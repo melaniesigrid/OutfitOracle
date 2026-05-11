@@ -10,7 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Dimensions,
 } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { useFonts } from 'expo-font';
 import {
   CormorantGaramond_700Bold_Italic,
@@ -33,6 +36,7 @@ import { OutfitCard } from '../components/OutfitCard';
 import { AvoidSection } from '../components/AvoidSection';
 import { LoadingOracle } from '../components/LoadingOracle';
 import { CitySuggestions } from '../components/CitySuggestions';
+import { ShareCard } from '../components/ShareCard';
 import { searchCities, CitySuggestion } from '../services/weather';
 import { colors, fonts, spacing } from '../theme';
 
@@ -45,8 +49,9 @@ export function HomeScreen() {
   const debounceRef         = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressSuggestRef  = useRef(false);
 
-  const { status, weather, verdict, error, consult, reset } = useOracle(CLAUDE_API_KEY);
+  const { status, weather, verdict, error, consult, reset, cachedCity, cachedAt, isFromCache } = useOracle(CLAUDE_API_KEY);
   const { recents, addCity } = useRecentCities();
+  const shareCardRef = useRef<View>(null);
 
   const [fontsLoaded] = useFonts({
     CormorantGaramond_700Bold_Italic,
@@ -62,11 +67,27 @@ export function HomeScreen() {
   const isLoading = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && weather && verdict;
 
+  // Pre-fill city from cache on mount
   useEffect(() => {
-    if (status === 'done') {
+    if (cachedCity && !city) setCity(cachedCity);
+  }, [cachedCity]);
+
+  // Haptic only for fresh consults, not cache loads
+  useEffect(() => {
+    if (status === 'done' && !isFromCache) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }, [status]);
+
+  const handleShare = async () => {
+    if (!shareCardRef.current) return;
+    try {
+      const uri = await captureRef(shareCardRef, { format: 'png', quality: 1 });
+      await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Oracle verdict' });
+    } catch {
+      // user cancelled or sharing unavailable
+    }
+  };
 
   useEffect(() => {
     if (isLoading || city.trim().length < 2 || suppressSuggestRef.current) {
@@ -227,12 +248,31 @@ export function HomeScreen() {
             {/* Results */}
             {showResult ? (
               <View style={styles.results}>
+                {isFromCache && cachedAt ? (
+                  <View style={styles.cacheBadge}>
+                    <Text style={styles.cacheBadgeText}>
+                      LAST CONSULTED · {new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <Pressable onPress={() => handleConsult(city)} accessibilityRole="button" accessibilityLabel="Refresh result">
+                      <Text style={styles.cacheRefresh}>↻ Refresh</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
                 <WeatherStrip weather={weather} />
                 <VerdictCard verdict={verdict} />
                 {verdict.outfits.map((item, i) => (
                   <OutfitCard key={item.category} item={item} index={i} />
                 ))}
                 <AvoidSection items={verdict.avoid} />
+                <Pressable
+                  style={styles.shareBtn}
+                  onPress={handleShare}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share the Oracle's verdict"
+                  accessibilityHint="Creates an image of your outfit verdict to share"
+                >
+                  <Text style={styles.shareBtnText}>SHARE THE LOOK →</Text>
+                </Pressable>
                 <Pressable
                   style={styles.resetBtn}
                   onPress={() => { suppressSuggestRef.current = false; reset(); setCity(''); }}
@@ -242,6 +282,13 @@ export function HomeScreen() {
                 >
                   <Text style={styles.resetText}>Ask Again →</Text>
                 </Pressable>
+              </View>
+            ) : null}
+
+            {/* Off-screen share card — rendered for capture only */}
+            {showResult ? (
+              <View style={styles.shareCardAnchor}>
+                <ShareCard ref={shareCardRef} weather={weather} verdict={verdict} />
               </View>
             ) : null}
 
@@ -440,6 +487,46 @@ const styles = StyleSheet.create({
   /* Results */
   results: {
     marginTop: spacing.sm,
+  },
+  cacheBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.bgSurface,
+    marginBottom: spacing.md,
+  },
+  cacheBadgeText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    color: colors.textMuted,
+  },
+  cacheRefresh: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  shareBtn: {
+    alignSelf: 'stretch',
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.borderHard,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  shareBtnText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2.5,
+    color: colors.textPrimary,
+  },
+  shareCardAnchor: {
+    position: 'absolute',
+    left: Dimensions.get('window').width + 10,
+    top: 0,
   },
   resetBtn: {
     alignSelf: 'center',

@@ -51,9 +51,9 @@
 > Hard blockers before any public release.
 
 ### Security
-- [-] **Backend proxy for Claude API** 🏗️ 2026/05/11 — Cloudflare Worker written (`cloudflare-worker/`). App auto-routes to proxy when `EXPO_PUBLIC_PROXY_URL` is set. **Action required:** deploy Worker + set `ANTHROPIC_API_KEY` secret + add URL to `.env`.
-- [ ] **Rotate the API key** — generate a new key on the Anthropic dashboard *after* the proxy is live and `EXPO_PUBLIC_PROXY_URL` is wired up.
-- [ ] **Rate limiting on the proxy** — cap requests per IP/device to prevent abuse and runaway costs before monetisation is live.
+- [x] **Backend proxy for Claude API** — Cloudflare Worker deployed, `EXPO_PUBLIC_PROXY_URL` set ✅ 2026/05/11
+- [ ] **Rotate the API key** — generate a new key on the Anthropic dashboard; old key was exposed in bundle history
+- [x] **Rate limiting on the proxy** — KV-based, 20 req/hr per IP; gracefully skipped if KV not yet wired ✅ 2026/05/11
 
 ### App Identity
 - [x] **Bundle identifier** — `com.melaniesigrid.outfitoracle` set in `app.json` ✅ 2026/05/11
@@ -81,8 +81,11 @@
 
 ### Retention
 - [ ] **Outfit history** — store every consultation (date, city, weather snapshot, verdict, outfits) in AsyncStorage; scrollable archive surfaced below the input; browsable by date
-- [ ] **Last result cache** — app opens to the most recent result instead of a blank input; re-fetch button prominent
+- [x] **Last result cache** — app opens to last result (12hr TTL); city pre-filled; "LAST CONSULTED" badge with one-tap refresh ✅ 2026/05/11
 - [ ] **Daily push notification** — `expo-notifications`; optional opt-in at first consult; fires at user-set time with today's city vibe teaser; deep-links to a fresh result
+
+### Virality (cont.)
+- [x] **Share card** — `react-native-view-shot` + `expo-sharing`; editorial portrait card (375×667) with masthead, vibe, weather, top 3 outfits, scarlet accent; "SHARE THE LOOK →" button in results ✅ 2026/05/11
 
 ### Content Depth
 - [ ] **Skeleton loading UI** — editorial placeholder cards matching the final layout; eliminates the layout shift during the ~3s Claude response time

@@ -6,8 +6,9 @@
  *
  * Deploy:
  *   cd cloudflare-worker
+ *   npx wrangler kv:namespace create "RATE_LIMIT_KV"   ← copy the id into wrangler.toml
  *   npx wrangler deploy
- *   npx wrangler secret put ANTHROPIC_API_KEY   ← paste your key when prompted
+ *   npx wrangler secret put ANTHROPIC_API_KEY           ← paste your key when prompted
  *
  * Then add to .env:
  *   EXPO_PUBLIC_PROXY_URL=https://outfit-oracle-proxy.<your-subdomain>.workers.dev
@@ -19,11 +20,43 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+const RATE_LIMIT_REQUESTS = 20; // per window
+const RATE_LIMIT_WINDOW_S = 3600; // 1 hour
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json', ...CORS },
   });
+}
+
+async function checkRateLimit(request, env) {
+  // Gracefully skip rate limiting if KV namespace isn't wired up yet
+  if (!env.RATE_LIMIT_KV) return { limited: false };
+
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+  const key = `rl:${ip}`;
+  const now = Date.now();
+  const windowMs = RATE_LIMIT_WINDOW_S * 1000;
+
+  const record = (await env.RATE_LIMIT_KV.get(key, { type: 'json' }))
+    ?? { count: 0, resetAt: now + windowMs };
+
+  if (now > record.resetAt) {
+    record.count = 0;
+    record.resetAt = now + windowMs;
+  }
+
+  if (record.count >= RATE_LIMIT_REQUESTS) {
+    const retryAfter = Math.ceil((record.resetAt - now) / 1000);
+    return { limited: true, retryAfter };
+  }
+
+  record.count++;
+  await env.RATE_LIMIT_KV.put(key, JSON.stringify(record), {
+    expirationTtl: RATE_LIMIT_WINDOW_S,
+  });
+  return { limited: false };
 }
 
 function buildPrompt(weather, gender) {
@@ -62,6 +95,14 @@ export default {
 
     if (request.method !== 'POST') {
       return json({ error: 'Method not allowed' }, 405);
+    }
+
+    const rateCheck = await checkRateLimit(request, env);
+    if (rateCheck.limited) {
+      return json(
+        { error: `Too many requests. Please wait ${rateCheck.retryAfter}s before trying again.` },
+        429
+      );
     }
 
     let body;
