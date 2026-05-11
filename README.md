@@ -43,14 +43,16 @@ The weight contrast between the 300 Light masthead and the 700 Bold Italic title
 ## Features
 
 - **Weather-powered verdict** — geocodes any city via Open-Meteo, fetches live conditions, passes them to Claude for a savage, weather-specific fashion opinion
+- **City autocomplete** — debounced geocoding suggestions appear as you type; tap to instantly consult; list collapses on selection and does not reappear until you type again
 - **5 outfit categories** — Top, Bottom, Outer Layer, Footwear, Accessories; each with a per-category editorial accent colour
 - **Shop this piece** — every item links directly to Google Shopping; the Oracle's recommendations are shoppable in one tap
-- **"The Oracle Forbids"** — 3 items to avoid today, listed with scarlet ✕ marks
+- **"The Oracle Forbids"** — 3 items to avoid today, listed with scarlet marks
 - **Effort rating** — 5-dash scale of how much the day demands from you, sartorially
 - **Today's Vibe** — a 3-5 word editorial vibe name with contextual icons derived from keywords
 - **Recent cities** — last 5 searches persisted, shown as chips, tap to re-consult instantly
 - **Pull-to-refresh** — swipe down on results to re-fetch for the same city
 - **Haptic feedback** — impact on consult press, success notification on verdict load
+- **Rotating loading statements** — 5 atmospheric messages (weather phase) + 7 Oracle-voice messages (verdict phase) cycling every 2.5s
 - **Staggered entrance animations** — results reveal sequentially; weather slides in, verdict fades, outfit cards stagger up one by one, forbidden list fades last
 
 ---
@@ -66,6 +68,7 @@ The weight contrast between the 300 Light masthead and the 700 Bold Italic title
 | Icons | `@expo/vector-icons` → `MaterialCommunityIcons` (bundled with Expo) |
 | Weather | [Open-Meteo](https://open-meteo.com/) — free, no key required |
 | AI | Claude Sonnet 4.6 via Anthropic API |
+| Proxy | Cloudflare Worker (`cloudflare-worker/`) — keeps API key server-side |
 | Haptics | `expo-haptics` |
 | Persistence | `@react-native-async-storage/async-storage` |
 | Animations | React Native `Animated` API (native driver throughout) |
@@ -80,14 +83,13 @@ The weight contrast between the 300 Light masthead and the 700 Bold Italic title
 npm install
 ```
 
-### 2. Configure your API key
+### 2. Configure environment
 
 ```bash
-# Create your .env file
-echo "EXPO_PUBLIC_CLAUDE_API_KEY=sk-ant-..." > .env
+cp .env.example .env
 ```
 
-> **Security note:** `EXPO_PUBLIC_*` variables are bundled into the JS bundle at build time. Anyone who unpacks the IPA can read this key. Before shipping publicly, move Claude calls to a backend proxy (Cloudflare Worker, Supabase Edge Function, or Next.js API route) and rotate the key.
+Edit `.env` — for local development set `EXPO_PUBLIC_CLAUDE_API_KEY`. For production set `EXPO_PUBLIC_PROXY_URL` (see Proxy Setup below).
 
 ### 3. Run
 
@@ -99,39 +101,62 @@ npx expo start        # Expo Go (limited — bare workflow modules may not work)
 
 Changing `.env` requires a full bundler restart — `EXPO_PUBLIC_*` vars are baked in at build time, not hot-reloaded.
 
+### Proxy Setup (recommended before sharing)
+
+The `cloudflare-worker/` directory contains a Cloudflare Worker that keeps your Anthropic key server-side. The app automatically routes to the proxy when `EXPO_PUBLIC_PROXY_URL` is set.
+
+```bash
+cd cloudflare-worker
+npx wrangler login
+npx wrangler deploy
+npx wrangler secret put ANTHROPIC_API_KEY   # paste your key when prompted
+```
+
+Add the Worker URL to `.env`:
+```
+EXPO_PUBLIC_PROXY_URL=https://outfit-oracle-proxy.<subdomain>.workers.dev
+```
+
 ---
 
 ## Project Structure
 
 ```
+cloudflare-worker/
+├── index.js            # Cloudflare Worker — proxies Claude API calls
+└── wrangler.toml       # Worker config and deploy settings
 src/
 ├── theme/index.ts          # All design tokens — colors, fonts, spacing, radius
 ├── services/
-│   ├── weather.ts          # Open-Meteo geocoding + WMO condition map (returns MCI icon names)
-│   └── oracle.ts           # Claude API call + JSON response parsing
+│   ├── weather.ts          # Open-Meteo geocoding + WMO condition map + city search
+│   └── oracle.ts           # Claude API call — routes via proxy or direct based on env
 ├── hooks/
 │   ├── useOracle.ts        # State machine: idle → fetching-weather → fetching-verdict → done/error
 │   └── useRecentCities.ts  # AsyncStorage persistence for last 5 searched cities
 ├── components/
+│   ├── CitySuggestions.tsx # Autocomplete dropdown — collapses on selection
 │   ├── WeatherStrip.tsx    # Slides in from left on mount
 │   ├── VerdictCard.tsx     # Fades + slides up on mount; pull quote + vibe icons + effort rating
 │   ├── OutfitCard.tsx      # Staggered fade + slide up (index × 90ms delay per card)
 │   ├── AvoidSection.tsx    # Fades in last (480ms delay) with scarlet forbidden list
 │   ├── GenderToggle.tsx    # Women / Men / Anyone chip selector
-│   └── LoadingOracle.tsx   # Pulsing italic text + animated progress line
+│   └── LoadingOracle.tsx   # Rotating messages + animated progress line
 └── screens/
-    └── HomeScreen.tsx      # Single screen — masthead, input, recent cities, results
+    └── HomeScreen.tsx      # Single screen — masthead, input, autocomplete, recents, results
 ```
 
 ---
 
 ## Production Checklist
 
-- [ ] Move Claude API calls to a backend proxy
-- [ ] Rotate the API key (current key is in `.env` history)
-- [ ] Set real bundle identifier in `app.json`
-- [ ] Design and add app icon (1024×1024) and splash screen
-- [ ] Add privacy policy URL (required by Apple for AI-powered apps)
-- [ ] Integrate Sentry for crash reporting
+- [-] Deploy Cloudflare Worker proxy (`cloudflare-worker/`) and set `ANTHROPIC_API_KEY` secret
+- [ ] Rotate the API key after proxy is live (current key is in `.env` history)
+- [ ] Rate-limit the proxy (per IP/device) before any public launch
+- [x] Bundle identifier set (`com.melaniesigrid.outfitoracle`)
+- [ ] App icon (1024×1024) and splash screen image
+- [x] Privacy policy (`PRIVACY_POLICY.md`) — add hosted URL to App Store listing
+- [ ] VoiceOver / TalkBack end-to-end audit
+- [ ] Sentry crash reporting (`@sentry/react-native`)
 - [ ] GPS auto-detect city via `expo-location`
+- [ ] TestFlight build for first users
 - [ ] App Store / Play Store listing assets

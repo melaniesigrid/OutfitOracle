@@ -42,7 +42,8 @@ export function HomeScreen() {
   const [city, setCity]               = useState('');
   const [gender, setGender]           = useState<Gender>('Women');
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef         = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressSuggestRef  = useRef(false);
 
   const { status, weather, verdict, error, consult, reset } = useOracle(CLAUDE_API_KEY);
   const { recents, addCity } = useRecentCities();
@@ -68,12 +69,13 @@ export function HomeScreen() {
   }, [status]);
 
   useEffect(() => {
-    if (isLoading || city.trim().length < 2) {
+    if (isLoading || city.trim().length < 2 || suppressSuggestRef.current) {
       setSuggestions([]);
       return;
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
+      if (suppressSuggestRef.current) return;
       const results = await searchCities(city);
       setSuggestions(results);
     }, 300);
@@ -85,6 +87,7 @@ export function HomeScreen() {
   const handleConsult = (overrideCity?: string) => {
     const target = (overrideCity ?? city).trim();
     if (!target || isLoading) return;
+    suppressSuggestRef.current = true;
     setSuggestions([]);
     setCity(target);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -138,7 +141,11 @@ export function HomeScreen() {
               <TextInput
                 style={styles.input}
                 value={city}
-                onChangeText={text => { setCity(text); if (!text.trim()) setSuggestions([]); }}
+                onChangeText={text => {
+                  suppressSuggestRef.current = false;
+                  setCity(text);
+                  if (!text.trim()) setSuggestions([]);
+                }}
                 placeholder="Toronto, London, Tokyo…"
                 placeholderTextColor={colors.textMuted}
                 autoCapitalize="words"
@@ -228,7 +235,7 @@ export function HomeScreen() {
                 <AvoidSection items={verdict.avoid} />
                 <Pressable
                   style={styles.resetBtn}
-                  onPress={() => { reset(); setCity(''); }}
+                  onPress={() => { suppressSuggestRef.current = false; reset(); setCity(''); }}
                   accessibilityRole="button"
                   accessibilityLabel="Ask again"
                   accessibilityHint="Clears the current result and returns to the search"

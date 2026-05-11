@@ -63,7 +63,7 @@
 
 ### Stability
 - [ ] **Crash reporting** — `@sentry/react-native` before any external users; without it you're flying blind
-- [ ] **VoiceOver / TalkBack audit** — all Pressables have labels, but test actual screen reader flow end-to-end
+- [ ] **VoiceOver / TalkBack audit** — all Pressables have labels and roles; needs end-to-end device test
 
 ---
 
@@ -77,7 +77,7 @@
 
 ### Input Quality
 - [ ] **GPS auto-detect** — `expo-location` + `foregroundPermission`; "Use my location" button; reverse-geocode via Open-Meteo. Removes the single biggest friction point in the onboarding flow.
-- [ ] **City autocomplete** — debounced Open-Meteo geocoding suggestions as the user types; kills "city not found" errors entirely.
+- [x] **City autocomplete** — debounced Open-Meteo geocoding suggestions; collapses immediately on selection and suppresses re-appearance until user types again ✅ 2026/05/11
 
 ### Retention
 - [ ] **Outfit history** — store every consultation (date, city, weather snapshot, verdict, outfits) in AsyncStorage; scrollable archive surfaced below the input; browsable by date
@@ -150,5 +150,9 @@
 - [x] **Accessibility audit** — contrast ratio fix (textMuted darkened, 5.08:1), all informational labels bumped from 8px → 10px ✅ 2026/05/11
 - [x] **Rotating loading messages** — 5 atmospheric + 7 Oracle-voice messages cycling every 2.5s per phase ✅ 2026/05/11
 - [x] **Staggered entrance animations** — WeatherStrip (translateX), VerdictCard (translateY), OutfitCards (staggered 90ms), AvoidSection (delayed fade) ✅ 2026/05/11
-- [x] **City autocomplete** — debounced Open-Meteo geocoding suggestions (300ms), editorial dropdown with city name + region/country, fires consult on tap ✅ 2026/05/11
-- [x] **Full accessibility label audit** — all remaining 8–9px labels bumped to 10px minimum across all components ✅ 2026/05/11
+- [x] **City autocomplete** — debounced suggestions (300ms), collapses on selection, suppressed until user types again ✅ 2026/05/11
+- [x] **Full accessibility label audit** — all remaining 8–9px labels bumped to 10px; textMuted contrast fixed to 5.08:1 ✅ 2026/05/11
+- [x] **Cloudflare Worker proxy** — Worker written, app auto-routes when `EXPO_PUBLIC_PROXY_URL` set ✅ 2026/05/11
+- [x] **Bundle identifier** — `com.melaniesigrid.outfitoracle` ✅ 2026/05/11
+- [x] **Privacy policy** — `PRIVACY_POLICY.md` covering all third-party services ✅ 2026/05/11
+- [x] **GitHub repository** — private repo, initial commit, all subsequent work pushed ✅ 2026/05/11
