@@ -51,12 +51,12 @@
 > Hard blockers before any public release.
 
 ### Security
-- [ ] **Backend proxy for Claude API** — `EXPO_PUBLIC_*` vars ship inside the JS bundle. Anyone who unpacks the IPA can read the key. Stand up a Cloudflare Worker or Supabase Edge Function; app posts `{ city, gender, styleProfile? }` and receives `OracleVerdict`. Remove `anthropic-dangerous-direct-browser-access` header.
-- [ ] **Rotate the API key** — currently committed in `.env` history; treat as compromised. Generate a new key on the Anthropic dashboard after the proxy is live.
+- [-] **Backend proxy for Claude API** 🏗️ 2026/05/11 — Cloudflare Worker written (`cloudflare-worker/`). App auto-routes to proxy when `EXPO_PUBLIC_PROXY_URL` is set. **Action required:** deploy Worker + set `ANTHROPIC_API_KEY` secret + add URL to `.env`.
+- [ ] **Rotate the API key** — generate a new key on the Anthropic dashboard *after* the proxy is live and `EXPO_PUBLIC_PROXY_URL` is wired up.
 - [ ] **Rate limiting on the proxy** — cap requests per IP/device to prevent abuse and runaway costs before monetisation is live.
 
 ### App Identity
-- [ ] **Bundle identifier** — replace `com.yourname.outfitoracle` in `app.json`
+- [x] **Bundle identifier** — `com.melaniesigrid.outfitoracle` set in `app.json` ✅ 2026/05/11
 - [ ] **App icon** — 1024×1024 PNG in `assets/`; editorial aesthetic (the "O" monogram or an oracle eye motif)
 - [ ] **Splash screen** — cream background with wordmark; wire `"splash.image"` in `app.json`
 - [ ] **Privacy policy** — required by Apple, Google, and any AI-disclosure rules; must mention Claude/Anthropic and weather data

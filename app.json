@@ -12,13 +12,13 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.yourname.outfitoracle"
+      "bundleIdentifier": "com.melaniesigrid.outfitoracle"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0D0D0F"
       },
-      "package": "com.yourname.outfitoracle"
+      "package": "com.melaniesigrid.outfitoracle"
     },
     "plugins": [
       "expo-font"

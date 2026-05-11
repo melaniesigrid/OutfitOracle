@@ -1,6 +1,7 @@
 import { WeatherData } from './weather';
 
-const CLAUDE_API = 'https://api.anthropic.com/v1/messages';
+const CLAUDE_API  = 'https://api.anthropic.com/v1/messages';
+const PROXY_URL   = process.env.EXPO_PUBLIC_PROXY_URL ?? '';
 
 export interface OutfitItem {
   category: string;
@@ -17,12 +18,8 @@ export interface OracleVerdict {
   rating: number;
 }
 
-export async function fetchOracleVerdict(
-  weather: WeatherData,
-  gender: string,
-  apiKey: string
-): Promise<OracleVerdict> {
-  const prompt = `You are the Outfit Oracle — a devastatingly chic, slightly savage AI fashion authority with the energy of a Y2K fashion editor who's seen everything and is mildly disappointed by most of it. You're witty, specific, occasionally dramatic, and genuinely invested in people looking good.
+function buildPrompt(weather: WeatherData, gender: string): string {
+  return `You are the Outfit Oracle — a devastatingly chic, slightly savage AI fashion authority with the energy of a Y2K fashion editor who's seen everything and is mildly disappointed by most of it. You're witty, specific, occasionally dramatic, and genuinely invested in people looking good.
 
 Weather right now:
 - City: ${weather.city}, ${weather.country}
@@ -47,7 +44,24 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
   ],
   "avoid": ["specific item to avoid", "another mistake", "one more thing the Oracle forbids"]
 }`;
+}
 
+async function viaProxy(weather: WeatherData, gender: string): Promise<OracleVerdict> {
+  const resp = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ weather, gender }),
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({})) as { error?: string };
+    throw new Error(err.error ?? `Proxy error ${resp.status}`);
+  }
+
+  return resp.json() as Promise<OracleVerdict>;
+}
+
+async function viaDirect(weather: WeatherData, gender: string, apiKey: string): Promise<OracleVerdict> {
   const resp = await fetch(CLAUDE_API, {
     method: 'POST',
     headers: {
@@ -59,19 +73,19 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: buildPrompt(weather, gender) }],
     }),
   });
 
   if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
+    const err = await resp.json().catch(() => ({})) as { error?: { message?: string } };
     throw new Error(err.error?.message ?? `Claude API error ${resp.status}`);
   }
 
-  const data = await resp.json();
-  const text: string = data.content
-    .filter((b: { type: string }) => b.type === 'text')
-    .map((b: { text: string }) => b.text)
+  const data = await resp.json() as { content: { type: string; text: string }[] };
+  const text = data.content
+    .filter(b => b.type === 'text')
+    .map(b => b.text)
     .join('')
     .trim();
 
@@ -80,4 +94,12 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
   } catch {
     throw new Error('The Oracle returned an unreadable response. Please try again.');
   }
+}
+
+export async function fetchOracleVerdict(
+  weather: WeatherData,
+  gender: string,
+  apiKey: string
+): Promise<OracleVerdict> {
+  return PROXY_URL ? viaProxy(weather, gender) : viaDirect(weather, gender, apiKey);
 }
