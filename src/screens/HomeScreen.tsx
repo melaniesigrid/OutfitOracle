@@ -39,6 +39,12 @@ import { CitySuggestions } from '../components/CitySuggestions';
 import { ShareCard } from '../components/ShareCard';
 import { searchCities, CitySuggestion } from '../services/weather';
 import { colors, fonts, spacing } from '../theme';
+import {
+  trackAppOpened,
+  trackShareTapped,
+  trackRecentCityTapped,
+  trackAutocompleteCitySelected,
+} from '../services/analytics';
 
 const CLAUDE_API_KEY = process.env.EXPO_PUBLIC_CLAUDE_API_KEY ?? '';
 
@@ -67,6 +73,11 @@ export function HomeScreen() {
   const isLoading = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && weather && verdict;
 
+  // Track app open once fonts + cache state are resolved
+  useEffect(() => {
+    if (fontsLoaded) trackAppOpened(isFromCache);
+  }, [fontsLoaded]);
+
   // Pre-fill city from cache on mount
   useEffect(() => {
     if (cachedCity && !city) setCity(cachedCity);
@@ -80,7 +91,8 @@ export function HomeScreen() {
   }, [status]);
 
   const handleShare = async () => {
-    if (!shareCardRef.current) return;
+    if (!shareCardRef.current || !verdict) return;
+    trackShareTapped(city, verdict.vibe);
     try {
       const uri = await captureRef(shareCardRef, { format: 'png', quality: 1 });
       await Share.share({ url: uri });
@@ -181,7 +193,7 @@ export function HomeScreen() {
             {/* City autocomplete */}
             <CitySuggestions
               suggestions={suggestions}
-              onSelect={(name) => handleConsult(name)}
+              onSelect={(name) => { trackAutocompleteCitySelected(name); handleConsult(name); }}
             />
 
             {/* Recent cities */}
@@ -193,7 +205,7 @@ export function HomeScreen() {
                     <Pressable
                       key={c}
                       style={({ pressed }) => [styles.recentChip, pressed && styles.recentChipPressed]}
-                      onPress={() => handleConsult(c)}
+                      onPress={() => { trackRecentCityTapped(c); handleConsult(c); }}
                       accessibilityRole="button"
                       accessibilityLabel={`Search ${c} again`}
                     >

@@ -2,6 +2,11 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchWeather, WeatherData } from '../services/weather';
 import { fetchOracleVerdict, OracleVerdict } from '../services/oracle';
+import {
+  trackConsultStarted,
+  trackConsultCompleted,
+  trackConsultError,
+} from '../services/analytics';
 
 const CACHE_KEY = '@outfit_oracle_last_result';
 const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
@@ -51,6 +56,9 @@ export function useOracle(apiKey: string) {
     setCachedCity(null);
     setCachedAt(null);
 
+    const startedAt = Date.now();
+    trackConsultStarted(city, gender);
+
     try {
       setStatus('fetching-weather');
       const wx = await fetchWeather(city);
@@ -61,10 +69,14 @@ export function useOracle(apiKey: string) {
       setVerdict(v);
       setStatus('done');
 
+      trackConsultCompleted(city, gender, wx.conditionLabel, wx.temp, v.vibe, v.rating, Date.now() - startedAt);
+
       const toCache: CachedResult = { city, weather: wx, verdict: v, timestamp: Date.now() };
       AsyncStorage.setItem(CACHE_KEY, JSON.stringify(toCache));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Something went wrong. The Oracle is displeased.';
+      const phase = weather ? 'verdict' : 'weather';
+      trackConsultError(city, phase, msg);
       setError(msg);
       setStatus('error');
     }

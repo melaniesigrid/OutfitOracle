@@ -82,6 +82,7 @@
 ### Retention
 - [ ] **Outfit history** — store every consultation (date, city, weather snapshot, verdict, outfits) in AsyncStorage; scrollable archive surfaced below the input; browsable by date
 - [x] **Last result cache** — app opens to last result (12hr TTL); city pre-filled; "LAST CONSULTED" badge with one-tap refresh ✅ 2026/05/11
+- [x] **Analytics** — PostHog HTTP API (no SDK, no rebuild); tracks app_opened, consult_started, consult_completed (with duration), consult_error, share_card_tapped, recent_city_tapped, autocomplete_city_selected; no-op if key not set ✅ 2026/05/11
 - [ ] **Daily push notification** — `expo-notifications`; optional opt-in at first consult; fires at user-set time with today's city vibe teaser; deep-links to a fresh result
 
 ### Virality (cont.)
