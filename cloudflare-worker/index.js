@@ -59,9 +59,26 @@ async function checkRateLimit(request, env) {
   return { limited: false };
 }
 
-function buildPrompt(weather, gender) {
-  return `You are the Outfit Oracle — a devastatingly chic, slightly savage AI fashion authority with the energy of a Y2K fashion editor who's seen everything and is mildly disappointed by most of it. You're witty, specific, occasionally dramatic, and genuinely invested in people looking good.
+const BUDGET_NOTES = {
+  'high-street':  'ASOS, Zara, & Other Stories',
+  'contemporary': 'Reiss, AllSaints, COS',
+  'luxury':       'Totême, Bottega, The Row',
+};
 
+const PERSONALITY_VOICE = {
+  diplomatic: 'Adopt a measured, neutral, and informative tone. Give clear recommendations without strong opinions or dramatic commentary.',
+  editorial:  "Be opinionated, direct, and editorial. Deliver verdicts with confidence. Use the Oracle's distinctive voice — witty, specific, slightly savage.",
+  savage:     'Be ruthlessly honest. If the weather is terrible or certain choices are unacceptable, say so with sharp wit and zero softening. Fashion is a serious matter.',
+};
+
+function buildPrompt(weather, gender, styleProfile) {
+  const voiceInstruction = PERSONALITY_VOICE[styleProfile?.personality ?? 'editorial'];
+  const profileSection = styleProfile?.keywords?.length
+    ? `\nUser style profile:\n- Name: ${styleProfile.name ?? 'The Devotee'}\n- Aesthetic: ${styleProfile.keywords.join(', ')}\n- Budget tier: ${styleProfile.budget} (${BUDGET_NOTES[styleProfile.budget] ?? ''})\nTailor all item recommendations to this aesthetic and budget range.\n`
+    : '';
+
+  return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
+${profileSection}
 Weather right now:
 - City: ${weather.city}, ${weather.country}
 - Temperature: ${weather.temp}°C (feels like ${weather.feelsLike}°C)
@@ -112,7 +129,7 @@ export default {
       return json({ error: 'Invalid JSON body' }, 400);
     }
 
-    const { weather, gender } = body;
+    const { weather, gender, styleProfile } = body;
     if (!weather || !gender) {
       return json({ error: 'Missing required fields: weather, gender' }, 400);
     }
@@ -127,7 +144,7 @@ export default {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
-        messages: [{ role: 'user', content: buildPrompt(weather, gender) }],
+        messages: [{ role: 'user', content: buildPrompt(weather, gender, styleProfile) }],
       }),
     });
 

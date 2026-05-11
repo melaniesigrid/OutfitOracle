@@ -12,6 +12,7 @@ import {
   StatusBar,
   Dimensions,
   Share,
+  Animated,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 import { useFonts } from 'expo-font';
@@ -29,6 +30,9 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useOracle } from '../hooks/useOracle';
 import { useRecentCities } from '../hooks/useRecentCities';
+import { useStyleProfile, BUDGET_TIERS } from '../hooks/useStyleProfile';
+import { useOutfitHistory } from '../hooks/useOutfitHistory';
+import { useConsultStreak } from '../hooks/useConsultStreak';
 import { GenderToggle, Gender } from '../components/GenderToggle';
 import { WeatherStrip } from '../components/WeatherStrip';
 import { VerdictCard } from '../components/VerdictCard';
@@ -37,7 +41,10 @@ import { AvoidSection } from '../components/AvoidSection';
 import { LoadingOracle } from '../components/LoadingOracle';
 import { CitySuggestions } from '../components/CitySuggestions';
 import { ShareCard } from '../components/ShareCard';
+import { StyleOnboarding } from '../components/StyleOnboarding';
+import { SkeletonResults } from '../components/SkeletonResults';
 import { searchCities, CitySuggestion } from '../services/weather';
+import * as Location from 'expo-location';
 import { colors, fonts, spacing } from '../theme';
 import {
   trackAppOpened,
@@ -55,9 +62,23 @@ export function HomeScreen() {
   const debounceRef         = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressSuggestRef  = useRef(false);
 
-  const { status, weather, verdict, error, consult, reset, cachedCity, cachedAt, isFromCache } = useOracle(CLAUDE_API_KEY);
+  const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache } = useOracle(CLAUDE_API_KEY);
+  const [locationLoading, setLocationLoading] = useState(false);
   const { recents, addCity } = useRecentCities();
+  const { profileState, profile, saveProfile, skip, edit } = useStyleProfile();
+  const { history, addEntry } = useOutfitHistory();
+  const { streak, rankTitle, newMilestone, newRank, recordConsult, clearMilestone, clearRank } = useConsultStreak();
   const shareCardRef = useRef<View>(null);
+
+  // ── Animation values ──────────────────────────────────────────────────────
+  const mastheadOpacity = useRef(new Animated.Value(0)).current;
+  const mastheadY       = useRef(new Animated.Value(20)).current;
+  const btnScale        = useRef(new Animated.Value(1)).current;
+  const streakScale     = useRef(new Animated.Value(0)).current;
+  const bannerOpacity   = useRef(new Animated.Value(0)).current;
+  const bannerY         = useRef(new Animated.Value(-14)).current;
+  const [bannerVisible, setBannerVisible] = useState(false);
+  const [bannerContent, setBannerContent] = useState<{ milestone: number | null; rank: string | null }>({ milestone: null, rank: null });
 
   const [fontsLoaded] = useFonts({
     CormorantGaramond_700Bold_Italic,
@@ -89,6 +110,62 @@ export function HomeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }, [status]);
+
+  // Save to history and record streak after every fresh successful consult
+  useEffect(() => {
+    if (status === 'done' && !isFromCache && weather && verdict) {
+      addEntry(city, gender, weather, verdict);
+      recordConsult();
+    }
+  }, [status, isFromCache]);
+
+  // Haptic when a streak milestone or rank is unlocked
+  useEffect(() => {
+    if (newMilestone !== null || newRank !== null) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [newMilestone, newRank]);
+
+  // Masthead entrance — fades + rises from slight offset on mount
+  useEffect(() => {
+    if (!fontsLoaded) return;
+    Animated.parallel([
+      Animated.timing(mastheadOpacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(mastheadY,       { toValue: 0, duration: 600, useNativeDriver: true }),
+    ]).start();
+  }, [fontsLoaded]);
+
+  // Streak badge pops in when first earned
+  useEffect(() => {
+    if (streak > 0) {
+      Animated.spring(streakScale, { toValue: 1, tension: 80, friction: 8, useNativeDriver: true }).start();
+    }
+  }, [streak > 0]);
+
+  // Milestone / rank banner: slide + fade in, snapshot content so it persists during dismiss animation
+  useEffect(() => {
+    if (newMilestone !== null || newRank !== null) {
+      setBannerContent({ milestone: newMilestone, rank: newRank });
+      bannerOpacity.setValue(0);
+      bannerY.setValue(-14);
+      setBannerVisible(true);
+      Animated.parallel([
+        Animated.timing(bannerOpacity, { toValue: 1, duration: 350, useNativeDriver: true }),
+        Animated.spring(bannerY,       { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [newMilestone, newRank]);
+
+  const dismissBanner = () => {
+    Animated.parallel([
+      Animated.timing(bannerOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(bannerY,       { toValue: -8, duration: 250, useNativeDriver: true }),
+    ]).start(() => {
+      setBannerVisible(false);
+      clearMilestone();
+      clearRank();
+    });
+  };
 
   const handleShare = async () => {
     if (!shareCardRef.current || !verdict) return;
@@ -125,12 +202,52 @@ export function HomeScreen() {
     setCity(target);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     addCity(target);
-    consult(target, gender);
+    consult(target, gender, profile);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 360, animated: true }), 400);
   };
 
+  const handleUseLocation = async () => {
+    if (locationLoading || isLoading) return;
+    setLocationLoading(true);
+    try {
+      const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
+      if (permStatus !== 'granted') return;
 
-  if (!fontsLoaded) return <View style={styles.root} />;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const results = await Location.reverseGeocodeAsync(loc.coords);
+      if (!results.length) return;
+
+      const place = results[0];
+      const detectedCity = place.city ?? place.subregion ?? place.region ?? '';
+      const detectedCountry = place.isoCountryCode ?? place.country ?? '';
+      if (!detectedCity) return;
+
+      suppressSuggestRef.current = true;
+      setSuggestions([]);
+      setCity(detectedCity);
+      addCity(detectedCity);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      consultByCoords(
+        loc.coords.latitude,
+        loc.coords.longitude,
+        detectedCity,
+        detectedCountry,
+        gender,
+        profile,
+      );
+      setTimeout(() => scrollRef.current?.scrollTo({ y: 360, animated: true }), 400);
+    } catch {
+      // Permission denied or GPS unavailable — silent fallback, user can type the city
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+
+  if (!fontsLoaded || profileState.status === 'loading') return <View style={styles.root} />;
+  if (profileState.status === 'not-set') {
+    return <StyleOnboarding onSave={saveProfile} onSkip={skip} />;
+  }
 
   return (
     <View style={styles.root}>
@@ -157,13 +274,56 @@ export function HomeScreen() {
         >
 
           {/* ── EDITORIAL MASTHEAD ── */}
-          <View style={styles.masthead}>
+          <Animated.View style={[styles.masthead, { opacity: mastheadOpacity, transform: [{ translateY: mastheadY }] }]}>
             <Text style={styles.mastheadKicker}>— WEATHER-POWERED STYLE —</Text>
             <Text style={styles.mastheadTitle1}>OUTFIT</Text>
             <Text style={styles.mastheadTitle2}>Oracle</Text>
             <View style={styles.mastheadRule} />
-            <Text style={styles.mastheadTagline}>Your unsolicited style authority</Text>
-          </View>
+            <View style={styles.mastheadFootRow}>
+              <Text style={styles.mastheadTagline}>Your unsolicited style authority</Text>
+              <View style={styles.mastheadBadges}>
+                {streak > 0 && (
+                  <Animated.View style={{ transform: [{ scale: streakScale }] }}>
+                    <Text style={styles.streakBadge}>
+                      {streak}-DAY {rankTitle.toUpperCase()}
+                    </Text>
+                  </Animated.View>
+                )}
+                {profile && (
+                  <Pressable
+                    onPress={edit}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit style profile"
+                  >
+                    <Text style={styles.profileBadge}>
+                      {profile.keywords.slice(0, 2).join(' · ')}
+                      {profile.keywords.length > 2 ? ` +${profile.keywords.length - 2}` : ''}
+                      {' · '}{BUDGET_TIERS.find(b => b.id === profile.budget)?.label ?? ''}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* ── MILESTONE / RANK BANNER ── */}
+          {bannerVisible && (
+            <Animated.View style={[styles.milestoneBanner, { opacity: bannerOpacity, transform: [{ translateY: bannerY }] }]}>
+              <Pressable
+                onPress={dismissBanner}
+                accessibilityRole="button"
+                accessibilityLabel={bannerContent.rank ? `Oracle rank unlocked: ${bannerContent.rank}` : `${bannerContent.milestone}-day streak milestone reached`}
+              >
+                <Text style={styles.milestoneKicker}>
+                  {bannerContent.rank ? 'RANK UNLOCKED' : `${bannerContent.milestone}-DAY MILESTONE`}
+                </Text>
+                <Text style={styles.milestoneTitle}>
+                  {bannerContent.rank ?? `The Oracle has noticed your devotion.`}
+                </Text>
+                <Text style={styles.milestoneDismiss}>Tap to dismiss</Text>
+              </Pressable>
+            </Animated.View>
+          )}
 
           {/* ── BODY ── */}
           <View style={styles.body}>
@@ -188,6 +348,18 @@ export function HomeScreen() {
                 editable={!isLoading}
               />
               <View style={styles.inputRule} />
+              <Pressable
+                style={styles.locationBtn}
+                onPress={handleUseLocation}
+                disabled={isLoading || locationLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Use my current location"
+                accessibilityHint="Detects your city automatically via GPS"
+              >
+                <Text style={styles.locationBtnText}>
+                  {locationLoading ? 'Detecting location…' : '+ Use my location'}
+                </Text>
+              </Pressable>
             </View>
 
             {/* City autocomplete */}
@@ -220,24 +392,28 @@ export function HomeScreen() {
             <GenderToggle selected={gender} onChange={setGender} />
 
             {/* CTA */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.btn,
-                pressed && styles.btnPressed,
-                isLoading && styles.btnDisabled,
-              ]}
-              onPress={() => handleConsult()}
-              disabled={isLoading}
-              accessibilityRole="button"
-              accessibilityLabel="Consult the Oracle"
-              accessibilityHint="Fetches weather and generates an outfit recommendation for your city"
-              accessibilityState={{ disabled: isLoading }}
-            >
-              <Text style={styles.btnText}>
-                {isLoading ? 'Consulting…' : 'Consult the Oracle'}
-              </Text>
-              {!isLoading && <Text style={styles.btnArrow}>→</Text>}
-            </Pressable>
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btn,
+                  pressed && styles.btnPressed,
+                  isLoading && styles.btnDisabled,
+                ]}
+                onPress={() => handleConsult()}
+                onPressIn={() => Animated.spring(btnScale, { toValue: 0.97, tension: 150, friction: 8, useNativeDriver: true }).start()}
+                onPressOut={() => Animated.spring(btnScale, { toValue: 1, tension: 60, friction: 6, useNativeDriver: true }).start()}
+                disabled={isLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Consult the Oracle"
+                accessibilityHint="Fetches weather and generates an outfit recommendation for your city"
+                accessibilityState={{ disabled: isLoading }}
+              >
+                <Text style={styles.btnText}>
+                  {isLoading ? 'Consulting…' : 'Consult the Oracle'}
+                </Text>
+                {!isLoading && <Text style={styles.btnArrow}>→</Text>}
+              </Pressable>
+            </Animated.View>
 
             {/* Error */}
             {status === 'error' && error ? (
@@ -256,6 +432,7 @@ export function HomeScreen() {
 
             {/* Loading */}
             <LoadingOracle status={status} />
+            {isLoading && <SkeletonResults />}
 
             {/* Results */}
             {showResult ? (
@@ -303,6 +480,36 @@ export function HomeScreen() {
                 <ShareCard ref={shareCardRef} weather={weather} verdict={verdict} />
               </View>
             ) : null}
+
+            {/* Oracle Archives — history */}
+            {history.length > 0 && (
+              <View style={styles.archiveSection}>
+                <Text style={styles.archiveLabel}>ORACLE ARCHIVES</Text>
+                {history.map(entry => (
+                  <Pressable
+                    key={entry.id}
+                    style={({ pressed }) => [styles.archiveRow, pressed && styles.archiveRowPressed]}
+                    onPress={() => handleConsult(entry.city)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Re-consult Oracle for ${entry.city}`}
+                  >
+                    <View style={styles.archiveDate}>
+                      <Text style={styles.archiveDateDay}>
+                        {new Date(entry.consultedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                      </Text>
+                      <Text style={styles.archiveDateTime}>
+                        {new Date(entry.consultedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </View>
+                    <View style={styles.archiveCenter}>
+                      <Text style={styles.archiveCity}>{entry.city}</Text>
+                      <Text style={styles.archiveVibe}>{entry.verdict.vibe}</Text>
+                    </View>
+                    <Text style={styles.archiveTemp}>{entry.weather.temp}°</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
 
             {/* Footer */}
             <View style={styles.footer}>
@@ -577,5 +784,133 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
     letterSpacing: 0.3,
+  },
+
+  /* Location button */
+  locationBtn: {
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  locationBtnText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: colors.textMuted,
+  },
+
+  /* Masthead footer row — tagline + badges */
+  mastheadFootRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  mastheadBadges: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  streakBadge: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 1.5,
+    color: colors.scarlet,
+  },
+  profileBadge: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 1,
+    color: 'rgba(250,249,246,0.40)',
+  },
+
+  /* Milestone / rank banner */
+  milestoneBanner: {
+    backgroundColor: colors.bgDark,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.scarlet,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: 4,
+  },
+  milestoneKicker: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 2.5,
+    color: colors.scarlet,
+  },
+  milestoneTitle: {
+    fontFamily: fonts.display,
+    fontSize: 22,
+    color: '#FAF9F6',
+    letterSpacing: -0.3,
+  },
+  milestoneDismiss: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 1,
+    color: 'rgba(250,249,246,0.30)',
+    marginTop: 4,
+  },
+
+  /* Oracle Archives */
+  archiveSection: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  archiveLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2.5,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
+  },
+  archiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  archiveRowPressed: {
+    backgroundColor: colors.bgSurface,
+  },
+  archiveDate: {
+    width: 52,
+    marginRight: spacing.md,
+  },
+  archiveDateDay: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.textPrimary,
+    letterSpacing: 0.3,
+  },
+  archiveDateTime: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  archiveCenter: {
+    flex: 1,
+  },
+  archiveCity: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  archiveVibe: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+    marginTop: 1,
+  },
+  archiveTemp: {
+    fontFamily: fonts.displayBold,
+    fontSize: 20,
+    color: colors.textPrimary,
+    marginLeft: spacing.sm,
   },
 });

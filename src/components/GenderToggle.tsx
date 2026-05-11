@@ -39,6 +39,7 @@ export function GenderToggle({ selected, onChange }: Props) {
 
 const styles = StyleSheet.create({
   row: {
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
   label: {

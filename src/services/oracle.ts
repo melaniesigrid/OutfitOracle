@@ -1,7 +1,20 @@
 import { WeatherData } from './weather';
+import { StyleProfile, OraclePersonality } from '../hooks/useStyleProfile';
 
 const CLAUDE_API  = 'https://api.anthropic.com/v1/messages';
 const PROXY_URL   = process.env.EXPO_PUBLIC_PROXY_URL ?? '';
+
+const BUDGET_NOTES: Record<string, string> = {
+  'high-street':  'ASOS, Zara, & Other Stories',
+  'contemporary': 'Reiss, AllSaints, COS',
+  'luxury':       'Totême, Bottega, The Row',
+};
+
+const PERSONALITY_VOICE: Record<OraclePersonality, string> = {
+  diplomatic: 'Adopt a measured, neutral, and informative tone. Give clear recommendations without strong opinions or dramatic commentary.',
+  editorial:  'Be opinionated, direct, and editorial. Deliver verdicts with confidence. Use the Oracle\'s distinctive voice — witty, specific, slightly savage.',
+  savage:     'Be ruthlessly honest. If the weather is terrible or certain choices are unacceptable, say so with sharp wit and zero softening. Fashion is a serious matter.',
+};
 
 export interface OutfitItem {
   category: string;
@@ -18,9 +31,14 @@ export interface OracleVerdict {
   rating: number;
 }
 
-function buildPrompt(weather: WeatherData, gender: string): string {
-  return `You are the Outfit Oracle — a devastatingly chic, slightly savage AI fashion authority with the energy of a Y2K fashion editor who's seen everything and is mildly disappointed by most of it. You're witty, specific, occasionally dramatic, and genuinely invested in people looking good.
+function buildPrompt(weather: WeatherData, gender: string, profile?: StyleProfile): string {
+  const voiceInstruction = PERSONALITY_VOICE[profile?.personality ?? 'editorial'];
+  const profileSection = profile?.keywords?.length
+    ? `\nUser style profile:\n- Name: ${profile.name ?? 'The Devotee'}\n- Aesthetic: ${profile.keywords.join(', ')}\n- Budget tier: ${profile.budget} (${BUDGET_NOTES[profile.budget] ?? ''})\nTailor all item recommendations to this aesthetic and budget range.\n`
+    : '';
 
+  return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
+${profileSection}
 Weather right now:
 - City: ${weather.city}, ${weather.country}
 - Temperature: ${weather.temp}°C (feels like ${weather.feelsLike}°C)
@@ -46,11 +64,11 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
 }`;
 }
 
-async function viaProxy(weather: WeatherData, gender: string): Promise<OracleVerdict> {
+async function viaProxy(weather: WeatherData, gender: string, profile?: StyleProfile): Promise<OracleVerdict> {
   const resp = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ weather, gender }),
+    body: JSON.stringify({ weather, gender, styleProfile: profile }),
   });
 
   if (!resp.ok) {
@@ -61,19 +79,18 @@ async function viaProxy(weather: WeatherData, gender: string): Promise<OracleVer
   return resp.json() as Promise<OracleVerdict>;
 }
 
-async function viaDirect(weather: WeatherData, gender: string, apiKey: string): Promise<OracleVerdict> {
+async function viaDirect(weather: WeatherData, gender: string, apiKey: string, profile?: StyleProfile): Promise<OracleVerdict> {
   const resp = await fetch(CLAUDE_API, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
-      messages: [{ role: 'user', content: buildPrompt(weather, gender) }],
+      messages: [{ role: 'user', content: buildPrompt(weather, gender, profile) }],
     }),
   });
 
@@ -99,7 +116,8 @@ async function viaDirect(weather: WeatherData, gender: string, apiKey: string): 
 export async function fetchOracleVerdict(
   weather: WeatherData,
   gender: string,
-  apiKey: string
+  apiKey: string,
+  profile?: StyleProfile,
 ): Promise<OracleVerdict> {
-  return PROXY_URL ? viaProxy(weather, gender) : viaDirect(weather, gender, apiKey);
+  return PROXY_URL ? viaProxy(weather, gender, profile) : viaDirect(weather, gender, apiKey, profile);
 }

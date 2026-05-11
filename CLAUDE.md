@@ -32,12 +32,14 @@ After changing `.env`, you must fully restart the bundler — `EXPO_PUBLIC_*` va
 
 ## Environment
 
-Copy `.env.example` to `.env` and set:
+Production (required for any device or TestFlight build):
 ```
-EXPO_PUBLIC_CLAUDE_API_KEY=sk-ant-...
+EXPO_PUBLIC_PROXY_URL=https://outfit-oracle-proxy.<subdomain>.workers.dev
 ```
 
-The key is read in `src/screens/HomeScreen.tsx` via `process.env.EXPO_PUBLIC_CLAUDE_API_KEY`. It is sent directly from the client using the `anthropic-dangerous-direct-browser-access: true` header — there is no backend proxy. This is acceptable for development but flagged in the README production checklist.
+The app calls the Cloudflare Worker proxy which holds the Anthropic key server-side. `EXPO_PUBLIC_CLAUDE_API_KEY` must NOT be set in production builds — the key would be baked into the JS bundle and readable from the IPA.
+
+Development only (no proxy): set `EXPO_PUBLIC_CLAUDE_API_KEY` in `.env` and leave `EXPO_PUBLIC_PROXY_URL` unset. Direct calls will fail without the proxy since `anthropic-dangerous-direct-browser-access` has been removed. Use the proxy for all environments.
 
 ## Architecture
 
@@ -47,9 +49,19 @@ Single-screen Expo bare workflow app. No navigation library — `App.tsx` render
 
 `HomeScreen` → `useOracle` hook → two sequential fetches:
 1. `fetchWeather(city)` — Open-Meteo geocoding + weather (free, no key)
-2. `fetchOracleVerdict(weather, gender, apiKey)` — Claude Sonnet 4.6
+2. `fetchOracleVerdict(weather, gender, apiKey, styleProfile?)` — Cloudflare Worker proxy → Claude Sonnet 4.6
 
 `useOracle` is the only stateful layer. It exposes `status` (`idle | fetching-weather | fetching-verdict | done | error`), the `weather` and `verdict` payloads, and `consult` / `reset` actions. All display components are pure presentational — they receive props only.
+
+### Proxy routing (`src/services/oracle.ts`)
+
+`fetchOracleVerdict` checks `EXPO_PUBLIC_PROXY_URL` at module init:
+- **Set** → `viaProxy()`: POST `{ weather, gender, styleProfile? }` to the Cloudflare Worker; Worker calls Anthropic server-side.
+- **Not set** → `viaDirect()`: direct Anthropic API call. Requires `EXPO_PUBLIC_CLAUDE_API_KEY`. Note: `anthropic-dangerous-direct-browser-access` header has been removed — direct calls will 403. Use the proxy.
+
+### Style profile (`src/hooks/useStyleProfile.ts`)
+
+`useStyleProfile` loads the user's aesthetic preferences (keywords + budget tier) from AsyncStorage. Status can be `loading | not-set | skipped | set`. HomeScreen shows `StyleOnboarding` when status is `not-set`. Profile is passed to Claude's prompt on every consult. `skip()` persists a marker so onboarding doesn't reappear.
 
 ### Claude integration (`src/services/oracle.ts`)
 

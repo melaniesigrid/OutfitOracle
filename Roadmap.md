@@ -57,12 +57,12 @@
 
 ### App Identity
 - [x] **Bundle identifier** — `com.melaniesigrid.outfitoracle` set in `app.json` ✅ 2026/05/11
-- [ ] **App icon** — 1024×1024 PNG in `assets/`; editorial aesthetic (the "O" monogram or an oracle eye motif)
-- [ ] **Splash screen** — cream background with wordmark; wire `"splash.image"` in `app.json`
-- [ ] **Privacy policy** — required by Apple, Google, and any AI-disclosure rules; must mention Claude/Anthropic and weather data
+- [x] **App icon** — `src/logo-dark.png` (2000×2000, jet-black + white wordmark); resized to 1024×1024 into iOS asset catalog; `"icon"` wired in `app.json` ✅ 2026/05/11
+- [x] **Splash screen** — `src/logo-light.png` (cream + scarlet wordmark); `"splash.image"` wired in `app.json`; `expo-splash-screen@0.27.7` installed; `resizeMode: "contain"` on cream `#FAF9F6` ✅ 2026/05/11
+- [x] **Privacy policy** — `PRIVACY_POLICY.md` covering Claude/Anthropic, Open-Meteo, AsyncStorage, PostHog ✅ 2026/05/11
 
 ### Stability
-- [ ] **Crash reporting** — `@sentry/react-native` before any external users; without it you're flying blind
+- [x] **Crash reporting** — `@sentry/react-native@8.x`; JS exceptions auto-captured + `captureException` on all Oracle errors; `Sentry.wrap(App)` in `App.tsx`; no-ops when DSN not set; native setup requires `npx @sentry/wizard@latest -s -i reactNative` + DSN in `.env` ✅ 2026/05/11
 - [ ] **VoiceOver / TalkBack audit** — all Pressables have labels and roles; needs end-to-end device test
 
 ---
@@ -72,25 +72,48 @@
 > Features that make the app shareable, sticky, and reviewable. Ship before monetising — users won't pay for something they don't love yet.
 
 ### Virality
-- [ ] **Share card** — `expo-view-shot` + `expo-sharing`; a portrait image with the editorial masthead, today's vibe, and top 3 outfit items. Designed to be screenshot-worthy and Instagram-ready. This is the single highest-leverage growth feature.
+- [x] **Share card** — `react-native-view-shot` + React Native `Share`; editorial portrait card with masthead, vibe, weather, top 3 outfits, scarlet accent ✅ 2026/05/11
 - [ ] **"Rate my outfit day"** — after the user has dressed and gone out, a time-delayed prompt (via local notification at 9am) asks them to rate how accurate the Oracle was (1-5 stars). Shown in the history feed. Social proof + engagement loop.
 
 ### Input Quality
-- [ ] **GPS auto-detect** — `expo-location` + `foregroundPermission`; "Use my location" button; reverse-geocode via Open-Meteo. Removes the single biggest friction point in the onboarding flow.
+- [x] **GPS auto-detect** — `expo-location@55.x`; "Use my location" below city input; `reverseGeocodeAsync` for city name; `consultByCoords` in `useOracle` calls Open-Meteo directly with coordinates (no double-geocode); graceful silent fallback if permission denied ✅ 2026/05/11
 - [x] **City autocomplete** — debounced Open-Meteo geocoding suggestions; collapses immediately on selection and suppresses re-appearance until user types again ✅ 2026/05/11
 
 ### Retention
-- [ ] **Outfit history** — store every consultation (date, city, weather snapshot, verdict, outfits) in AsyncStorage; scrollable archive surfaced below the input; browsable by date
+- [x] **Outfit history** — `useOutfitHistory` hook; saves every fresh consult (deduped within 5min window, capped at 20); "ORACLE ARCHIVES" section in HomeScreen with date/city/vibe/temp rows; tap to re-consult ✅ 2026/05/11
 - [x] **Last result cache** — app opens to last result (12hr TTL); city pre-filled; "LAST CONSULTED" badge with one-tap refresh ✅ 2026/05/11
 - [x] **Analytics** — PostHog HTTP API (no SDK, no rebuild); tracks app_opened, consult_started, consult_completed (with duration), consult_error, share_card_tapped, recent_city_tapped, autocomplete_city_selected; no-op if key not set ✅ 2026/05/11
 - [ ] **Daily push notification** — `expo-notifications`; optional opt-in at first consult; fires at user-set time with today's city vibe teaser; deep-links to a fresh result
 
-### Virality (cont.)
-- [x] **Share card** — `react-native-view-shot` + `expo-sharing`; editorial portrait card (375×667) with masthead, vibe, weather, top 3 outfits, scarlet accent; "SHARE THE LOOK →" button in results ✅ 2026/05/11
 
 ### Content Depth
-- [ ] **Skeleton loading UI** — editorial placeholder cards matching the final layout; eliminates the layout shift during the ~3s Claude response time
+- [x] **Skeleton loading UI** — `SkeletonResults` component; shimmer placeholder matching WeatherStrip/VerdictCard/3×OutfitCard layouts; shown alongside atmospheric loading messages during fetch ✅ 2026/05/11
 - [ ] **Alternative outfits** — prompt Claude for 2 outfit sets (polished + casual) and let the user swipe between them; doubles the perceived value per consult
+
+### Gamification — The Oracle's Court
+> Inspired by the 2026 trend of gamified digital experiences (Duolingo streaks, Sephora challenges, progress-as-reward UX). The execution here must stay true to the editorial aesthetic — no XP bars or pixel badges. Every mechanic is reframed in the Oracle's voice: devotion, rank, pilgrimage.
+
+- [x] **Consult streak** — `useConsultStreak` hook; consecutive-day tracking in AsyncStorage; streak badge in masthead ("7-DAY DEVOTEE"); milestones at 3/7/14/30/100 days trigger haptic + dismissible scarlet banner; same-day double-count prevented ✅ 2026/05/11
+
+- [x] **Oracle Rank** — a tier system based on lifetime consults, not a point score. Titles stay in the editorial register:
+  | Consults | Title |
+  |---|---|
+  | 1–4 | Initiate |
+  | 5–19 | Devotee |
+  | 20–49 | Connoisseur |
+  | 50–99 | Muse |
+  | 100+ | Oracle's Chosen |
+  Displayed as a small label in the profile/settings sheet. Unlocking a new rank triggers a haptic + a one-time congratulatory banner (implemented). ✅ 2026/05/11
+
+- [x] **Style Passport** — running tally of unique cities in YouScreen; milestone stamps at 10/25/50 cities ("Globetrotter", "World Citizen", "The Nomad Oracle") derived from `useOutfitHistory` ✅ 2026/05/11
+
+- [x] **Weather badges** — `useWeatherBadges` hook; 16 badges: temperature extremes (Blizzard Chic, Polar Explorer, Desert Muse), UV (Solar Oracle, Extreme UV), precipitation (Snow Day, Storm Chaser, Rain Oracle, Rain Dancer), sunshine (The Sun Devotee, Sunshine Streak), conditions (Four Seasons), timing (Night Oracle), travel (World Citizen), anniversary (Six-Month Devotee, Year of the Oracle); `firstConsultAt` tracked in `useOutfitHistory` for anniversary badges; earned badges shown full-opacity, unearned dimmed; displayed in YouScreen ✅ 2026/05/11
+
+- [ ] **Weekly editorial challenge** — a fresh brief every Monday, generated by Claude and stored in the Worker (or hardcoded rotating set). Examples: *"This week: dress for rain in three different cities"* or *"Consult from two continents before Sunday."* Completing it adds a limited badge and a congratulatory share card variant. The challenge is shown as a strip below the city input when active.
+
+- [ ] **Oracle Accuracy score** — powered by the existing "Rate my outfit day" prompt (Phase 2 Virality). After rating, the running accuracy percentage is shown in the profile: "The Oracle has been right 78% of the time." High accuracy (>80%) unlocks a "Trusted Oracle" badge. Low accuracy (<50%) triggers a prompt to update the style profile — closing the personalisation feedback loop.
+
+- [ ] **Leaderboard (post-scale)** — opt-in global leaderboard ranked by streak length and city count. Privacy-safe: display name only (derived from city of first consult, e.g. "The London Oracle"). Requires a lightweight backend (Cloudflare KV or D1). Do not build until DAU > 1,000 — leaderboards are empty and demotivating below critical mass.
 
 ---
 
@@ -99,8 +122,10 @@
 > Without personalisation the Oracle gives the same answer to everyone in the same city. This is the moat.
 
 ### Style Profile (onboarding)
-- [ ] **3-step onboarding** — shown on first launch; skippable but nudged. Step 1: gender. Step 2: style keywords (pick 3 from: Minimal / Maximalist / Streetwear / Classic / Eclectic / Coastal / Dark Academic / Y2K). Step 3: budget tier (High Street / Contemporary / Luxury). Stored in AsyncStorage, passed as context to Claude on every consult.
-- [ ] **Settings sheet** — accessible from a gear icon in the masthead; edit style profile, toggle notifications, view history, clear data
+- [x] **3-step onboarding** — 2-step UI (keywords pick-3 + budget tier); skippable with persisted marker; profile badge in masthead taps to re-edit; profile passed to Claude on every consult via proxy and direct path ✅ 2026/05/11
+- [x] **Oracle Personality selection** — Diplomat / Editor / Savage Oracle; voice injected into prompt on every consult; selectable in onboarding and editable in ProfileEditScreen ✅ 2026/05/11
+- [x] **ProfileEditScreen** — name, keywords (pick-3), budget tier, Oracle voice; accessible from YouScreen "Edit →" ✅ 2026/05/11
+- [ ] **Settings sheet** — toggle notifications, clear data
 
 ### Wardrobe
 - [ ] **Saved outfits** — heart icon on each outfit card; saved looks stored in AsyncStorage; accessible from the header
@@ -142,7 +167,14 @@
 
 ---
 
+- [x] **Expanded TodayScreen** — hourly forecast (next 24h horizontal scroll with time/icon/temp/precip%/UV); conditions strip (UV with color-coded label, sunrise, sunset, moon phase icon + name); 7-day daily forecast (day label, icon, condition, precip%, high/low temps); allergens & air quality section (AQI + grass/birch/ragweed pollen levels); verdict + outfit chips moved below weather detail ✅ 2026/05/11
+
 ## Recently Completed
+
+- [x] **Multi-screen UX redesign** — 3-tab navigation (Today / Oracle / You); welcome flow (Intro → Carousel → Personality → Style Onboarding); `AppDataProvider` context sharing oracle state across tabs; `ProfileEditScreen`; `YouScreen` with rank hero, Style Passport, archives ✅ 2026/05/11
+- [x] **Consult streak + Oracle Rank** — `useConsultStreak` hook; streak badge in masthead; milestone/rank banner with haptic; `SkeletonResults` shimmer loading ✅ 2026/05/11
+- [x] **Style profile onboarding** — 2-step flow (keywords + budget), skippable with persistence, profile badge in masthead, profile passed to Claude prompt ✅ 2026/05/11
+- [x] **Outfit history** — `useOutfitHistory`, "ORACLE ARCHIVES" list, tap-to-reconsult ✅ 2026/05/11
 
 - [x] **ROADMAP.md professional audit** ✅ 2026/05/10
 - [x] **Phase 1 accessibility pass** ✅ 2026/05/10

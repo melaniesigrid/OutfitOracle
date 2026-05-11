@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchWeather, WeatherData } from '../services/weather';
+import * as Sentry from '@sentry/react-native';
+import { fetchWeather, fetchWeatherByCoords, WeatherData } from '../services/weather';
 import { fetchOracleVerdict, OracleVerdict } from '../services/oracle';
+import { StyleProfile } from './useStyleProfile';
 import {
   trackConsultStarted,
   trackConsultCompleted,
@@ -48,7 +50,12 @@ export function useOracle(apiKey: string) {
     });
   }, []);
 
-  const consult = useCallback(async (city: string, gender: string) => {
+  const runConsult = useCallback(async (
+    city: string,
+    gender: string,
+    wxFetch: Promise<WeatherData>,
+    styleProfile?: StyleProfile,
+  ) => {
     isFromCacheRef.current = false;
     setError(null);
     setVerdict(null);
@@ -61,11 +68,11 @@ export function useOracle(apiKey: string) {
 
     try {
       setStatus('fetching-weather');
-      const wx = await fetchWeather(city);
+      const wx = await wxFetch;
       setWeather(wx);
 
       setStatus('fetching-verdict');
-      const v = await fetchOracleVerdict(wx, gender, apiKey);
+      const v = await fetchOracleVerdict(wx, gender, apiKey, styleProfile);
       setVerdict(v);
       setStatus('done');
 
@@ -74,13 +81,26 @@ export function useOracle(apiKey: string) {
       const toCache: CachedResult = { city, weather: wx, verdict: v, timestamp: Date.now() };
       AsyncStorage.setItem(CACHE_KEY, JSON.stringify(toCache));
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Something went wrong. The Oracle is displeased.';
       const phase = weather ? 'verdict' : 'weather';
+      const msg = e instanceof Error ? e.message : 'Something went wrong. The Oracle is displeased.';
+      Sentry.captureException(e, { tags: { city, phase } });
       trackConsultError(city, phase, msg);
       setError(msg);
       setStatus('error');
     }
   }, [apiKey]);
+
+  const consult = useCallback(
+    (city: string, gender: string, styleProfile?: StyleProfile) =>
+      runConsult(city, gender, fetchWeather(city), styleProfile),
+    [runConsult],
+  );
+
+  const consultByCoords = useCallback(
+    (lat: number, lng: number, city: string, country: string, gender: string, styleProfile?: StyleProfile) =>
+      runConsult(city, gender, fetchWeatherByCoords(lat, lng, city, country), styleProfile),
+    [runConsult],
+  );
 
   const reset = useCallback(() => {
     isFromCacheRef.current = false;
@@ -98,6 +118,7 @@ export function useOracle(apiKey: string) {
     verdict,
     error,
     consult,
+    consultByCoords,
     reset,
     cachedCity,
     cachedAt,
