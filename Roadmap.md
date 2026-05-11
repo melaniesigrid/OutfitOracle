@@ -40,6 +40,7 @@
 - [ ] **Rotate the Anthropic API key** — generate a new key at console.anthropic.com; update the Cloudflare Worker secret (`wrangler secret put ANTHROPIC_API_KEY`). The old key was exposed in the bundle during early development. This is a security blocker.
 - [ ] **Host the privacy policy** — publish `PRIVACY_POLICY.md` as a public web page (GitHub Pages, Notion public page, or a simple HTML file). App Store Connect requires a live URL — a markdown file in a private repo is not accepted.
 - [ ] **Configure Sentry** — run `npx @sentry/wizard@latest -s -i reactNative` in the project root; set `SENTRY_DSN` in `.env` and in the Cloudflare Worker. Without this, crashes on beta devices go undetected.
+- [ ] **Add PrivacyInfo.xcprivacy** — surfaced during pod install after adding react-native-maps. Apple requires a privacy manifest listing Required Reasons APIs (e.g. file timestamps, user defaults). Add the file to the Xcode project; a template is at `ios/PrivacyInfo.xcprivacy`. Required for App Store submission from Spring 2024 onward.
 
 ### Nice-to-have before archive
 
@@ -186,6 +187,7 @@
 - [x] **Outfit history + last result cache** — `useOutfitHistory`, tap-to-reconsult, 12hr TTL ✅ 2026/05/11
 - [x] **Expanded TodayScreen** — hourly forecast, 7-day daily, UV, sun/moon, allergens ✅ 2026/05/11
 - [x] **Weather service expansion** — pollen/AQI (Open-Meteo Air Quality API), moon phase calculation, parallel fetches ✅ 2026/05/11
+- [x] **Style Passport world map** — `MapScreen` with Apple Maps (mutedStandard); scarlet markers for visited cities with visit-count badge; 5 fashion capital inspiration markers (Paris/Milan/NY/London/Tokyo) that hide once visited; tap-to-select city detail card (name, country, last vibe, temp, condition, date); passport stats panel (city count, milestone countdown, earned stamps); `lat/lon` added to `WeatherData`; entry via "VIEW ON MAP" in YouScreen ✅ 2026/05/11
 - [x] **City autocomplete alignment fix** — `CitySuggestions` now respects screen horizontal margins ✅ 2026/05/11
 - [x] **BEST_PRACTICES.md** — commit conventions, TypeScript rules, RN/Expo constraints documented ✅ 2026/05/11
 - [x] **Engineering audit + 9 bug fixes** ✅ 2026/05/11
