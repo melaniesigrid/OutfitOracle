@@ -69,6 +69,8 @@ export interface WeatherData {
   conditionLabel: string;
   conditionIcon: string;
   description: string;
+  latitude?: number;
+  longitude?: number;
   uvIndex?: number;
   hourly?: HourlyForecast[];
   daily?: DailyForecast[];
@@ -240,6 +242,8 @@ function buildWeatherResult(
     daily:         daily.length  ? daily  : undefined,
     sunrise:       today?.sunrise,
     sunset:        today?.sunset,
+    latitude:      wxData.latitude,
+    longitude:     wxData.longitude,
     moonPhase:     moon.phase,
     moonPhaseName: moon.name,
     moonPhaseIcon: moon.icon,

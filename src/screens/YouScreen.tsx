@@ -80,6 +80,16 @@ export function YouScreen() {
               {cityCount === 1 ? 'city consulted' : 'cities consulted'}
             </Text>
           </View>
+          <Pressable
+            style={styles.mapLink}
+            onPress={() => navigation.navigate('Map')}
+            accessibilityRole="button"
+            accessibilityLabel="View your city map"
+          >
+            <MaterialCommunityIcons name="map-outline" size={12} color={colors.scarlet} />
+            <Text style={styles.mapLinkText}>VIEW ON MAP</Text>
+          </Pressable>
+
           {nextMilestone && (
             <Text style={styles.passportNext}>
               {nextMilestone.cities - cityCount} more until "{nextMilestone.title}"
@@ -324,6 +334,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 0.5,
+  },
+  mapLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.scarlet,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+  },
+  mapLinkText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: colors.scarlet,
+    letterSpacing: 1.5,
   },
   passportNext: {
     fontFamily: fonts.mono,
