@@ -8,6 +8,7 @@ import { PersonalityScreen } from '../screens/PersonalityScreen';
 import { StyleOnboarding } from '../components/StyleOnboarding';
 import { ProfileEditScreen } from '../screens/ProfileEditScreen';
 import { MapScreen } from '../screens/MapScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { TabNavigator } from './TabNavigator';
 import { OraclePersonality } from '../hooks/useStyleProfile';
 
@@ -30,6 +31,11 @@ function MainStack() {
         name="Map"
         component={MapScreen}
         options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
     </Stack.Navigator>
   );

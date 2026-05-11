@@ -55,6 +55,7 @@ export function useOracle(apiKey: string) {
     gender: string,
     wxFetch: Promise<WeatherData>,
     styleProfile?: StyleProfile,
+    occasion?: string,
   ) => {
     isFromCacheRef.current = false;
     setError(null);
@@ -72,7 +73,7 @@ export function useOracle(apiKey: string) {
       setWeather(wx);
 
       setStatus('fetching-verdict');
-      const v = await fetchOracleVerdict(wx, gender, apiKey, styleProfile);
+      const v = await fetchOracleVerdict(wx, gender, apiKey, styleProfile, occasion);
       setVerdict(v);
       setStatus('done');
 
@@ -91,14 +92,14 @@ export function useOracle(apiKey: string) {
   }, [apiKey]);
 
   const consult = useCallback(
-    (city: string, gender: string, styleProfile?: StyleProfile) =>
-      runConsult(city, gender, fetchWeather(city), styleProfile),
+    (city: string, gender: string, styleProfile?: StyleProfile, occasion?: string) =>
+      runConsult(city, gender, fetchWeather(city), styleProfile, occasion),
     [runConsult],
   );
 
   const consultByCoords = useCallback(
-    (lat: number, lng: number, city: string, country: string, gender: string, styleProfile?: StyleProfile) =>
-      runConsult(city, gender, fetchWeatherByCoords(lat, lng, city, country), styleProfile),
+    (lat: number, lng: number, city: string, country: string, gender: string, styleProfile?: StyleProfile, occasion?: string) =>
+      runConsult(city, gender, fetchWeatherByCoords(lat, lng, city, country), styleProfile, occasion),
     [runConsult],
   );
 

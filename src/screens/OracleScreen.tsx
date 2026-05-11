@@ -10,6 +10,7 @@ import * as Location from 'expo-location';
 import { useAppData } from '../contexts/AppContext';
 import { useRecentCities } from '../hooks/useRecentCities';
 import { GenderToggle, Gender } from '../components/GenderToggle';
+import { OccasionPicker, Occasion } from '../components/OccasionPicker';
 import { WeatherStrip } from '../components/WeatherStrip';
 import { VerdictCard } from '../components/VerdictCard';
 import { OutfitCard } from '../components/OutfitCard';
@@ -31,6 +32,7 @@ export function OracleScreen() {
 
   const [city, setCity]               = useState('');
   const [gender, setGender]           = useState<Gender>('Women');
+  const [occasion, setOccasion]       = useState<Occasion>('Any');
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
   const [locationLoading, setLocationLoading] = useState(false);
 
@@ -88,7 +90,7 @@ export function OracleScreen() {
     setCity(target);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     addCity(target);
-    consult(target, gender, profile);
+    consult(target, gender, profile, occasion);
     setTimeout(() => scrollRef.current?.scrollTo({ y: 240, animated: true }), 400);
   };
 
@@ -110,7 +112,7 @@ export function OracleScreen() {
       setCity(detectedCity);
       addCity(detectedCity);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      consultByCoords(loc.coords.latitude, loc.coords.longitude, detectedCity, detectedCountry, gender, profile);
+      consultByCoords(loc.coords.latitude, loc.coords.longitude, detectedCity, detectedCountry, gender, profile, occasion);
       setTimeout(() => scrollRef.current?.scrollTo({ y: 240, animated: true }), 400);
     } catch {
       // GPS unavailable — silent fallback
@@ -208,6 +210,7 @@ export function OracleScreen() {
           )}
 
           <GenderToggle selected={gender} onChange={setGender} />
+          <OccasionPicker selected={occasion} onChange={setOccasion} />
 
           {/* ── CTA ── */}
           <Animated.View style={{ transform: [{ scale: btnScale }] }}>

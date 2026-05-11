@@ -71,10 +71,13 @@ const PERSONALITY_VOICE = {
   savage:     'Be ruthlessly honest. If the weather is terrible or certain choices are unacceptable, say so with sharp wit and zero softening. Fashion is a serious matter.',
 };
 
-function buildPrompt(weather, gender, styleProfile) {
+function buildPrompt(weather, gender, styleProfile, occasion) {
   const voiceInstruction = PERSONALITY_VOICE[styleProfile?.personality ?? 'editorial'];
   const profileSection = styleProfile?.keywords?.length
     ? `\nUser style profile:\n- Name: ${styleProfile.name ?? 'The Devotee'}\n- Aesthetic: ${styleProfile.keywords.join(', ')}\n- Budget tier: ${styleProfile.budget} (${BUDGET_NOTES[styleProfile.budget] ?? ''})\nTailor all item recommendations to this aesthetic and budget range.\n`
+    : '';
+  const occasionNote = occasion && occasion !== 'Any'
+    ? `- Occasion: ${occasion} — shape every recommendation specifically for this context.\n`
     : '';
 
   return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
@@ -86,6 +89,7 @@ Weather right now:
 - Humidity: ${weather.humidity}%
 - Wind: ${weather.windSpeed} km/h
 - Dressing for: ${gender}
+${occasionNote}
 
 Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble:
 
@@ -129,7 +133,7 @@ export default {
       return json({ error: 'Invalid JSON body' }, 400);
     }
 
-    const { weather, gender, styleProfile } = body;
+    const { weather, gender, styleProfile, occasion } = body;
     if (!weather || !gender) {
       return json({ error: 'Missing required fields: weather, gender' }, 400);
     }
@@ -144,7 +148,7 @@ export default {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
-        messages: [{ role: 'user', content: buildPrompt(weather, gender, styleProfile) }],
+        messages: [{ role: 'user', content: buildPrompt(weather, gender, styleProfile, occasion) }],
       }),
     });
 

@@ -51,6 +51,14 @@ export function YouScreen() {
 
         {/* ── RANK HERO ── */}
         <View style={styles.rankHero}>
+          <Pressable
+            style={styles.settingsBtn}
+            onPress={() => navigation.navigate('Settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
+          >
+            <MaterialCommunityIcons name="cog-outline" size={20} color="rgba(250,249,246,0.35)" />
+          </Pressable>
           <Text style={styles.rankEyebrow}>ORACLE RANK</Text>
           <Text style={styles.rankTitle}>{rankTitle}</Text>
           <View style={styles.rankMeta}>
@@ -238,6 +246,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
     marginBottom: spacing.md,
+  },
+  settingsBtn: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    padding: 8,
+    zIndex: 1,
   },
   rankEyebrow: {
     fontFamily: fonts.mono,

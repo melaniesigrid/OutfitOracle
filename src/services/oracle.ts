@@ -31,10 +31,13 @@ export interface OracleVerdict {
   rating: number;
 }
 
-function buildPrompt(weather: WeatherData, gender: string, profile?: StyleProfile): string {
+function buildPrompt(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string): string {
   const voiceInstruction = PERSONALITY_VOICE[profile?.personality ?? 'editorial'];
   const profileSection = profile?.keywords?.length
     ? `\nUser style profile:\n- Name: ${profile.name ?? 'The Devotee'}\n- Aesthetic: ${profile.keywords.join(', ')}\n- Budget tier: ${profile.budget} (${BUDGET_NOTES[profile.budget] ?? ''})\nTailor all item recommendations to this aesthetic and budget range.\n`
+    : '';
+  const occasionNote = occasion && occasion !== 'Any'
+    ? `- Occasion: ${occasion} — shape every recommendation specifically for this context.\n`
     : '';
 
   return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
@@ -46,6 +49,7 @@ Weather right now:
 - Humidity: ${weather.humidity}%
 - Wind: ${weather.windSpeed} km/h
 - Dressing for: ${gender}
+${occasionNote}
 
 Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble:
 
@@ -64,11 +68,11 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
 }`;
 }
 
-async function viaProxy(weather: WeatherData, gender: string, profile?: StyleProfile): Promise<OracleVerdict> {
+async function viaProxy(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string): Promise<OracleVerdict> {
   const resp = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ weather, gender, styleProfile: profile }),
+    body: JSON.stringify({ weather, gender, styleProfile: profile, occasion }),
   });
 
   if (!resp.ok) {
@@ -79,7 +83,7 @@ async function viaProxy(weather: WeatherData, gender: string, profile?: StylePro
   return resp.json() as Promise<OracleVerdict>;
 }
 
-async function viaDirect(weather: WeatherData, gender: string, apiKey: string, profile?: StyleProfile): Promise<OracleVerdict> {
+async function viaDirect(weather: WeatherData, gender: string, apiKey: string, profile?: StyleProfile, occasion?: string): Promise<OracleVerdict> {
   const resp = await fetch(CLAUDE_API, {
     method: 'POST',
     headers: {
@@ -90,7 +94,7 @@ async function viaDirect(weather: WeatherData, gender: string, apiKey: string, p
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 1000,
-      messages: [{ role: 'user', content: buildPrompt(weather, gender, profile) }],
+      messages: [{ role: 'user', content: buildPrompt(weather, gender, profile, occasion) }],
     }),
   });
 
@@ -118,6 +122,9 @@ export async function fetchOracleVerdict(
   gender: string,
   apiKey: string,
   profile?: StyleProfile,
+  occasion?: string,
 ): Promise<OracleVerdict> {
-  return PROXY_URL ? viaProxy(weather, gender, profile) : viaDirect(weather, gender, apiKey, profile);
+  return PROXY_URL
+    ? viaProxy(weather, gender, profile, occasion)
+    : viaDirect(weather, gender, apiKey, profile, occasion);
 }
