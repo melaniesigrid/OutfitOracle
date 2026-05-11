@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Outfit Oracle",
+    "slug": "outfit-oracle",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "outfitoracle",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FAF9F6",
+    "splash": {
+      "backgroundColor": "#FAF9F6"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourname.outfitoracle"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D0D0F"
+      },
+      "package": "com.yourname.outfitoracle"
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "extra": {}
+  }
+}

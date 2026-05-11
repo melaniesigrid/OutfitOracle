@@ -1,0 +1,31 @@
+{
+  "name": "outfit-oracle",
+  "version": "1.0.0",
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo-google-fonts/cormorant-garamond": "^0.4.1",
+    "@expo-google-fonts/ibm-plex-mono": "^0.2.3",
+    "@expo-google-fonts/syne": "^0.2.3",
+    "@react-native-async-storage/async-storage": "^3.0.2",
+    "expo": "~51.0.0",
+    "expo-font": "~12.0.0",
+    "expo-haptics": "^55.0.14",
+    "expo-status-bar": "~1.12.0",
+    "react": "18.2.0",
+    "react-native": "0.74.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/node": "^25.6.2",
+    "@types/react": "~18.2.0",
+    "@types/react-native": "~0.73.0",
+    "typescript": "~5.3.0"
+  },
+  "private": true
+}
