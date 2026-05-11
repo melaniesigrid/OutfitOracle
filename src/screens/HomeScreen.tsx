@@ -11,9 +11,9 @@ import {
   Platform,
   StatusBar,
   Dimensions,
+  Share,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing';
 import { useFonts } from 'expo-font';
 import {
   CormorantGaramond_700Bold_Italic,
@@ -83,7 +83,7 @@ export function HomeScreen() {
     if (!shareCardRef.current) return;
     try {
       const uri = await captureRef(shareCardRef, { format: 'png', quality: 1 });
-      await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your Oracle verdict' });
+      await Share.share({ url: uri });
     } catch {
       // user cancelled or sharing unavailable
     }
