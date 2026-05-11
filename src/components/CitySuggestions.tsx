@@ -41,12 +41,12 @@ const styles = StyleSheet.create({
   container: {
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
+    marginHorizontal: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   row: {
     paddingVertical: 12,
-    paddingHorizontal: 2,
   },
   rowBorder: {
     borderBottomWidth: 1,
