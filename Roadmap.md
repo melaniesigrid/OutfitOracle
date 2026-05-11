@@ -26,7 +26,33 @@
 | 6 | 2026/05/11 | `console.log` leaking partial API key in production | Removed both log statements |
 | 7 | 2026/05/11 | `key={i}` on `OutfitCard` list — index-based key | Changed to `key={item.category}` (stable, unique per response) |
 | 8 | 2026/05/11 | `textMuted` (#9A958E) contrast 2.70:1 — fails accessibility guidelines (4.5:1 required) | Darkened to #706A66 → 5.08:1, passes AA |
-| 9 | 2026/05/11 | All remaining 8–9px informational labels — WeatherStrip condition/statSub, HomeScreen inputLabel/recentsLabel/errorLabel | Bumped to 10px across all components |
+| 9 | 2026/05/11 | All remaining 8–9px informational labels | Bumped to 10px across all components |
+| 10 | 2026/05/11 | City suggestions appeared flush left | Added `marginHorizontal: spacing.lg` to `CitySuggestions` container |
+
+---
+
+## TestFlight Beta — Launch Checklist 🚀
+
+> These are the **only** remaining tasks before uploading to App Store Connect for internal beta testing. They can be completed in a single focused session.
+
+### Must-do before archive
+
+- [ ] **Rotate the Anthropic API key** — generate a new key at console.anthropic.com; update the Cloudflare Worker secret (`wrangler secret put ANTHROPIC_API_KEY`). The old key was exposed in the bundle during early development. This is a security blocker.
+- [ ] **Host the privacy policy** — publish `PRIVACY_POLICY.md` as a public web page (GitHub Pages, Notion public page, or a simple HTML file). App Store Connect requires a live URL — a markdown file in a private repo is not accepted.
+- [ ] **Configure Sentry** — run `npx @sentry/wizard@latest -s -i reactNative` in the project root; set `SENTRY_DSN` in `.env` and in the Cloudflare Worker. Without this, crashes on beta devices go undetected.
+
+### Nice-to-have before archive
+
+- [ ] **VoiceOver / TalkBack device audit** — all Pressables have labels and roles in code; needs a 15-minute end-to-end test on a real device with VoiceOver enabled. Apple will require this for public release.
+- [ ] **App Store Connect record** — create the app listing (name: "Outfit Oracle", category: Lifestyle, age rating: 4+, privacy policy URL from above). Required before you can upload a build.
+- [ ] **App Store screenshots** — 6.5" iPhone (1284×2778) and 5.5" iPhone (1242×2208); minimum 3 per device class. Can be captured from the simulator.
+- [ ] **Settings sheet** — minimum viable: a way for beta users to clear data and opt out of analytics. Apple reviewers look for data deletion options.
+
+### After archive is uploaded
+
+- [ ] Add internal testers to TestFlight (up to 100 without review)
+- [ ] Set a beta feedback email in App Store Connect
+- [ ] Monitor Sentry dashboard for first-session crashes
 
 ---
 
@@ -46,74 +72,54 @@
 
 ---
 
-## Phase 1 — App Store Readiness 🚨
+## Phase 1 — App Store Infrastructure ✅
 
-> Hard blockers before any public release.
-
-### Security
 - [x] **Backend proxy for Claude API** — Cloudflare Worker deployed, `EXPO_PUBLIC_PROXY_URL` set ✅ 2026/05/11
-- [ ] **Rotate the API key** — generate a new key on the Anthropic dashboard; old key was exposed in bundle history
-- [x] **Rate limiting on the proxy** — KV-based, 20 req/hr per IP; gracefully skipped if KV not yet wired ✅ 2026/05/11
-
-### App Identity
-- [x] **Bundle identifier** — `com.melaniesigrid.outfitoracle` set in `app.json` ✅ 2026/05/11
-- [x] **App icon** — `src/logo-dark.png` (2000×2000, jet-black + white wordmark); resized to 1024×1024 into iOS asset catalog; `"icon"` wired in `app.json` ✅ 2026/05/11
-- [x] **Splash screen** — `src/logo-light.png` (cream + scarlet wordmark); `"splash.image"` wired in `app.json`; `expo-splash-screen@0.27.7` installed; `resizeMode: "contain"` on cream `#FAF9F6` ✅ 2026/05/11
-- [x] **Privacy policy** — `PRIVACY_POLICY.md` covering Claude/Anthropic, Open-Meteo, AsyncStorage, PostHog ✅ 2026/05/11
-
-### Stability
-- [x] **Crash reporting** — `@sentry/react-native@8.x`; JS exceptions auto-captured + `captureException` on all Oracle errors; `Sentry.wrap(App)` in `App.tsx`; no-ops when DSN not set; native setup requires `npx @sentry/wizard@latest -s -i reactNative` + DSN in `.env` ✅ 2026/05/11
-- [ ] **VoiceOver / TalkBack audit** — all Pressables have labels and roles; needs end-to-end device test
+- [x] **Rate limiting on the proxy** — KV-based, 20 req/hr per IP ✅ 2026/05/11
+- [x] **Bundle identifier** — `com.melaniesigrid.outfitoracle` ✅ 2026/05/11
+- [x] **App icon** — 1024×1024 wired in `app.json` ✅ 2026/05/11
+- [x] **Splash screen** — cream background, scarlet wordmark, `expo-splash-screen` ✅ 2026/05/11
+- [x] **Privacy policy document** — `PRIVACY_POLICY.md` covering all third-party services ✅ 2026/05/11
+- [x] **Crash reporting** — Sentry installed, `Sentry.wrap(App)`, no-ops without DSN ✅ 2026/05/11
 
 ---
 
 ## Phase 2 — Growth Engine
 
-> Features that make the app shareable, sticky, and reviewable. Ship before monetising — users won't pay for something they don't love yet.
+> Features that make the app shareable, sticky, and reviewable. Ship before monetising.
 
 ### Virality
-- [x] **Share card** — `react-native-view-shot` + React Native `Share`; editorial portrait card with masthead, vibe, weather, top 3 outfits, scarlet accent ✅ 2026/05/11
-- [ ] **"Rate my outfit day"** — after the user has dressed and gone out, a time-delayed prompt (via local notification at 9am) asks them to rate how accurate the Oracle was (1-5 stars). Shown in the history feed. Social proof + engagement loop.
-
-### Input Quality
-- [x] **GPS auto-detect** — `expo-location@55.x`; "Use my location" below city input; `reverseGeocodeAsync` for city name; `consultByCoords` in `useOracle` calls Open-Meteo directly with coordinates (no double-geocode); graceful silent fallback if permission denied ✅ 2026/05/11
-- [x] **City autocomplete** — debounced Open-Meteo geocoding suggestions; collapses immediately on selection and suppresses re-appearance until user types again ✅ 2026/05/11
+- [x] **Share card** — editorial portrait card with masthead, vibe, weather, top 3 outfits ✅ 2026/05/11
+- [ ] **"Rate my outfit day"** — time-delayed prompt (local notification) after the user has gone out; 1–5 star rating on Oracle accuracy; shown in history feed; feeds Oracle Accuracy score (see Gamification)
+- [ ] **App Clip** — a shareable link (`outfitoracle.app/clip?city=Paris`) renders a lightweight clip showing today's verdict for any city; non-users can try the Oracle without installing; drives conversion. Requires a domain and Clip target in Xcode.
 
 ### Retention
-- [x] **Outfit history** — `useOutfitHistory` hook; saves every fresh consult (deduped within 5min window, capped at 20); "ORACLE ARCHIVES" section in HomeScreen with date/city/vibe/temp rows; tap to re-consult ✅ 2026/05/11
-- [x] **Last result cache** — app opens to last result (12hr TTL); city pre-filled; "LAST CONSULTED" badge with one-tap refresh ✅ 2026/05/11
-- [x] **Analytics** — PostHog HTTP API (no SDK, no rebuild); tracks app_opened, consult_started, consult_completed (with duration), consult_error, share_card_tapped, recent_city_tapped, autocomplete_city_selected; no-op if key not set ✅ 2026/05/11
-- [ ] **Daily push notification** — `expo-notifications`; optional opt-in at first consult; fires at user-set time with today's city vibe teaser; deep-links to a fresh result
+- [x] **Outfit history** — 20-entry cap, 5-min dedup, tap-to-reconsult ✅ 2026/05/11
+- [x] **Last result cache** — 12hr TTL, city pre-filled, one-tap refresh ✅ 2026/05/11
+- [x] **Analytics** — PostHog HTTP API, tracks 7 events, no-op if key not set ✅ 2026/05/11
+- [ ] **Daily push notification** — opt-in at first consult; user sets time; fires a morning brief ("London, 12°C, overcast — the Oracle is ready") with deep link to a fresh result; uses `expo-notifications`
+- [ ] **iOS Home Screen Widget** — "Today's Vibe" widget via WidgetKit (React Native requires a native extension target); shows current city, temp, condition icon, vibe word in editorial type. Drives daily return better than any notification. *High effort, very high impact.*
 
+### Input Quality
+- [x] **GPS auto-detect** — `expo-location`, `reverseGeocodeAsync`, no double-geocode ✅ 2026/05/11
+- [x] **City autocomplete** — debounced (300ms), collapses on selection ✅ 2026/05/11
+- [ ] **Occasion input** — "I'm dressing for..." (Work, Date, Event, Weekend, Travel) shown below the city input; a single selection completely reshapes the Claude verdict. The single biggest improvement to output quality available. *Low effort, very high impact.*
 
 ### Content Depth
-- [x] **Skeleton loading UI** — `SkeletonResults` component; shimmer placeholder matching WeatherStrip/VerdictCard/3×OutfitCard layouts; shown alongside atmospheric loading messages during fetch ✅ 2026/05/11
-- [ ] **Alternative outfits** — prompt Claude for 2 outfit sets (polished + casual) and let the user swipe between them; doubles the perceived value per consult
+- [x] **Skeleton loading UI** — shimmer placeholder during fetch ✅ 2026/05/11
+- [x] **Expanded TodayScreen** — hourly forecast, 7-day daily, UV index, sun/moon, allergens & AQI ✅ 2026/05/11
+- [ ] **Alternative outfits** — prompt Claude for 2 sets (polished + casual); user swipes between them; doubles perceived value per consult
 
 ### Gamification — The Oracle's Court
-> Inspired by the 2026 trend of gamified digital experiences (Duolingo streaks, Sephora challenges, progress-as-reward UX). The execution here must stay true to the editorial aesthetic — no XP bars or pixel badges. Every mechanic is reframed in the Oracle's voice: devotion, rank, pilgrimage.
+> Every mechanic stays in the editorial register — no XP bars, no pixel badges. Devotion, rank, pilgrimage.
 
-- [x] **Consult streak** — `useConsultStreak` hook; consecutive-day tracking in AsyncStorage; streak badge in masthead ("7-DAY DEVOTEE"); milestones at 3/7/14/30/100 days trigger haptic + dismissible scarlet banner; same-day double-count prevented ✅ 2026/05/11
-
-- [x] **Oracle Rank** — a tier system based on lifetime consults, not a point score. Titles stay in the editorial register:
-  | Consults | Title |
-  |---|---|
-  | 1–4 | Initiate |
-  | 5–19 | Devotee |
-  | 20–49 | Connoisseur |
-  | 50–99 | Muse |
-  | 100+ | Oracle's Chosen |
-  Displayed as a small label in the profile/settings sheet. Unlocking a new rank triggers a haptic + a one-time congratulatory banner (implemented). ✅ 2026/05/11
-
-- [x] **Style Passport** — running tally of unique cities in YouScreen; milestone stamps at 10/25/50 cities ("Globetrotter", "World Citizen", "The Nomad Oracle") derived from `useOutfitHistory` ✅ 2026/05/11
-
-- [x] **Weather badges** — `useWeatherBadges` hook; 16 badges: temperature extremes (Blizzard Chic, Polar Explorer, Desert Muse), UV (Solar Oracle, Extreme UV), precipitation (Snow Day, Storm Chaser, Rain Oracle, Rain Dancer), sunshine (The Sun Devotee, Sunshine Streak), conditions (Four Seasons), timing (Night Oracle), travel (World Citizen), anniversary (Six-Month Devotee, Year of the Oracle); `firstConsultAt` tracked in `useOutfitHistory` for anniversary badges; earned badges shown full-opacity, unearned dimmed; displayed in YouScreen ✅ 2026/05/11
-
-- [ ] **Weekly editorial challenge** — a fresh brief every Monday, generated by Claude and stored in the Worker (or hardcoded rotating set). Examples: *"This week: dress for rain in three different cities"* or *"Consult from two continents before Sunday."* Completing it adds a limited badge and a congratulatory share card variant. The challenge is shown as a strip below the city input when active.
-
-- [ ] **Oracle Accuracy score** — powered by the existing "Rate my outfit day" prompt (Phase 2 Virality). After rating, the running accuracy percentage is shown in the profile: "The Oracle has been right 78% of the time." High accuracy (>80%) unlocks a "Trusted Oracle" badge. Low accuracy (<50%) triggers a prompt to update the style profile — closing the personalisation feedback loop.
-
-- [ ] **Leaderboard (post-scale)** — opt-in global leaderboard ranked by streak length and city count. Privacy-safe: display name only (derived from city of first consult, e.g. "The London Oracle"). Requires a lightweight backend (Cloudflare KV or D1). Do not build until DAU > 1,000 — leaderboards are empty and demotivating below critical mass.
+- [x] **Consult streak** — consecutive-day tracking; milestone banners at 3/7/14/30/100 days ✅ 2026/05/11
+- [x] **Oracle Rank** — 5 tiers (Initiate → Oracle's Chosen) based on lifetime consults ✅ 2026/05/11
+- [x] **Style Passport** — unique city tally; milestone stamps at 10/25/50 cities ✅ 2026/05/11
+- [x] **Weather badges** — 16 badges across temperature, UV, precipitation, timing, travel, anniversary ✅ 2026/05/11
+- [ ] **Weekly editorial challenge** — fresh brief every Monday (hardcoded rotating set of 8–10); "Dress for rain in two different cities this week." Completing it adds a limited badge and a share card variant. Shown as a strip in the Oracle tab when active.
+- [ ] **Oracle Accuracy score** — powered by "Rate my outfit day" ratings; running percentage shown in YouScreen ("The Oracle has been right 78% of the time"); >80% unlocks "Trusted Oracle" badge; <50% prompts style profile update
+- [ ] **Leaderboard** — opt-in, global, ranked by streak + city count; display name derived from city of first consult ("The London Oracle"). **Do not build until DAU > 1,000.** Empty leaderboards are demotivating.
 
 ---
 
@@ -121,37 +127,40 @@
 
 > Without personalisation the Oracle gives the same answer to everyone in the same city. This is the moat.
 
-### Style Profile (onboarding)
-- [x] **3-step onboarding** — 2-step UI (keywords pick-3 + budget tier); skippable with persisted marker; profile badge in masthead taps to re-edit; profile passed to Claude on every consult via proxy and direct path ✅ 2026/05/11
-- [x] **Oracle Personality selection** — Diplomat / Editor / Savage Oracle; voice injected into prompt on every consult; selectable in onboarding and editable in ProfileEditScreen ✅ 2026/05/11
-- [x] **ProfileEditScreen** — name, keywords (pick-3), budget tier, Oracle voice; accessible from YouScreen "Edit →" ✅ 2026/05/11
-- [ ] **Settings sheet** — toggle notifications, clear data
+### Style Profile
+- [x] **3-step onboarding** — keywords (pick-3) + budget tier; skippable; persisted ✅ 2026/05/11
+- [x] **Oracle Personality** — Diplomat / Editor / Savage; injected into every prompt ✅ 2026/05/11
+- [x] **ProfileEditScreen** — name, keywords, budget, voice; accessible from YouScreen ✅ 2026/05/11
+- [ ] **Temperature sensitivity** — "I usually run cold / hot" toggle; shifts the Oracle toward layering or lighter pieces independently of the actual temperature reading. *10-minute build, immediately improves cold-weather advice.*
+- [ ] **Colour preferences** — mark 2–3 colours you love and 1–2 you avoid; Claude references these in picks ("avoiding your dislike of yellow")
+- [ ] **Settings sheet** — toggle notifications, clear data, export history
 
 ### Wardrobe
-- [ ] **Saved outfits** — heart icon on each outfit card; saved looks stored in AsyncStorage; accessible from the header
-- [ ] **"Wear this again"** — if weather is similar to a past consultation, surface the saved look with a one-tap option to re-consult
+- [ ] **Saved outfits** — heart icon on each outfit card; stored in AsyncStorage; accessible from a "Saved" tab or YouScreen section
+- [ ] **"Wear this again"** — if current weather matches a past consult within ±5°C and same condition type, surface the saved look with one-tap option to re-consult
+- [ ] **Wardrobe photo upload** *(Phase 3 stretch)* — photograph individual pieces; Claude Vision identifies the item; the Oracle then references "your navy blazer" or "the linen shirt you own" in verdicts. This is the long-term moat — no other weather-to-outfit app does this.
 
 ---
 
 ## Phase 4 — Monetisation
 
-> Only introduce monetisation after Phase 2 is shipped and retention metrics show users returning. Charging too early kills growth.
+> Only introduce monetisation after Phase 2 is shipped and retention metrics confirm D7 > 30%. Charging too early kills growth.
 
 ### Oracle Pro — Subscription ($4.99/month or $34.99/year)
-- [ ] **Paywall design** — editorial, non-aggressive; shown after 3 free consults/day. Uses `expo-in-app-purchases` or RevenueCat (recommended — handles receipt validation, restore, and analytics out of the box).
+- [ ] **Paywall design** — editorial, non-aggressive; shown after 3 free consults/day; 7-day free trial standard
 - [ ] **Free tier** — 3 consults/day, basic outfit set, Google Shopping links
-- [ ] **Pro tier** — unlimited consults, alternative outfit sets, full history, wardrobe saves, daily notifications, style profile, priority response (higher Claude token budget = richer responses)
-- [ ] **Restore purchases** — required by Apple; `RevenueCat` handles this automatically
-- [ ] **Paywall A/B test** — test hard paywall vs. soft paywall (feature-gate only) vs. usage cap
+- [ ] **Pro tier** — unlimited consults, alternative outfit sets (polished/casual), full history, wardrobe saves, daily notifications, Home Screen Widget, priority response (higher Claude token budget)
+- [ ] **Restore purchases** — required by Apple; RevenueCat handles this automatically
+- [ ] **RevenueCat integration** — handles receipt validation, restoration, and A/B testing; simpler than raw `expo-in-app-purchases`
 
 ### Affiliate Revenue
-- [ ] **Retailer-specific links** — replace Google Shopping URLs with ASOS, Nordstrom, or Farfetch affiliate links via their APIs or SerpAPI; commission is 4-8% per purchase. Highest-revenue opportunity per user.
-- [ ] **"Shop the full look" button** — one tap opens a curated shopping page with all 5 outfit items pre-searched; better conversion than individual item links
-- [ ] **Price tier filtering** — surface items matching the user's budget tier from the style profile
+- [ ] **Retailer-specific links** — replace Google Shopping URLs with ASOS, Nordstrom, or Farfetch affiliate links; 4–8% commission per purchase; highest revenue per user
+- [ ] **"Shop the full look" button** — one tap opens a curated page with all outfit items pre-searched; better conversion than individual item links
+- [ ] **Price tier filtering** — surface items matching the user's budget tier from their style profile
 
-### Brand Partnerships (post-scale)
-- [ ] **Sponsored "Oracle's Pick"** — a 6th card in the outfit results, clearly labelled "Presented by [Brand]"; sold directly or via a fashion ad network
-- [ ] **City-based editorial drops** — "This week in Milan: the Oracle recommends..."; brand-funded, city-specific editorial content surfaced at the top of the home screen
+### Brand Partnerships *(post-scale)*
+- [ ] **Sponsored "Oracle's Pick"** — a 6th card in outfit results, clearly labelled "Presented by [Brand]"; sold directly or via a fashion ad network
+- [ ] **City-based editorial drops** — brand-funded, city-specific content ("This week in Milan: the Oracle recommends...") surfaced at the top of the Today tab
 
 ---
 
@@ -159,36 +168,29 @@
 
 > After product-market fit is confirmed on iOS.
 
-- [ ] **Android parity audit** — fonts, icons, haptics, keyboard behaviour all differ; full QA pass required before Android launch
-- [ ] **iPad / tablet layout** — two-column split: input + weather left, results right; `app.json` currently has `supportsTablet: false`
-- [ ] **Web version** — `expo start --web` works today but is unstyled; a proper web build opens SEO and desktop users
-- [ ] **B2B API** — fashion trend data aggregated by city + weather condition; sell access to brands and retailers for inventory/marketing decisions
-- [ ] **Waitlist / referral** — launch a waitlist page before Android goes live; referral rewards unlock Pro features
+- [ ] **Android parity audit** — fonts, icons, haptics, keyboard behaviour all differ on Android; full QA pass required
+- [ ] **iPad / tablet layout** — two-column split (input + weather left, results right); `app.json` has `supportsTablet: false`
+- [ ] **Apple Watch complication** — today's temp + condition icon on watch face; tap opens iPhone app. Requires a WatchKit extension target.
+- [ ] **Siri Shortcut** — "Hey Siri, ask the Oracle for [city]"; runs a background consult and reads back the vibe and top 3 picks
+- [ ] **Web version** — `expo start --web` works but is unstyled; a proper web build opens SEO and desktop users
+- [ ] **B2B API** — fashion trend data aggregated by city + weather condition; sell access to brands for inventory and marketing decisions
+- [ ] **Waitlist / referral page** — launch before Android; referral rewards unlock Pro features early
 
 ---
 
-- [x] **Expanded TodayScreen** — hourly forecast (next 24h horizontal scroll with time/icon/temp/precip%/UV); conditions strip (UV with color-coded label, sunrise, sunset, moon phase icon + name); 7-day daily forecast (day label, icon, condition, precip%, high/low temps); allergens & air quality section (AQI + grass/birch/ragweed pollen levels); verdict + outfit chips moved below weather detail ✅ 2026/05/11
-
 ## Recently Completed
 
-- [x] **Multi-screen UX redesign** — 3-tab navigation (Today / Oracle / You); welcome flow (Intro → Carousel → Personality → Style Onboarding); `AppDataProvider` context sharing oracle state across tabs; `ProfileEditScreen`; `YouScreen` with rank hero, Style Passport, archives ✅ 2026/05/11
-- [x] **Consult streak + Oracle Rank** — `useConsultStreak` hook; streak badge in masthead; milestone/rank banner with haptic; `SkeletonResults` shimmer loading ✅ 2026/05/11
-- [x] **Style profile onboarding** — 2-step flow (keywords + budget), skippable with persistence, profile badge in masthead, profile passed to Claude prompt ✅ 2026/05/11
-- [x] **Outfit history** — `useOutfitHistory`, "ORACLE ARCHIVES" list, tap-to-reconsult ✅ 2026/05/11
-
-- [x] **ROADMAP.md professional audit** ✅ 2026/05/10
-- [x] **Phase 1 accessibility pass** ✅ 2026/05/10
-- [x] **Haptic feedback** ✅ 2026/05/10
-- [x] **Recent cities** ✅ 2026/05/10
-- [x] **Pull-to-refresh** ✅ 2026/05/10
-- [x] **app.json theme fix** ✅ 2026/05/10
-- [x] **Engineering audit + 7 bug fixes** (GestureResponderEvent crash, JSON.parse safety, console.log removal, stable list keys, dead interface field, indentation, typed `any`) ✅ 2026/05/11
-- [x] **Accessibility audit** — contrast ratio fix (textMuted darkened, 5.08:1), all informational labels bumped from 8px → 10px ✅ 2026/05/11
-- [x] **Rotating loading messages** — 5 atmospheric + 7 Oracle-voice messages cycling every 2.5s per phase ✅ 2026/05/11
-- [x] **Staggered entrance animations** — WeatherStrip (translateX), VerdictCard (translateY), OutfitCards (staggered 90ms), AvoidSection (delayed fade) ✅ 2026/05/11
-- [x] **City autocomplete** — debounced suggestions (300ms), collapses on selection, suppressed until user types again ✅ 2026/05/11
-- [x] **Full accessibility label audit** — all remaining 8–9px labels bumped to 10px; textMuted contrast fixed to 5.08:1 ✅ 2026/05/11
-- [x] **Cloudflare Worker proxy** — Worker written, app auto-routes when `EXPO_PUBLIC_PROXY_URL` set ✅ 2026/05/11
-- [x] **Bundle identifier** — `com.melaniesigrid.outfitoracle` ✅ 2026/05/11
-- [x] **Privacy policy** — `PRIVACY_POLICY.md` covering all third-party services ✅ 2026/05/11
-- [x] **GitHub repository** — private repo, initial commit, all subsequent work pushed ✅ 2026/05/11
+- [x] **Multi-screen UX redesign** — 3-tab navigation (Today / Oracle / You); welcome flow; `AppDataProvider` context; `ProfileEditScreen`; `YouScreen` ✅ 2026/05/11
+- [x] **Gamification suite** — consult streak, Oracle Rank, Style Passport, 16 weather badges ✅ 2026/05/11
+- [x] **Style profile onboarding** — 2-step flow, skippable, persisted, passed to Claude ✅ 2026/05/11
+- [x] **Outfit history + last result cache** — `useOutfitHistory`, tap-to-reconsult, 12hr TTL ✅ 2026/05/11
+- [x] **Expanded TodayScreen** — hourly forecast, 7-day daily, UV, sun/moon, allergens ✅ 2026/05/11
+- [x] **Weather service expansion** — pollen/AQI (Open-Meteo Air Quality API), moon phase calculation, parallel fetches ✅ 2026/05/11
+- [x] **City autocomplete alignment fix** — `CitySuggestions` now respects screen horizontal margins ✅ 2026/05/11
+- [x] **BEST_PRACTICES.md** — commit conventions, TypeScript rules, RN/Expo constraints documented ✅ 2026/05/11
+- [x] **Engineering audit + 9 bug fixes** ✅ 2026/05/11
+- [x] **Cloudflare Worker proxy + rate limiting** ✅ 2026/05/11
+- [x] **App identity** — bundle ID, icon, splash, privacy policy ✅ 2026/05/11
+- [x] **Analytics + crash reporting** — PostHog (HTTP), Sentry (installed, needs DSN) ✅ 2026/05/11
+- [x] **Share card** — `react-native-view-shot` + native Share sheet ✅ 2026/05/11
+- [x] **GPS auto-detect + city autocomplete** ✅ 2026/05/11
