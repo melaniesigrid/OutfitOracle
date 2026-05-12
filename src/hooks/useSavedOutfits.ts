@@ -4,11 +4,17 @@ import { OutfitItem } from '../services/oracle';
 
 const KEY = '@outfit_oracle_saved';
 
+export interface SavedOutfitWeather {
+  temp: number;
+  conditionLabel: string;
+}
+
 export interface SavedOutfit {
   item: OutfitItem;
   city: string;
   vibe: string;
   savedAt: number;
+  weather?: SavedOutfitWeather;
 }
 
 export function useSavedOutfits() {
@@ -22,10 +28,15 @@ export function useSavedOutfits() {
     });
   }, []);
 
-  const saveOutfit = useCallback((item: OutfitItem, city: string, vibe: string) => {
+  const saveOutfit = useCallback((
+    item: OutfitItem,
+    city: string,
+    vibe: string,
+    weather?: SavedOutfitWeather,
+  ) => {
     setSaved(prev => {
       if (prev.some(s => s.item.item === item.item && s.city === city)) return prev;
-      const next = [{ item, city, vibe, savedAt: Date.now() }, ...prev].slice(0, 50);
+      const next = [{ item, city, vibe, savedAt: Date.now(), weather }, ...prev].slice(0, 50);
       AsyncStorage.setItem(KEY, JSON.stringify(next));
       return next;
     });

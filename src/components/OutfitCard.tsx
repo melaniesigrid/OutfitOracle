@@ -21,6 +21,7 @@ interface Props {
   index: number;
   city: string;
   vibe: string;
+  weather?: { temp: number; conditionLabel: string };
 }
 
 function openShop(itemName: string) {
@@ -36,7 +37,7 @@ function splitItems(raw: string): string[] {
     .filter(Boolean);
 }
 
-export function OutfitCard({ item, index, city, vibe }: Props) {
+export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   const { savedCtx } = useAppData();
   const accent = accentMap[item.accentColor] ?? accentMap.mint;
   const num = String(index + 1).padStart(2, '0');
@@ -59,7 +60,7 @@ export function OutfitCard({ item, index, city, vibe }: Props) {
     if (hearted) {
       savedCtx.removeOutfit(item, city);
     } else {
-      savedCtx.saveOutfit(item, city, vibe);
+      savedCtx.saveOutfit(item, city, vibe, weather);
     }
   };
 

@@ -19,6 +19,8 @@ import { LoadingOracle } from '../components/LoadingOracle';
 import { CitySuggestions } from '../components/CitySuggestions';
 import { ShareCard } from '../components/ShareCard';
 import { SkeletonResults } from '../components/SkeletonResults';
+import { ChallengeCard } from '../components/ChallengeCard';
+import { useWeeklyChallenge } from '../hooks/useWeeklyChallenge';
 import { searchCities, CitySuggestion } from '../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
@@ -26,7 +28,7 @@ import {
 import { colors, fonts, spacing } from '../theme';
 
 export function OracleScreen() {
-  const { oracle, profileCtx, historyCtx, streakCtx } = useAppData();
+  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
   const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache } = oracle;
   const profile = profileCtx.profile;
 
@@ -47,6 +49,16 @@ export function OracleScreen() {
   const showResult = status === 'done' && !!weather && !!verdict;
 
   const { recents, addCity } = useRecentCities();
+  const weeklyChallenge = useWeeklyChallenge(historyCtx.history);
+
+  // Saved looks that match current weather (same city, temp within 5°C)
+  const wearAgainMatches = showResult && weather
+    ? savedCtx.saved.filter(s =>
+        s.city.toLowerCase() === city.toLowerCase() &&
+        s.weather != null &&
+        Math.abs(s.weather.temp - weather.temp) <= 5,
+      )
+    : [];
 
   // Pre-fill city from cache
   useEffect(() => {
@@ -213,6 +225,7 @@ export function OracleScreen() {
 
           <GenderToggle selected={gender} onChange={setGender} />
           <OccasionPicker selected={occasion} onChange={setOccasion} />
+          <ChallengeCard state={weeklyChallenge} />
 
           {/* ── CTA ── */}
           <Animated.View style={{ transform: [{ scale: btnScale }] }}>
@@ -258,6 +271,16 @@ export function OracleScreen() {
                   </Pressable>
                 </View>
               ) : null}
+              {wearAgainMatches.length > 0 && (
+                <View style={styles.wearAgainBanner}>
+                  <Text style={styles.wearAgainLabel}>WEAR THIS AGAIN</Text>
+                  <Text style={styles.wearAgainText}>
+                    {wearAgainMatches.length === 1
+                      ? `You saved a look for ${city} in similar conditions. The Oracle approves a repeat.`
+                      : `You have ${wearAgainMatches.length} saved looks for ${city} in similar conditions.`}
+                  </Text>
+                </View>
+              )}
               <WeatherStrip weather={weather} />
               <VerdictCard verdict={verdict} />
               {verdict.outfitsAlt && (
@@ -279,7 +302,14 @@ export function OracleScreen() {
                 </View>
               )}
               {(lookMode === 'casual' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits).map((item, i) => (
-                <OutfitCard key={item.category} item={item} index={i} city={city} vibe={verdict.vibe} />
+                <OutfitCard
+                  key={item.category}
+                  item={item}
+                  index={i}
+                  city={city}
+                  vibe={verdict.vibe}
+                  weather={weather ? { temp: weather.temp, conditionLabel: weather.conditionLabel } : undefined}
+                />
               ))}
               <AvoidSection items={verdict.avoid} />
               <Pressable
@@ -399,4 +429,26 @@ const styles = StyleSheet.create({
   shareBtnText: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2.5, color: colors.textPrimary },
   resetBtn: { alignSelf: 'center', paddingVertical: spacing.md, marginBottom: spacing.lg },
   resetText: { fontFamily: fonts.serif, fontSize: 18, color: colors.textSecondary, letterSpacing: 0.3 },
+  wearAgainBanner: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.scarlet,
+    paddingLeft: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.scarletDim,
+  },
+  wearAgainLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    color: colors.scarlet,
+    marginBottom: 4,
+  },
+  wearAgainText: {
+    fontFamily: fonts.serif,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
+    fontStyle: 'italic',
+  },
 });

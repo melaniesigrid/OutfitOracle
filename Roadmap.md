@@ -120,7 +120,7 @@
 - [x] **Oracle Rank** — 5 tiers (Initiate → Oracle's Chosen) based on lifetime consults ✅ 2026/05/11
 - [x] **Style Passport** — unique city tally; milestone stamps at 10/25/50 cities ✅ 2026/05/11
 - [x] **Weather badges** — 100 badges across first steps, streaks, temperature, precipitation, sunshine, wind, humidity, timing, calendar, cities, occasions, saves, and anniversaries; `BadgeExtras` param (totalConsults, streak, savedCount) wired from YouScreen; `occasion` added to HistoryEntry ✅ 2026/05/12
-- [ ] **Weekly editorial challenge** — fresh brief every Monday (hardcoded rotating set of 8–10); "Dress for rain in two different cities this week." Completing it adds a limited badge and a share card variant. Shown as a strip in the Oracle tab when active.
+- [x] **Weekly editorial challenge** — 16 rotating challenges (rain, cities, occasions, timing, weather conditions); ISO week number picks the active challenge; `useWeeklyChallenge` evaluates against current week's history; `ChallengeCard` shown above the consult CTA in OracleScreen ✅ 2026/05/12
 - [ ] **Oracle Accuracy score** — powered by "Rate my outfit day" ratings; running percentage shown in YouScreen ("The Oracle has been right 78% of the time"); >80% unlocks "Trusted Oracle" badge; <50% prompts style profile update
 - [ ] **Leaderboard** — opt-in, global, ranked by streak + city count; display name derived from city of first consult ("The London Oracle"). **Do not build until DAU > 1,000.** Empty leaderboards are demotivating. Requires Phase 6 (Identity).
 
@@ -140,7 +140,7 @@
 
 ### Wardrobe
 - [x] **Saved outfits** — heart icon on each OutfitCard; `useSavedOutfits` hook (AsyncStorage, 50-item cap, dedup); SAVED LOOKS section in YouScreen with unsave tap; key included in Settings clear flows ✅ 2026/05/12
-- [ ] **"Wear this again"** — if current weather matches a past consult within ±5°C and same condition type, surface the saved look with one-tap option to re-consult
+- [x] **"Wear this again"** — after results load, OracleScreen checks saved looks for the same city within ±5°C; shows a scarlet-accented banner when matches found; weather context stored on save via `SavedOutfitWeather` ✅ 2026/05/12
 - [ ] **Wardrobe photo upload** *(Phase 3 stretch)* — photograph individual pieces; Claude Vision identifies the item; the Oracle then references "your navy blazer" or "the linen shirt you own" in verdicts. This is the long-term moat — no other weather-to-outfit app does this.
 
 ---

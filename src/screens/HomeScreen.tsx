@@ -450,7 +450,14 @@ export function HomeScreen() {
                 <WeatherStrip weather={weather} />
                 <VerdictCard verdict={verdict} />
                 {verdict.outfits.map((item, i) => (
-                  <OutfitCard key={item.category} item={item} index={i} />
+                  <OutfitCard
+                    key={item.category}
+                    item={item}
+                    index={i}
+                    city={city}
+                    vibe={verdict.vibe}
+                    weather={weather ? { temp: weather.temp, conditionLabel: weather.conditionLabel } : undefined}
+                  />
                 ))}
                 <AvoidSection items={verdict.avoid} />
                 <Pressable
