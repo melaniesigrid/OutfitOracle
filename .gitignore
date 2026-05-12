@@ -16,3 +16,11 @@ android/app/build/
 # Editor
 .vscode/
 *.log
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Orchestrator results (generated output, not source)
+src/files/results/
