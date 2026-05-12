@@ -38,9 +38,9 @@
 
 ### Must-do before archive
 
-- [ ] **Rotate the Anthropic API key** — generate a new key at console.anthropic.com; update the Cloudflare Worker secret (`wrangler secret put ANTHROPIC_API_KEY`). The old key was exposed in the bundle during early development. This is a security blocker.
-- [ ] **Host the privacy policy** — publish `PRIVACY_POLICY.md` as a public web page (GitHub Pages, Notion public page, or a simple HTML file). App Store Connect requires a live URL — a markdown file in a private repo is not accepted.
-- [ ] **Configure Sentry** — set `SENTRY_DSN` in `.env` and in the Cloudflare Worker. Without this, crashes on beta devices go undetected.
+- [x] **Rotate the Anthropic API key** — new key generated; old key removed from `.env`; Cloudflare Worker secret updated via `wrangler secret put ANTHROPIC_API_KEY`. ✅ 2026/05/12
+- [-] **Host the privacy policy** — `docs/index.html` created, ready for GitHub Pages. **Action required: go to github.com → repo Settings → Pages → Source → Deploy from branch → main → /docs → Save.** URL will be `https://melaniesigrid.github.io/OutfitOracle/`. 🏗️ 2026/05/12
+- [-] **Configure Sentry DSN** — Sentry is initialized in `App.tsx` (`Sentry.init` + `Sentry.wrap`). **Action required: create a project at sentry.io → copy the DSN → paste into `EXPO_PUBLIC_SENTRY_DSN` in `.env` → rebuild.** 🏗️ 2026/05/12
 - [x] **Add PrivacyInfo.xcprivacy** — file created at `ios/OutfitOracle/PrivacyInfo.xcprivacy` with all four standard RN Required Reasons API entries. **Must be dragged into Xcode project navigator** (File → Add Files) before archiving — the file exists on disk but is not yet referenced in the `.xcodeproj`. ✅ 2026/05/11
 
 ### Nice-to-have before archive

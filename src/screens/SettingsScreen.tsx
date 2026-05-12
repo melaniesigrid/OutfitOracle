@@ -29,7 +29,7 @@ const SOFT_KEYS = [
 ];
 
 const APP_VERSION = '1.0.0';
-const PRIVACY_POLICY_URL = 'https://github.com/melaniesigridab/outfit-oracle'; // replace with hosted URL
+const PRIVACY_POLICY_URL = 'https://melaniesigrid.github.io/OutfitOracle/';
 
 export function SettingsScreen() {
   const navigation = useNavigation<any>();
@@ -46,7 +46,7 @@ export function SettingsScreen() {
           text: 'Clear',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.multiRemove(SOFT_KEYS);
+            await Promise.all(SOFT_KEYS.map(k => AsyncStorage.removeItem(k)));
             historyCtx.clear();
             Alert.alert('Done', 'History cleared.');
           },
@@ -65,7 +65,7 @@ export function SettingsScreen() {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.multiRemove(ALL_KEYS);
+            await Promise.all(ALL_KEYS.map(k => AsyncStorage.removeItem(k)));
             historyCtx.clear();
             Alert.alert('Done', 'All data removed. Please close and reopen Outfit Oracle.');
           },
