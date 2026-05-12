@@ -16,6 +16,7 @@ const ALL_KEYS = [
   '@outfit_oracle_last_result',
   '@outfit_oracle_streak',
   '@outfit_oracle_style_profile',
+  '@outfit_oracle_saved',
   '@onboarding_complete',
 ];
 
@@ -24,6 +25,7 @@ const SOFT_KEYS = [
   '@outfit_oracle_first_consult',
   '@outfit_oracle_recent_cities',
   '@outfit_oracle_last_result',
+  '@outfit_oracle_saved',
 ];
 
 const APP_VERSION = '1.0.0';

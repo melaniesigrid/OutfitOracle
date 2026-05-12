@@ -7,8 +7,8 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
 import {
-  STYLE_KEYWORDS, BUDGET_TIERS, PERSONALITY_OPTIONS,
-  OraclePersonality, BudgetTier,
+  STYLE_KEYWORDS, BUDGET_TIERS, PERSONALITY_OPTIONS, TEMP_SENSITIVITY_OPTIONS, COLOR_OPTIONS,
+  OraclePersonality, BudgetTier, TempSensitivity,
 } from '../hooks/useStyleProfile';
 import { colors, fonts, spacing } from '../theme';
 
@@ -17,10 +17,13 @@ export function ProfileEditScreen() {
   const { profileCtx } = useAppData();
   const existing = profileCtx.profile;
 
-  const [name,        setName]        = useState(existing?.name ?? '');
-  const [keywords,    setKeywords]    = useState<string[]>(existing?.keywords ?? []);
-  const [budget,      setBudget]      = useState<BudgetTier>(existing?.budget ?? 'contemporary');
-  const [personality, setPersonality] = useState<OraclePersonality>(existing?.personality ?? 'editorial');
+  const [name,            setName]            = useState(existing?.name ?? '');
+  const [keywords,        setKeywords]        = useState<string[]>(existing?.keywords ?? []);
+  const [budget,          setBudget]          = useState<BudgetTier>(existing?.budget ?? 'contemporary');
+  const [personality,     setPersonality]     = useState<OraclePersonality>(existing?.personality ?? 'editorial');
+  const [tempSensitivity, setTempSensitivity] = useState<TempSensitivity>(existing?.tempSensitivity ?? 'normal');
+  const [colorLoves,      setColorLoves]      = useState<string[]>(existing?.colorLoves ?? []);
+  const [colorAvoids,     setColorAvoids]     = useState<string[]>(existing?.colorAvoids ?? []);
 
   const toggleKeyword = (kw: string) => {
     Haptics.selectionAsync();
@@ -31,7 +34,7 @@ export function ProfileEditScreen() {
 
   const save = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    profileCtx.saveProfile({ keywords, budget, name: name.trim() || undefined, personality });
+    profileCtx.saveProfile({ keywords, budget, name: name.trim() || undefined, personality, tempSensitivity, colorLoves, colorAvoids });
     navigation.goBack();
   };
 
@@ -115,6 +118,78 @@ export function ProfileEditScreen() {
               </Pressable>
             );
           })}
+        </View>
+
+        {/* Temperature sensitivity */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>TEMPERATURE SENSITIVITY</Text>
+          <View style={styles.tempRow}>
+            {TEMP_SENSITIVITY_OPTIONS.map(opt => {
+              const active = tempSensitivity === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  style={[styles.tempBtn, active && styles.tempBtnActive]}
+                  onPress={() => { Haptics.selectionAsync(); setTempSensitivity(opt.id); }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={opt.label}
+                >
+                  <Text style={[styles.tempBtnLabel, active && styles.tempBtnLabelActive]}>
+                    {opt.label}
+                  </Text>
+                  <Text style={styles.tempBtnNote}>{opt.note}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Colour preferences */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>COLOUR PREFERENCES</Text>
+          <Text style={[styles.fieldHint, { marginBottom: spacing.md }]}>
+            Tap once to love (up to 3), tap again to avoid (up to 2), tap a third time to clear.
+          </Text>
+          <View style={styles.colorGrid}>
+            {COLOR_OPTIONS.map(c => {
+              const loved   = colorLoves.includes(c.id);
+              const avoided = colorAvoids.includes(c.id);
+              const handleTap = () => {
+                Haptics.selectionAsync();
+                if (loved) {
+                  setColorLoves(prev => prev.filter(x => x !== c.id));
+                  if (colorAvoids.length < 2) setColorAvoids(prev => [...prev, c.id]);
+                } else if (avoided) {
+                  setColorAvoids(prev => prev.filter(x => x !== c.id));
+                } else if (colorLoves.length < 3) {
+                  setColorLoves(prev => [...prev, c.id]);
+                }
+              };
+              return (
+                <Pressable
+                  key={c.id}
+                  style={styles.colorCell}
+                  onPress={handleTap}
+                  accessibilityRole="button"
+                  accessibilityLabel={loved ? `${c.label}, loved` : avoided ? `${c.label}, avoided` : c.label}
+                >
+                  <View style={[
+                    styles.colorSwatch,
+                    { backgroundColor: c.hex },
+                    loved   && styles.colorSwatchLoved,
+                    avoided && styles.colorSwatchAvoided,
+                  ]}>
+                    {loved   && <Text style={styles.colorMark}>+</Text>}
+                    {avoided && <Text style={styles.colorMark}>-</Text>}
+                  </View>
+                  <Text style={[styles.colorLabel, loved && styles.colorLabelLoved, avoided && styles.colorLabelAvoided]}>
+                    {c.label.toUpperCase()}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* Personality */}
@@ -231,9 +306,88 @@ const styles = StyleSheet.create({
   personalityTitleActive: { color: colors.textPrimary },
   personalityQuote: { fontFamily: fonts.serif, fontSize: 13, color: colors.scarlet, marginTop: 2, letterSpacing: -0.1 },
 
+  tempRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  tempBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+    alignItems: 'center',
+    gap: 4,
+  },
+  tempBtnActive: {
+    borderColor: colors.textPrimary,
+    backgroundColor: colors.bgSurface,
+  },
+  tempBtnLabel: {
+    fontFamily: fonts.displayBold,
+    fontSize: 14,
+    color: colors.textSecondary,
+    letterSpacing: -0.1,
+    textAlign: 'center',
+  },
+  tempBtnLabelActive: {
+    color: colors.textPrimary,
+  },
+  tempBtnNote: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    color: colors.textMuted,
+    letterSpacing: 0.2,
+    textAlign: 'center',
+    lineHeight: 12,
+  },
+
   saveFullBtn: {
     marginHorizontal: spacing.lg, marginTop: spacing.xl,
     backgroundColor: colors.bgDark, paddingVertical: 18, alignItems: 'center',
   },
   saveFullBtnText: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 1.5, color: '#FAF9F6' },
+
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  colorCell: {
+    alignItems: 'center',
+    gap: 4,
+    width: '22%',
+  },
+  colorSwatch: {
+    width: 44,
+    height: 44,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorSwatchLoved: {
+    borderColor: '#FAF9F6',
+    borderWidth: 2,
+  },
+  colorSwatchAvoided: {
+    borderColor: colors.scarlet,
+    borderWidth: 2,
+    opacity: 0.6,
+  },
+  colorMark: {
+    fontFamily: fonts.monoMedium,
+    fontSize: 18,
+    color: '#FAF9F6',
+    lineHeight: 22,
+  },
+  colorLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  colorLabelLoved:   { color: colors.textPrimary },
+  colorLabelAvoided: { color: colors.scarlet },
 });

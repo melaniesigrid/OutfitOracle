@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Linking, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { OutfitItem } from '../services/oracle';
+import { useAppData } from '../contexts/AppContext';
 import { colors, fonts, spacing } from '../theme';
 
 const accentMap = {
@@ -17,6 +19,8 @@ const NONE_NEEDED_RE = /\bnone\b|not needed|no outer|skip the|universe has gifte
 interface Props {
   item: OutfitItem;
   index: number;
+  city: string;
+  vibe: string;
 }
 
 function openShop(itemName: string) {
@@ -24,10 +28,21 @@ function openShop(itemName: string) {
   Linking.openURL(`https://www.google.com/search?tbm=shop&q=${q}`);
 }
 
-export function OutfitCard({ item, index }: Props) {
+// Split "scarf, gloves and sunglasses" into ["scarf", "gloves", "sunglasses"]
+function splitItems(raw: string): string[] {
+  return raw
+    .split(/,\s*|\s+and\s+/i)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+export function OutfitCard({ item, index, city, vibe }: Props) {
+  const { savedCtx } = useAppData();
   const accent = accentMap[item.accentColor] ?? accentMap.mint;
   const num = String(index + 1).padStart(2, '0');
   const isNoneNeeded = NONE_NEEDED_RE.test(item.item);
+  const shopItems = splitItems(item.item);
+  const hearted = savedCtx.isSaved(item, city);
 
   const opacity    = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(16)).current;
@@ -39,15 +54,38 @@ export function OutfitCard({ item, index }: Props) {
     ]).start();
   }, []);
 
+  const toggleSave = () => {
+    Haptics.selectionAsync();
+    if (hearted) {
+      savedCtx.removeOutfit(item, city);
+    } else {
+      savedCtx.saveOutfit(item, city, vibe);
+    }
+  };
+
   return (
     <Animated.View style={[styles.card, { opacity, transform: [{ translateY }] }]}>
       <View style={styles.rule} />
       <View style={styles.inner}>
         <Text style={styles.num}>{num}</Text>
         <View style={styles.content}>
-          <Text style={[styles.category, { color: accent.color }]}>
-            {item.category.toUpperCase()}
-          </Text>
+          <View style={styles.categoryRow}>
+            <Text style={[styles.category, { color: accent.color }]}>
+              {item.category.toUpperCase()}
+            </Text>
+            <Pressable
+              onPress={toggleSave}
+              accessibilityRole="button"
+              accessibilityLabel={hearted ? `Remove ${item.item} from saved looks` : `Save ${item.item}`}
+              hitSlop={12}
+            >
+              <MaterialCommunityIcons
+                name={hearted ? 'heart' : 'heart-outline'}
+                size={16}
+                color={hearted ? colors.scarlet : colors.border}
+              />
+            </Pressable>
+          </View>
           <Text style={styles.itemName}>{item.item}</Text>
           <Text style={styles.detail}>{item.detail}</Text>
 
@@ -56,21 +94,28 @@ export function OutfitCard({ item, index }: Props) {
               The Oracle blesses your bare arms. Go forth. :)
             </Text>
           ) : (
-            <Pressable
-              style={({ pressed }) => [styles.shopBtn, pressed && styles.shopBtnPressed]}
-              onPress={() => openShop(item.item)}
-              accessibilityRole="link"
-              accessibilityLabel={`Shop ${item.item}`}
-              accessibilityHint="Opens Google Shopping in your browser"
-            >
-              <Text style={[styles.shopText, { color: accent.color }]}>SHOP THIS PIECE</Text>
-              <MaterialCommunityIcons
-                name="open-in-new"
-                size={10}
-                color={accent.color}
-                style={styles.shopIcon}
-              />
-            </Pressable>
+            <View style={styles.shopBtns}>
+              {shopItems.map(piece => (
+                <Pressable
+                  key={piece}
+                  style={({ pressed }) => [styles.shopBtn, pressed && styles.shopBtnPressed]}
+                  onPress={() => openShop(piece)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Shop ${piece}`}
+                  accessibilityHint="Opens Google Shopping in your browser"
+                >
+                  <Text style={[styles.shopText, { color: accent.color }]}>
+                    {shopItems.length > 1 ? `SHOP ${piece.toUpperCase()}` : 'SHOP THIS PIECE'}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name="open-in-new"
+                    size={10}
+                    color={accent.color}
+                    style={styles.shopIcon}
+                  />
+                </Pressable>
+              ))}
+            </View>
           )}
         </View>
       </View>
@@ -105,11 +150,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 4,
   },
+  categoryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   category: {
     fontFamily: fonts.mono,
     fontSize: 10,
     letterSpacing: 2.5,
-    marginBottom: 6,
   },
   itemName: {
     fontFamily: fonts.display,
@@ -125,6 +175,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 17,
     marginBottom: spacing.sm,
+  },
+  shopBtns: {
+    gap: 6,
   },
   shopBtn: {
     flexDirection: 'row',

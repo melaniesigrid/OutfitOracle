@@ -9,6 +9,90 @@ import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
 import { colors, fonts, spacing } from '../theme';
 
+// ─── Word of the Day ──────────────────────────────────────────────────────────
+
+interface WordEntry {
+  word: string;
+  origin: string;
+  definition: string;
+}
+
+const WORDS: WordEntry[] = [
+  { word: 'Sartorial',       origin: 'Latin · sartōrius',        definition: 'Relating to tailoring or the making of fine garments.' },
+  { word: 'Sprezzatura',     origin: 'Italian',                   definition: 'The art of making the difficult look effortless; studied carelessness.' },
+  { word: 'Insouciant',      origin: 'French · insoucier',        definition: 'Showing a casual lack of concern; blithely indifferent.' },
+  { word: 'Louche',          origin: 'French',                    definition: 'Disreputable or rakish in an intriguing, appealing way.' },
+  { word: 'Élan',            origin: 'French',                    definition: 'Energy, style, and flair; vivacious enthusiasm.' },
+  { word: 'Panache',         origin: 'French · pennacchio',       definition: 'A flamboyant confidence of style or manner.' },
+  { word: 'Diaphanous',      origin: 'Greek · diaphanēs',         definition: 'Light, delicate, and translucent; sheer as gossamer.' },
+  { word: 'Bespoke',         origin: 'Old English · bespeoken',   definition: 'Made to order; custom-crafted to exact specification.' },
+  { word: 'Nonchalant',      origin: 'French · nonchaloir',       definition: 'Appearing casually calm and unconcerned; coolly self-assured.' },
+  { word: 'Raffish',         origin: 'English',                   definition: 'Unconventional and slightly disreputable, but in an attractive way.' },
+  { word: 'Opulent',         origin: 'Latin · opulentus',         definition: 'Ostentatiously rich; richly luxurious and sumptuous.' },
+  { word: 'Austere',         origin: 'Greek · austēros',          definition: 'Severe and plain; having no decoration or adornment.' },
+  { word: 'Languid',         origin: 'Latin · languidus',         definition: 'Gracefully slow and relaxed; pleasantly without urgency.' },
+  { word: 'Silhouette',      origin: 'French · É. de Silhouette', definition: 'The outline or shape of a garment against the body.' },
+  { word: 'Atelier',         origin: 'French',                    definition: 'A designer\'s private workshop; a studio of haute couture.' },
+  { word: 'Couture',         origin: 'French · coudre',           definition: 'The design and manufacture of fashionable garments; high fashion.' },
+  { word: 'Toile',           origin: 'French · cloth',            definition: 'A trial garment made in inexpensive fabric to test a pattern.' },
+  { word: 'Maison',          origin: 'French · house',            definition: 'A fashion house; the creative home of a designer\'s vision.' },
+  { word: 'Prêt-à-porter',   origin: 'French',                    definition: 'Ready-to-wear; designed for mass production, not made-to-order.' },
+  { word: 'Gestalt',         origin: 'German · shape',            definition: 'The overall look perceived as a unified whole, beyond its parts.' },
+  { word: 'Zeitgeist',       origin: 'German · time spirit',      definition: 'The defining spirit or mood of a particular era.' },
+  { word: 'Démodé',          origin: 'French',                    definition: 'No longer fashionable; out of date; past its moment.' },
+  { word: 'Avant-garde',     origin: 'French · advance guard',    definition: 'Favouring experimental, ahead-of-its-time ideas.' },
+  { word: 'Ecru',            origin: 'French · unbleached',       definition: 'The beige or off-white colour of unbleached linen.' },
+  { word: 'Celadon',         origin: 'French · Céladon',          definition: 'A pale grey-green, like ancient Chinese porcelain glaze.' },
+  { word: 'Mauve',           origin: 'French · mallow plant',     definition: 'A pale purple-pink; the first synthetic dye, discovered 1856.' },
+  { word: 'Umber',           origin: 'Italian · Umbria',          definition: 'A dark brownish pigment; rich, earthy, and warm.' },
+  { word: 'Tawny',           origin: 'Old French · tané',         definition: 'An orange-brown or yellowish-brown; warm as autumn.' },
+  { word: 'Alabaster',       origin: 'Greek · alabastron',        definition: 'Smooth and white; translucent like fine-grained gypsum.' },
+  { word: 'Burnished',       origin: 'Old French · brunir',       definition: 'Polished by rubbing; having a warm, metallic sheen.' },
+  { word: 'Capsule',         origin: 'Latin · capsula',           definition: 'A small, curated collection of versatile, timeless pieces.' },
+  { word: 'Curation',        origin: 'Latin · cūrāre',            definition: 'The careful selection and organisation of items for effect.' },
+  { word: 'Provenance',      origin: 'French · provenir',         definition: 'The place of origin; the story behind an object.' },
+  { word: 'Archive',         origin: 'Greek · arkheion',          definition: 'Historical garments preserved; the memory of a house.' },
+  { word: 'Monochromatic',   origin: 'Greek · monos + khroma',    definition: 'Using a single colour in varying shades and tones.' },
+  { word: 'Sculptural',      origin: 'Latin · sculptura',         definition: 'Having strong, clear, three-dimensional lines; garment-as-art.' },
+  { word: 'Deconstructed',   origin: 'French · déconstruction',   definition: 'Subverting the rules of construction; taken apart and reconceived.' },
+  { word: 'Understated',     origin: 'English',                   definition: 'Expressed with restraint; achieving impact through quiet confidence.' },
+  { word: 'Draped',          origin: 'Old French · draper',       definition: 'Arranged in graceful, flowing folds; fabric allowed to fall freely.' },
+  { word: 'Cinched',         origin: 'Old French · cingle',       definition: 'Gathered tight at the waist; defining the figure.' },
+  { word: 'Oversized',       origin: 'English',                   definition: 'Intentionally larger than standard; volume as a design statement.' },
+  { word: 'Textural',        origin: 'Latin · textura',           definition: 'Rich in surface quality and tactility; varied in feel.' },
+  { word: 'Polished',        origin: 'Latin · polire',            definition: 'Smooth, refined, and sophisticated; carefully finished.' },
+  { word: 'Heritage',        origin: 'Old French · héritage',     definition: 'Tradition and craft passed down; the weight of history in cloth.' },
+  { word: 'Gilded',          origin: 'Old English · gyldan',      definition: 'Thinly covered in gold; wealthy, gleaming, and opulent.' },
+  { word: 'Chromatic',       origin: 'Greek · khroma',            definition: 'Relating to colour; richly hued; vibrant with pigment.' },
+  { word: 'Studied',         origin: 'Latin · studēre',           definition: 'Deliberately considered; intentional in its apparent effortlessness.' },
+  { word: 'Verdant',         origin: 'Old French · verdoier',     definition: 'Lush and green; rich with the vitality of fresh growth.' },
+  { word: 'Slouchy',         origin: 'English',                   definition: 'Relaxed and intentionally casual in structure; artfully undone.' },
+  { word: 'Laconic',         origin: 'Greek · Laconia (Sparta)',  definition: 'Using very few words; speaking through silence and restraint.' },
+  { word: 'Palette',         origin: 'French · palete',           definition: 'The range of colours used by a designer; a chromatic signature.' },
+  { word: 'Je ne sais quoi', origin: 'French',                    definition: 'An indefinable quality that makes something distinctly attractive.' },
+  { word: 'Jolie laide',     origin: 'French · pretty ugly',      definition: 'Attractive despite irregular features; beauty that defies convention.' },
+  { word: 'Ennui',           origin: 'French · Old French enui',  definition: 'A listless world-weariness; glamorous dissatisfaction.' },
+  { word: 'Chic',            origin: 'French · German schick',    definition: 'Elegantly and stylishly dressed; effortlessly sophisticated.' },
+  { word: 'Proportion',      origin: 'Latin · proportio',         definition: 'The harmonious relationship between parts of a garment.' },
+  { word: 'Craft',           origin: 'Old English · cræft',       definition: 'Skill and precision in the making of things; mastery by hand.' },
+  { word: 'Wardrobe',        origin: 'Old French · warderobe',    definition: 'One\'s entire collection of clothing; a curated personal universe.' },
+  { word: 'Minimal',         origin: 'Latin · minimus',           definition: 'Reduced to essentials; beauty found in what is left out.' },
+  { word: 'Cobalt',          origin: 'German · kobold',           definition: 'A deep, vivid blue; the colour of shadow in bright light.' },
+  { word: 'Eclecticism',     origin: 'Greek · eklektikos',        definition: 'Deriving ideas from a broad and varied range of sources.' },
+];
+
+function dayOfYear(): number {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  return Math.floor((now.getTime() - start.getTime()) / 86400000);
+}
+
+function getWord(): WordEntry {
+  return WORDS[dayOfYear() % WORDS.length];
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function uvLabel(uv: number): string {
   if (uv <= 2) return 'Low';
   if (uv <= 5) return 'Moderate';
@@ -33,6 +117,19 @@ function pollenLevel(val: number): string {
   return 'Very High';
 }
 
+// ─── Widget shell ─────────────────────────────────────────────────────────────
+
+function Widget({ label, children, noPad }: { label: string; children: React.ReactNode; noPad?: boolean }) {
+  return (
+    <View style={styles.widget}>
+      <Text style={styles.widgetLabel}>{label}</Text>
+      <View style={noPad ? undefined : styles.widgetBody}>{children}</View>
+    </View>
+  );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export function TodayScreen() {
   const { oracle, profileCtx, streakCtx } = useAppData();
   const { weather, verdict, cachedAt, cachedCity, isFromCache, status } = oracle;
@@ -53,10 +150,8 @@ export function TodayScreen() {
 
   const showResult = !!weather && !!verdict;
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
-
-  const hoursAgo = cachedAt
-    ? Math.round((Date.now() - cachedAt) / (1000 * 60 * 60))
-    : null;
+  const hoursAgo   = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
+  const word       = getWord();
 
   return (
     <View style={styles.root}>
@@ -82,6 +177,14 @@ export function TodayScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── WORD OF THE DAY (always visible) ── */}
+        <Widget label="WORD OF THE DAY">
+          <View style={styles.wotdAccent} />
+          <Text style={styles.wotdWord}>{word.word}</Text>
+          <Text style={styles.wotdOrigin}>{word.origin}</Text>
+          <Text style={styles.wotdDef}>{word.definition}</Text>
+        </Widget>
+
         {showResult ? (
           <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroY }] }}>
 
@@ -123,8 +226,7 @@ export function TodayScreen() {
 
             {/* ── HOURLY FORECAST ── */}
             {!!weather.hourly?.length && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>NEXT 24 HOURS</Text>
+              <Widget label="NEXT 24 HOURS" noPad>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -152,13 +254,12 @@ export function TodayScreen() {
                     </View>
                   ))}
                 </ScrollView>
-              </View>
+              </Widget>
             )}
 
-            {/* ── UV / SUN / MOON ── */}
+            {/* ── CONDITIONS (UV / SUN / MOON) ── */}
             {(weather.uvIndex !== undefined || weather.sunrise || weather.moonPhaseName) && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>CONDITIONS</Text>
+              <Widget label="CONDITIONS">
                 <View style={styles.conditionsRow}>
                   {weather.uvIndex !== undefined && (
                     <View style={styles.condCard}>
@@ -177,22 +278,14 @@ export function TodayScreen() {
                   )}
                   {weather.sunrise && (
                     <View style={styles.condCard}>
-                      <MaterialCommunityIcons
-                        name="weather-sunset-up"
-                        size={20}
-                        color="rgba(250,249,246,0.50)"
-                      />
+                      <MaterialCommunityIcons name="weather-sunset-up" size={20} color="rgba(250,249,246,0.50)" />
                       <Text style={styles.condCardVal}>{weather.sunrise}</Text>
                       <Text style={styles.condCardLabel}>SUNRISE</Text>
                     </View>
                   )}
                   {weather.sunset && (
                     <View style={styles.condCard}>
-                      <MaterialCommunityIcons
-                        name="weather-sunset-down"
-                        size={20}
-                        color="rgba(250,249,246,0.50)"
-                      />
+                      <MaterialCommunityIcons name="weather-sunset-down" size={20} color="rgba(250,249,246,0.50)" />
                       <Text style={styles.condCardVal}>{weather.sunset}</Text>
                       <Text style={styles.condCardLabel}>SUNSET</Text>
                     </View>
@@ -208,13 +301,12 @@ export function TodayScreen() {
                     </View>
                   )}
                 </View>
-              </View>
+              </Widget>
             )}
 
-            {/* ── 7-DAY FORECAST ── */}
+            {/* ── WEEKLY FORECAST ── */}
             {!!weather.daily?.length && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>7-DAY FORECAST</Text>
+              <Widget label="WEEKLY FORECAST">
                 {weather.daily.map((d, i) => (
                   <View
                     key={d.date}
@@ -241,20 +333,15 @@ export function TodayScreen() {
                     </View>
                   </View>
                 ))}
-              </View>
+              </Widget>
             )}
 
             {/* ── ALLERGENS & AIR QUALITY ── */}
             {weather.pollen && (
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>ALLERGENS & AIR</Text>
+              <Widget label="ALLERGENS & AIR">
                 <View style={styles.aqiRow}>
-                  <View>
-                    <Text style={styles.aqiVal}>{weather.pollen.aqi}</Text>
-                    <Text style={styles.aqiLabel}>
-                      AQI — {weather.pollen.aqiLabel.toUpperCase()}
-                    </Text>
-                  </View>
+                  <Text style={styles.aqiVal}>{weather.pollen.aqi}</Text>
+                  <Text style={styles.aqiLabel}>AQI — {weather.pollen.aqiLabel.toUpperCase()}</Text>
                 </View>
                 <View style={styles.pollenGrid}>
                   {[
@@ -269,13 +356,12 @@ export function TodayScreen() {
                     </View>
                   ))}
                 </View>
-              </View>
+              </Widget>
             )}
 
-            {/* ── VERDICT STRIP ── */}
-            <View style={styles.verdictStrip}>
-              <Text style={styles.verdictEyebrow}>— THE ORACLE SPEAKS —</Text>
-              <Text style={styles.verdictPull} numberOfLines={3}>
+            {/* ── THE ORACLE SPEAKS ── */}
+            <Widget label="— THE ORACLE SPEAKS —">
+              <Text style={styles.verdictPull} numberOfLines={4}>
                 "{verdict.verdict}"
               </Text>
               <View style={styles.verdictMeta}>
@@ -292,20 +378,17 @@ export function TodayScreen() {
                   </View>
                 </View>
               </View>
-            </View>
+            </Widget>
 
-            {/* ── OUTFIT CHIPS ── */}
-            <View style={styles.chipSection}>
-              <Text style={styles.chipLabel}>TODAY'S LOOK</Text>
-              <View style={styles.chips}>
-                {verdict.outfits.slice(0, 3).map(item => (
-                  <View key={item.category} style={styles.chip}>
-                    <Text style={styles.chipCategory}>{item.category.toUpperCase()}</Text>
-                    <Text style={styles.chipItem}>{item.item}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
+            {/* ── TODAY'S LOOK (outfit chips) ── */}
+            <Widget label="TODAY'S LOOK">
+              {verdict.outfits.slice(0, 3).map(item => (
+                <View key={item.category} style={styles.chip}>
+                  <Text style={styles.chipCategory}>{item.category.toUpperCase()}</Text>
+                  <Text style={styles.chipItem}>{item.item}</Text>
+                </View>
+              ))}
+            </Widget>
 
             {/* ── REFRESH ROW ── */}
             <View style={styles.refreshRow}>
@@ -324,7 +407,7 @@ export function TodayScreen() {
                 accessibilityLabel="Refresh today's Oracle verdict"
               >
                 <Text style={[styles.refreshBtn, isLoading && { opacity: 0.4 }]}>
-                  {isLoading ? 'Consulting…' : '↻ Refresh verdict'}
+                  {isLoading ? 'Consulting…' : '+ Refresh verdict'}
                 </Text>
               </Pressable>
             </View>
@@ -357,11 +440,15 @@ export function TodayScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
   },
+
+  /* Header */
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: spacing.md,
@@ -395,19 +482,78 @@ const styles = StyleSheet.create({
     color: 'rgba(250,249,246,0.50)',
     letterSpacing: 1,
   },
-  scroll: {
-    flex: 1,
+
+  scroll: { flex: 1 },
+  content: { paddingBottom: 48 },
+
+  /* ── Widget shell ── */
+  widget: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    backgroundColor: '#111009',
+    borderWidth: 1,
+    borderColor: 'rgba(250,249,246,0.08)',
   },
-  content: {
-    paddingBottom: 40,
+  widgetLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2.5,
+    color: 'rgba(250,249,246,0.30)',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(250,249,246,0.06)',
+  },
+  widgetBody: {
+    padding: spacing.md,
+  },
+
+  /* ── Word of the Day ── */
+  wotdAccent: {
+    width: 2,
+    height: '100%',
+    backgroundColor: colors.scarlet,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  wotdWord: {
+    fontFamily: fonts.display,
+    fontSize: 34,
+    color: '#FAF9F6',
+    letterSpacing: -0.5,
+    lineHeight: 38,
+    marginBottom: 4,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+  },
+  wotdOrigin: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.scarlet,
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  wotdDef: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    color: 'rgba(250,249,246,0.55)',
+    lineHeight: 18,
+    letterSpacing: 0.2,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
 
   /* ── Weather hero ── */
   weatherHero: {
     backgroundColor: '#111009',
     marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(250,249,246,0.08)',
   },
   heroTop: {
     flexDirection: 'row',
@@ -415,9 +561,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: spacing.md,
   },
-  heroLeft: {
-    flex: 1,
-  },
+  heroLeft: { flex: 1 },
   heroCity: {
     fontFamily: fonts.display,
     fontSize: 28,
@@ -481,26 +625,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ── Detail sections (shared) ── */
-  detailSection: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(250,249,246,0.07)',
-  },
-  detailLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    letterSpacing: 2.5,
-    color: 'rgba(250,249,246,0.30)',
-    marginBottom: spacing.md,
-  },
-
   /* ── Hourly forecast ── */
   hourlyList: {
     gap: 4,
-    paddingRight: spacing.md,
+    padding: spacing.md,
   },
   hourlyItem: {
     alignItems: 'center',
@@ -539,7 +667,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  /* ── Conditions (UV / sun / moon) ── */
+  /* ── Conditions ── */
   conditionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -569,7 +697,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  /* ── 7-day forecast ── */
+  /* ── Weekly forecast ── */
   dailyRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -627,9 +755,7 @@ const styles = StyleSheet.create({
   },
 
   /* ── Allergens & AQI ── */
-  aqiRow: {
-    marginBottom: spacing.md,
-  },
+  aqiRow: { marginBottom: spacing.md },
   aqiVal: {
     fontFamily: fonts.displayBold,
     fontSize: 36,
@@ -675,27 +801,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  /* ── Verdict strip ── */
-  verdictStrip: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-    padding: spacing.lg,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  verdictEyebrow: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    letterSpacing: 2,
-    color: colors.textMuted,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
+  /* ── Oracle verdict ── */
   verdictPull: {
     fontFamily: fonts.display,
     fontSize: 20,
-    color: colors.textPrimary,
+    color: '#FAF9F6',
     lineHeight: 28,
     letterSpacing: -0.3,
     marginBottom: spacing.md,
@@ -705,67 +815,47 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: 'rgba(250,249,246,0.10)',
     paddingTop: spacing.md,
   },
   verdictMetaLabel: {
     fontFamily: fonts.mono,
     fontSize: 9,
     letterSpacing: 2,
-    color: colors.textMuted,
+    color: 'rgba(250,249,246,0.35)',
     marginBottom: 4,
   },
   verdictVibe: {
     fontFamily: fonts.displayBold,
     fontSize: 16,
-    color: colors.textPrimary,
+    color: '#FAF9F6',
   },
-  ratingBlock: {
-    alignItems: 'flex-end',
-  },
-  ratingDashes: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 4,
-  },
+  ratingBlock: { alignItems: 'flex-end' },
+  ratingDashes: { flexDirection: 'row', gap: 4, marginTop: 4 },
   dash: { width: 16, height: 3 },
-  dashFilled: { backgroundColor: colors.textPrimary },
-  dashEmpty:  { backgroundColor: colors.border },
+  dashFilled: { backgroundColor: '#FAF9F6' },
+  dashEmpty:  { backgroundColor: 'rgba(250,249,246,0.15)' },
 
   /* ── Outfit chips ── */
-  chipSection: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.md,
-  },
-  chipLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    letterSpacing: 2,
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  chips: {
-    gap: 1,
-  },
   chip: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: spacing.sm,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: 'rgba(250,249,246,0.07)',
   },
   chipCategory: {
     fontFamily: fonts.mono,
     fontSize: 8,
     letterSpacing: 1.5,
-    color: colors.textMuted,
+    color: 'rgba(250,249,246,0.35)',
     width: 72,
   },
   chipItem: {
     fontFamily: fonts.displayBold,
     fontSize: 16,
-    color: colors.textPrimary,
+    color: '#FAF9F6',
     flex: 1,
     letterSpacing: -0.2,
   },
@@ -773,7 +863,7 @@ const styles = StyleSheet.create({
   /* ── Refresh row ── */
   refreshRow: {
     marginHorizontal: spacing.lg,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -781,22 +871,20 @@ const styles = StyleSheet.create({
   refreshMeta: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: colors.textMuted,
+    color: 'rgba(250,249,246,0.30)',
     letterSpacing: 0.5,
   },
   refreshBtn: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.55)',
+    color: 'rgba(250,249,246,0.50)',
     letterSpacing: 0.5,
   },
 
   /* ── Empty state ── */
   emptyState: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 64,
     gap: spacing.md,
   },
   emptyTitle: {
@@ -820,12 +908,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(250,249,246,0.08)',
+    borderTopColor: 'rgba(250,249,246,0.06)',
   },
   greetingSub: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.25)',
+    color: 'rgba(250,249,246,0.20)',
     letterSpacing: 0.3,
   },
 });

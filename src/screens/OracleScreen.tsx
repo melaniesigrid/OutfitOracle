@@ -33,6 +33,7 @@ export function OracleScreen() {
   const [city, setCity]               = useState('');
   const [gender, setGender]           = useState<Gender>('Women');
   const [occasion, setOccasion]       = useState<Occasion>('Any');
+  const [lookMode, setLookMode]       = useState<'polished' | 'casual'>('polished');
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
   const [locationLoading, setLocationLoading] = useState(false);
 
@@ -88,6 +89,7 @@ export function OracleScreen() {
     suppressSuggestRef.current = true;
     setSuggestions([]);
     setCity(target);
+    setLookMode('polished');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     addCity(target);
     consult(target, gender, profile, occasion);
@@ -258,8 +260,26 @@ export function OracleScreen() {
               ) : null}
               <WeatherStrip weather={weather} />
               <VerdictCard verdict={verdict} />
-              {verdict.outfits.map((item, i) => (
-                <OutfitCard key={item.category} item={item} index={i} />
+              {verdict.outfitsAlt && (
+                <View style={styles.lookToggle}>
+                  {(['polished', 'casual'] as const).map(mode => (
+                    <Pressable
+                      key={mode}
+                      style={[styles.lookToggleBtn, lookMode === mode && styles.lookToggleBtnActive]}
+                      onPress={() => { Haptics.selectionAsync(); setLookMode(mode); }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: lookMode === mode }}
+                      accessibilityLabel={`${mode} look`}
+                    >
+                      <Text style={[styles.lookToggleText, lookMode === mode && styles.lookToggleTextActive]}>
+                        {mode.toUpperCase()}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+              {(lookMode === 'casual' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits).map((item, i) => (
+                <OutfitCard key={item.category} item={item} index={i} city={city} vibe={verdict.vibe} />
               ))}
               <AvoidSection items={verdict.avoid} />
               <Pressable
@@ -342,6 +362,29 @@ const styles = StyleSheet.create({
   errorText: { fontFamily: fonts.mono, fontSize: 12, color: colors.textSecondary, lineHeight: 19, marginBottom: spacing.md },
   retryText: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.scarlet, letterSpacing: 0.5 },
   results: { marginTop: spacing.sm, paddingHorizontal: spacing.lg },
+  lookToggle: {
+    flexDirection: 'row',
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  lookToggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  lookToggleBtnActive: {
+    backgroundColor: colors.bgDark,
+  },
+  lookToggleText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2,
+    color: colors.textMuted,
+  },
+  lookToggleTextActive: {
+    color: '#FAF9F6',
+  },
   cacheBadge: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,

@@ -79,6 +79,14 @@ function buildPrompt(weather, gender, styleProfile, occasion) {
   const occasionNote = occasion && occasion !== 'Any'
     ? `- Occasion: ${occasion} — shape every recommendation specifically for this context.\n`
     : '';
+  const tempNote = styleProfile?.tempSensitivity === 'runs-cold'
+    ? `- Temperature sensitivity: This person runs cold — lean toward warmer layers and heavier fabrics than the thermometer alone might suggest.\n`
+    : styleProfile?.tempSensitivity === 'runs-hot'
+    ? `- Temperature sensitivity: This person runs hot — recommend lighter, more breathable pieces than the temperature might suggest.\n`
+    : '';
+  const colorLoves  = styleProfile?.colorLoves?.length  ? `- Colour loves: ${styleProfile.colorLoves.join(', ')} — weave these into picks where possible.\n`  : '';
+  const colorAvoids = styleProfile?.colorAvoids?.length ? `- Colour avoids: ${styleProfile.colorAvoids.join(', ')} — never recommend items in these colours.\n` : '';
+  const colorNote   = colorLoves + colorAvoids;
 
   return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
 ${profileSection}
@@ -89,8 +97,7 @@ Weather right now:
 - Humidity: ${weather.humidity}%
 - Wind: ${weather.windSpeed} km/h
 - Dressing for: ${gender}
-${occasionNote}
-
+${occasionNote}${tempNote}${colorNote}
 Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble:
 
 {
@@ -98,11 +105,18 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
   "vibe": "3-5 word vibe name for the day, e.g. 'Cozy Intellectual', 'Apocalypse Chic', 'Main Character Winter'",
   "rating": <integer 1-5 representing how much effort/complexity the day demands — 1 is basic, 5 is full look>,
   "outfits": [
-    { "category": "Top", "item": "specific item", "detail": "styling note or sassy observation", "accentColor": "mint" },
-    { "category": "Bottom", "item": "specific item", "detail": "styling note", "accentColor": "lavender" },
-    { "category": "Outer Layer", "item": "specific item or 'None needed — the universe has gifted you warmth'", "detail": "why this makes sense for ${weather.temp}°C", "accentColor": "coral" },
-    { "category": "Footwear", "item": "specific item", "detail": "practical and stylish reasoning", "accentColor": "lemon" },
-    { "category": "Accessories", "item": "specific items", "detail": "complete the look", "accentColor": "iris" }
+    { "category": "Top", "item": "polished, put-together item", "detail": "styling note — this is the elevated, considered look", "accentColor": "mint" },
+    { "category": "Bottom", "item": "polished item", "detail": "styling note", "accentColor": "lavender" },
+    { "category": "Outer Layer", "item": "polished item or 'None needed — the universe has gifted you warmth'", "detail": "why this makes sense for the temperature", "accentColor": "coral" },
+    { "category": "Footwear", "item": "polished item", "detail": "practical and stylish reasoning", "accentColor": "lemon" },
+    { "category": "Accessories", "item": "considered accessories", "detail": "complete the polished look", "accentColor": "iris" }
+  ],
+  "outfitsAlt": [
+    { "category": "Top", "item": "casual, relaxed item for the same weather", "detail": "styling note — this is the off-duty, effortless version", "accentColor": "mint" },
+    { "category": "Bottom", "item": "casual item", "detail": "styling note", "accentColor": "lavender" },
+    { "category": "Outer Layer", "item": "casual item or 'None needed — the universe has gifted you warmth'", "detail": "why this makes sense for the temperature", "accentColor": "coral" },
+    { "category": "Footwear", "item": "casual item", "detail": "practical and relaxed reasoning", "accentColor": "lemon" },
+    { "category": "Accessories", "item": "minimal accessories", "detail": "finish the casual look", "accentColor": "iris" }
   ],
   "avoid": ["specific item to avoid", "another mistake", "one more thing the Oracle forbids"]
 }`;
@@ -147,7 +161,7 @@ export default {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        max_tokens: 1800,
         messages: [{ role: 'user', content: buildPrompt(weather, gender, styleProfile, occasion) }],
       }),
     });

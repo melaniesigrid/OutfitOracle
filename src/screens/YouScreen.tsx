@@ -26,7 +26,7 @@ const RANK_PROGRESS = [
 
 export function YouScreen() {
   const navigation = useNavigation<any>();
-  const { profileCtx, historyCtx, streakCtx } = useAppData();
+  const { profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
   const profile   = profileCtx.profile;
   const { history, firstConsultAt } = historyCtx;
   const { streak, totalConsults } = streakCtx;
@@ -201,6 +201,33 @@ export function YouScreen() {
             </Pressable>
           )}
         </View>
+
+        {/* ── SAVED LOOKS ── */}
+        {savedCtx.saved.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>SAVED LOOKS</Text>
+              <Text style={styles.badgeCount}>{savedCtx.saved.length}</Text>
+            </View>
+            {savedCtx.saved.map(s => (
+              <View key={`${s.item.item}-${s.savedAt}`} style={styles.savedRow}>
+                <View style={styles.savedLeft}>
+                  <Text style={styles.savedCategory}>{s.item.category.toUpperCase()}</Text>
+                  <Text style={styles.savedItem}>{s.item.item}</Text>
+                  <Text style={styles.savedMeta}>{s.city} · {s.vibe}</Text>
+                </View>
+                <Pressable
+                  onPress={() => savedCtx.removeOutfit(s.item, s.city)}
+                  hitSlop={12}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${s.item.item} from saved looks`}
+                >
+                  <MaterialCommunityIcons name="heart" size={16} color={colors.scarlet} />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* ── ORACLE ARCHIVES ── */}
         {history.length > 0 && (
@@ -507,6 +534,37 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 0.3,
     lineHeight: 17,
+  },
+
+  /* Saved looks */
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
+  },
+  savedLeft: { flex: 1 },
+  savedCategory: {
+    fontFamily: fonts.mono,
+    fontSize: 8,
+    letterSpacing: 2,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  savedItem: {
+    fontFamily: fonts.display,
+    fontSize: 18,
+    color: colors.textPrimary,
+    letterSpacing: -0.2,
+  },
+  savedMeta: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+    marginTop: 2,
   },
 
   /* Archives */

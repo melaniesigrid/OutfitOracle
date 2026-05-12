@@ -28,6 +28,7 @@
 | 8 | 2026/05/11 | `textMuted` (#9A958E) contrast 2.70:1 — fails accessibility guidelines (4.5:1 required) | Darkened to #706A66 → 5.08:1, passes AA |
 | 9 | 2026/05/11 | All remaining 8–9px informational labels | Bumped to 10px across all components |
 | 10 | 2026/05/11 | City suggestions appeared flush left | Added `marginHorizontal: spacing.lg` to `CitySuggestions` container |
+| 11 | 2026/05/12 | Accessories Google Shopping searched all items as one query | `splitItems()` splits on `,` and `and`; renders one Pressable per piece |
 
 ---
 
@@ -39,15 +40,15 @@
 
 - [ ] **Rotate the Anthropic API key** — generate a new key at console.anthropic.com; update the Cloudflare Worker secret (`wrangler secret put ANTHROPIC_API_KEY`). The old key was exposed in the bundle during early development. This is a security blocker.
 - [ ] **Host the privacy policy** — publish `PRIVACY_POLICY.md` as a public web page (GitHub Pages, Notion public page, or a simple HTML file). App Store Connect requires a live URL — a markdown file in a private repo is not accepted.
-- [ ] **Configure Sentry** — run `npx @sentry/wizard@latest -s -i reactNative` in the project root; set `SENTRY_DSN` in `.env` and in the Cloudflare Worker. Without this, crashes on beta devices go undetected.
-- [ ] **Add PrivacyInfo.xcprivacy** — surfaced during pod install after adding react-native-maps. Apple requires a privacy manifest listing Required Reasons APIs (e.g. file timestamps, user defaults). Add the file to the Xcode project; a template is at `ios/PrivacyInfo.xcprivacy`. Required for App Store submission from Spring 2024 onward.
+- [ ] **Configure Sentry** — set `SENTRY_DSN` in `.env` and in the Cloudflare Worker. Without this, crashes on beta devices go undetected.
+- [x] **Add PrivacyInfo.xcprivacy** — file created at `ios/OutfitOracle/PrivacyInfo.xcprivacy` with all four standard RN Required Reasons API entries. **Must be dragged into Xcode project navigator** (File → Add Files) before archiving — the file exists on disk but is not yet referenced in the `.xcodeproj`. ✅ 2026/05/11
 
 ### Nice-to-have before archive
 
 - [ ] **VoiceOver / TalkBack device audit** — all Pressables have labels and roles in code; needs a 15-minute end-to-end test on a real device with VoiceOver enabled. Apple will require this for public release.
 - [ ] **App Store Connect record** — create the app listing (name: "Outfit Oracle", category: Lifestyle, age rating: 4+, privacy policy URL from above). Required before you can upload a build.
 - [ ] **App Store screenshots** — 6.5" iPhone (1284×2778) and 5.5" iPhone (1242×2208); minimum 3 per device class. Can be captured from the simulator.
-- [ ] **Settings sheet** — minimum viable: a way for beta users to clear data and opt out of analytics. Apple reviewers look for data deletion options.
+- [x] **Settings screen** — gear icon in YouScreen rank hero → dark modal with: DATA (clear history, reset all data with confirmation Alert), ANALYTICS toggle, ABOUT (version, privacy policy link, attributions) ✅ 2026/05/11
 
 ### After archive is uploaded
 
@@ -104,12 +105,13 @@
 ### Input Quality
 - [x] **GPS auto-detect** — `expo-location`, `reverseGeocodeAsync`, no double-geocode ✅ 2026/05/11
 - [x] **City autocomplete** — debounced (300ms), collapses on selection ✅ 2026/05/11
-- [ ] **Occasion input** — "I'm dressing for..." (Work, Date, Event, Weekend, Travel) shown below the city input; a single selection completely reshapes the Claude verdict. The single biggest improvement to output quality available. *Low effort, very high impact.*
+- [x] **Occasion input** — Any / Work / Date / Event / Weekend / Active picker below gender toggle; threads through `useOracle` → `fetchOracleVerdict` → `buildPrompt` in both app and Worker ✅ 2026/05/11
 
 ### Content Depth
 - [x] **Skeleton loading UI** — shimmer placeholder during fetch ✅ 2026/05/11
 - [x] **Expanded TodayScreen** — hourly forecast, 7-day daily, UV index, sun/moon, allergens & AQI ✅ 2026/05/11
-- [ ] **Alternative outfits** — prompt Claude for 2 sets (polished + casual); user swipes between them; doubles perceived value per consult
+- [x] **TodayScreen widget redesign** — all sections refactored into uniform dark bordered Widget cards; Word of the Day widget (60-word curated fashion vocabulary, deterministic per calendar day) shown above weather ✅ 2026/05/11
+- [x] **Alternative outfits** — Claude now returns `outfits` (polished) + `outfitsAlt` (casual); POLISHED / CASUAL toggle appears in OracleScreen when both sets are present; old cached verdicts without `outfitsAlt` render normally ✅ 2026/05/11
 
 ### Gamification — The Oracle's Court
 > Every mechanic stays in the editorial register — no XP bars, no pixel badges. Devotion, rank, pilgrimage.
@@ -120,7 +122,7 @@
 - [x] **Weather badges** — 16 badges across temperature, UV, precipitation, timing, travel, anniversary ✅ 2026/05/11
 - [ ] **Weekly editorial challenge** — fresh brief every Monday (hardcoded rotating set of 8–10); "Dress for rain in two different cities this week." Completing it adds a limited badge and a share card variant. Shown as a strip in the Oracle tab when active.
 - [ ] **Oracle Accuracy score** — powered by "Rate my outfit day" ratings; running percentage shown in YouScreen ("The Oracle has been right 78% of the time"); >80% unlocks "Trusted Oracle" badge; <50% prompts style profile update
-- [ ] **Leaderboard** — opt-in, global, ranked by streak + city count; display name derived from city of first consult ("The London Oracle"). **Do not build until DAU > 1,000.** Empty leaderboards are demotivating.
+- [ ] **Leaderboard** — opt-in, global, ranked by streak + city count; display name derived from city of first consult ("The London Oracle"). **Do not build until DAU > 1,000.** Empty leaderboards are demotivating. Requires Phase 6 (Identity).
 
 ---
 
@@ -132,12 +134,12 @@
 - [x] **3-step onboarding** — keywords (pick-3) + budget tier; skippable; persisted ✅ 2026/05/11
 - [x] **Oracle Personality** — Diplomat / Editor / Savage; injected into every prompt ✅ 2026/05/11
 - [x] **ProfileEditScreen** — name, keywords, budget, voice; accessible from YouScreen ✅ 2026/05/11
-- [ ] **Temperature sensitivity** — "I usually run cold / hot" toggle; shifts the Oracle toward layering or lighter pieces independently of the actual temperature reading. *10-minute build, immediately improves cold-weather advice.*
-- [ ] **Colour preferences** — mark 2–3 colours you love and 1–2 you avoid; Claude references these in picks ("avoiding your dislike of yellow")
+- [x] **Temperature sensitivity** — Runs Cold / Normal / Runs Hot 3-way toggle in ProfileEditScreen; shifts layering recommendations in both app and Worker `buildPrompt` ✅ 2026/05/11
+- [x] **Colour preferences** — 16-colour swatch grid in ProfileEditScreen; tap-cycle (love → avoid → clear); up to 3 loves + 2 avoids; injected into Claude prompt in both app and Worker ✅ 2026/05/12
 - [ ] **Settings sheet** — toggle notifications, clear data, export history
 
 ### Wardrobe
-- [ ] **Saved outfits** — heart icon on each outfit card; stored in AsyncStorage; accessible from a "Saved" tab or YouScreen section
+- [x] **Saved outfits** — heart icon on each OutfitCard; `useSavedOutfits` hook (AsyncStorage, 50-item cap, dedup); SAVED LOOKS section in YouScreen with unsave tap; key included in Settings clear flows ✅ 2026/05/12
 - [ ] **"Wear this again"** — if current weather matches a past consult within ±5°C and same condition type, surface the saved look with one-tap option to re-consult
 - [ ] **Wardrobe photo upload** *(Phase 3 stretch)* — photograph individual pieces; Claude Vision identifies the item; the Oracle then references "your navy blazer" or "the linen shirt you own" in verdicts. This is the long-term moat — no other weather-to-outfit app does this.
 
@@ -179,8 +181,42 @@
 
 ---
 
+## Phase 6 — Identity & Cloud Sync
+
+> Without identity, every user is anonymous and all their data lives on one device. Identity unlocks cross-device continuity, social features, cloud backup, and eventually personalised model fine-tuning.  
+> **Do not build until after TestFlight beta confirms retention — identity is infrastructure, not a feature.**
+
+### Authentication
+- [ ] **Sign in with Apple** — required by Apple if any social login is offered; `expo-apple-authentication`; most frictionless for iOS users; no email required
+- [ ] **Email / password** — fallback for non-Apple users; handled by Supabase Auth or Firebase Authentication; password reset flow required
+- [ ] **Guest → account upgrade** — anonymous sessions with local data must seamlessly migrate to an authenticated account on sign-up (merge history, profile, saved outfits); losing data on sign-up is a conversion killer
+- [ ] **Auth gate** — sign-in wall is shown only when a cloud feature is triggered (leaderboard, cross-device sync), never at cold launch; anonymous use stays fully functional
+
+### Cloud Sync (requires Auth)
+- [ ] **Profile sync** — style profile (keywords, budget, personality, temp sensitivity, colour prefs) synced to user record; survives device change
+- [ ] **History sync** — outfit history and saved looks backed up; accessible on any device; conflict resolution: server wins on merge (last-write)
+- [ ] **Streak sync** — consult streak is currently device-local; losing a device resets it. Store streak + last consult date in user record
+- [ ] **Backend** — Supabase recommended (Postgres + Auth + Realtime + Storage in one hosted service, generous free tier); Firebase is viable but vendor lock-in is higher. Either integrates well with Expo via REST or JS SDK
+
+### Social & Identity Features (requires Auth)
+- [ ] **Display name** — chosen at sign-up (or derived from city of first consult: "The London Oracle"); shown in leaderboard and share cards
+- [ ] **Friend sharing** — send a consult result directly to a friend in-app; requires knowing their username or sharing a link; drives word-of-mouth
+- [ ] **Leaderboard** — move here from Phase 2 Gamification; requires stable identity to prevent manipulation. See Phase 2 note: do not build until DAU > 1,000
+- [ ] **Oracle Accuracy crowdsourcing** — aggregate anonymised accuracy ratings across users to surface which occasion × weather combos the Oracle nails vs. misses; feed this back into prompt tuning
+
+### Privacy & Compliance (required for any cloud storage of personal data)
+- [ ] **GDPR / CCPA delete-my-data flow** — authenticated users must be able to request full account deletion including all cloud records; required for EU App Store distribution
+- [ ] **Data export** — download full history + profile as JSON; Apple requires this for apps with user accounts
+- [ ] **Server-side rate limiting per user** — replace IP-based rate limiting on the Cloudflare Worker with user-ID-based limits once auth exists; prevents VPN abuse
+
+---
+
 ## Recently Completed
 
+- [x] **Colour preferences** — 16-colour swatch grid in ProfileEditScreen; tap-cycle (love → avoid → clear); injected into Claude prompt in both app and Worker ✅ 2026/05/12
+- [x] **Saved outfits** — `useSavedOutfits` hook; heart icon on OutfitCard; SAVED LOOKS in YouScreen; settings clear flow ✅ 2026/05/12
+- [x] **Accessories split fix** — `splitItems()` splits comma/and-separated accessories into individual Google Shopping links ✅ 2026/05/12
+- [x] **Orchestrator-Workers engine** — `src/files/orchestrator.py`; Phase 1 (orchestrator LLM selects 2–4 outfit lenses), Phase 2 (worker LLMs generate per-lens outfit sets); saves JSON + Markdown to `src/files/results/` ✅ 2026/05/12
 - [x] **Multi-screen UX redesign** — 3-tab navigation (Today / Oracle / You); welcome flow; `AppDataProvider` context; `ProfileEditScreen`; `YouScreen` ✅ 2026/05/11
 - [x] **Gamification suite** — consult streak, Oracle Rank, Style Passport, 16 weather badges ✅ 2026/05/11
 - [x] **Style profile onboarding** — 2-step flow, skippable, persisted, passed to Claude ✅ 2026/05/11

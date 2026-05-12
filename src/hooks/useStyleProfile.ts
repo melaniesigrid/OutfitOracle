@@ -45,11 +45,47 @@ export const PERSONALITY_OPTIONS: Array<{
   },
 ];
 
+export type TempSensitivity = 'runs-cold' | 'normal' | 'runs-hot';
+
+export const TEMP_SENSITIVITY_OPTIONS: Array<{
+  id: TempSensitivity;
+  label: string;
+  note: string;
+}> = [
+  { id: 'runs-cold', label: 'Runs Cold',  note: 'Always chilly — I layer up' },
+  { id: 'normal',    label: 'Normal',      note: 'Standard temperature comfort' },
+  { id: 'runs-hot',  label: 'Runs Hot',    note: 'Always warm — I wear less' },
+];
+
+export const COLOR_OPTIONS = [
+  { id: 'black',      label: 'Black',      hex: '#0D0B08' },
+  { id: 'white',      label: 'White',      hex: '#FAFAF8' },
+  { id: 'cream',      label: 'Cream',      hex: '#EDE8DC' },
+  { id: 'grey',       label: 'Grey',       hex: '#8A8A8A' },
+  { id: 'camel',      label: 'Camel',      hex: '#C19A6B' },
+  { id: 'chocolate',  label: 'Chocolate',  hex: '#5C3317' },
+  { id: 'navy',       label: 'Navy',       hex: '#1B2A4A' },
+  { id: 'cobalt',     label: 'Cobalt',     hex: '#0047AB' },
+  { id: 'burgundy',   label: 'Burgundy',   hex: '#800020' },
+  { id: 'scarlet',    label: 'Scarlet',    hex: '#C41230' },
+  { id: 'blush',      label: 'Blush',      hex: '#E8A0A0' },
+  { id: 'mustard',    label: 'Mustard',    hex: '#C8963C' },
+  { id: 'terracotta', label: 'Terracotta', hex: '#C06A45' },
+  { id: 'emerald',    label: 'Emerald',    hex: '#1A6B2A' },
+  { id: 'sage',       label: 'Sage',       hex: '#7D9B6A' },
+  { id: 'lavender',   label: 'Lavender',   hex: '#9B8DB8' },
+] as const;
+
+export type ColorId = typeof COLOR_OPTIONS[number]['id'];
+
 export interface StyleProfile {
   keywords: string[];
   budget: BudgetTier;
   name?: string;
   personality?: OraclePersonality;
+  tempSensitivity?: TempSensitivity;
+  colorLoves?: string[];
+  colorAvoids?: string[];
 }
 
 type ProfileState =
