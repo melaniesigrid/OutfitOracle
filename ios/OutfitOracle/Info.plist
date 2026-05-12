@@ -65,8 +65,10 @@
       <string>UIInterfaceOrientationLandscapeLeft</string>
       <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Outfit Oracle uses your location to give you a personalised outfit recommendation for where you are right now.</string>
     <key>UIUserInterfaceStyle</key>
-    <string>Dark</string>
+    <string>Light</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
   </dict>

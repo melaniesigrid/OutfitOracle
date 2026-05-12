@@ -23,7 +23,7 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { colors } from './src/theme';
 
 enableScreens();
-Appearance.addChangeListener(() => {});
+const _appearanceSub = Appearance.addChangeListener(() => {});
 SplashScreen.preventAutoHideAsync();
 
 Sentry.init({

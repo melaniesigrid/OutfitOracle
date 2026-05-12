@@ -124,15 +124,16 @@ export function SkeletonResults() {
 const styles = StyleSheet.create({
   root: {
     marginTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   hardRule: {
     height: 1,
-    backgroundColor: colors.borderHard,
+    backgroundColor: colors.border,
   },
   softRule: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.borderHard,
+    backgroundColor: colors.border,
   },
   softRuleStandalone: {
     height: 1,

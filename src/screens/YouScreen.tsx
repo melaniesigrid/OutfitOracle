@@ -40,7 +40,11 @@ export function YouScreen() {
   const nextRank = RANK_PROGRESS.find(r => totalConsults < r.min);
   const personalityLabel = PERSONALITY_OPTIONS.find(p => p.id === profile?.personality)?.title ?? 'The Editor';
 
-  const badges = useWeatherBadges(history, firstConsultAt);
+  const badges = useWeatherBadges(history, firstConsultAt, {
+    totalConsults,
+    streak,
+    savedCount: savedCtx.saved.length,
+  });
   const earnedBadges   = badges.filter(b => b.earned);
   const unearnedBadges = badges.filter(b => !b.earned);
 

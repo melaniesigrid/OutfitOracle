@@ -119,7 +119,7 @@
 - [x] **Consult streak** — consecutive-day tracking; milestone banners at 3/7/14/30/100 days ✅ 2026/05/11
 - [x] **Oracle Rank** — 5 tiers (Initiate → Oracle's Chosen) based on lifetime consults ✅ 2026/05/11
 - [x] **Style Passport** — unique city tally; milestone stamps at 10/25/50 cities ✅ 2026/05/11
-- [x] **Weather badges** — 16 badges across temperature, UV, precipitation, timing, travel, anniversary ✅ 2026/05/11
+- [x] **Weather badges** — 100 badges across first steps, streaks, temperature, precipitation, sunshine, wind, humidity, timing, calendar, cities, occasions, saves, and anniversaries; `BadgeExtras` param (totalConsults, streak, savedCount) wired from YouScreen; `occasion` added to HistoryEntry ✅ 2026/05/12
 - [ ] **Weekly editorial challenge** — fresh brief every Monday (hardcoded rotating set of 8–10); "Dress for rain in two different cities this week." Completing it adds a limited badge and a share card variant. Shown as a strip in the Oracle tab when active.
 - [ ] **Oracle Accuracy score** — powered by "Rate my outfit day" ratings; running percentage shown in YouScreen ("The Oracle has been right 78% of the time"); >80% unlocks "Trusted Oracle" badge; <50% prompts style profile update
 - [ ] **Leaderboard** — opt-in, global, ranked by streak + city count; display name derived from city of first consult ("The London Oracle"). **Do not build until DAU > 1,000.** Empty leaderboards are demotivating. Requires Phase 6 (Identity).

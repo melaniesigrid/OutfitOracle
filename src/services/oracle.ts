@@ -68,18 +68,18 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
   "vibe": "3-5 word vibe name for the day, e.g. 'Cozy Intellectual', 'Apocalypse Chic', 'Main Character Winter'",
   "rating": <integer 1-5 representing how much effort/complexity the day demands — 1 is basic, 5 is full look>,
   "outfits": [
-    { "category": "Top", "item": "polished, put-together item", "detail": "styling note — this is the elevated, considered look", "accentColor": "mint" },
-    { "category": "Bottom", "item": "polished item", "detail": "styling note", "accentColor": "lavender" },
-    { "category": "Outer Layer", "item": "polished item or 'None needed — the universe has gifted you warmth'", "detail": "why this makes sense for ${weather.temp}°C", "accentColor": "coral" },
-    { "category": "Footwear", "item": "polished item", "detail": "practical and stylish reasoning", "accentColor": "lemon" },
-    { "category": "Accessories", "item": "considered accessories", "detail": "complete the polished look", "accentColor": "iris" }
+    { "category": "Top", "item": "daytime item — functional and appropriate for the occasion and daylight hours", "detail": "why it works for the day", "accentColor": "mint" },
+    { "category": "Bottom", "item": "daytime item", "detail": "styling note", "accentColor": "lavender" },
+    { "category": "Outer Layer", "item": "daytime outer layer or 'None needed — the universe has gifted you warmth'", "detail": "why this makes sense for ${weather.temp}°C during the day", "accentColor": "coral" },
+    { "category": "Footwear", "item": "daytime footwear — practical and stylish", "detail": "practical and stylish reasoning", "accentColor": "lemon" },
+    { "category": "Accessories", "item": "daytime accessories", "detail": "complete the daytime look", "accentColor": "iris" }
   ],
   "outfitsAlt": [
-    { "category": "Top", "item": "casual, relaxed item for the same weather", "detail": "styling note — this is the off-duty, effortless version", "accentColor": "mint" },
-    { "category": "Bottom", "item": "casual item", "detail": "styling note", "accentColor": "lavender" },
-    { "category": "Outer Layer", "item": "casual item or 'None needed — the universe has gifted you warmth'", "detail": "why this makes sense for ${weather.temp}°C", "accentColor": "coral" },
-    { "category": "Footwear", "item": "casual item", "detail": "practical and relaxed reasoning", "accentColor": "lemon" },
-    { "category": "Accessories", "item": "minimal accessories", "detail": "finish the casual look", "accentColor": "iris" }
+    { "category": "Top", "item": "evening/night item — same weather, different energy after dark", "detail": "why it shifts the look for night", "accentColor": "mint" },
+    { "category": "Bottom", "item": "evening item", "detail": "styling note", "accentColor": "lavender" },
+    { "category": "Outer Layer", "item": "evening outer layer or 'None needed — the universe has gifted you warmth'", "detail": "why this makes sense for ${weather.temp}°C at night", "accentColor": "coral" },
+    { "category": "Footwear", "item": "evening footwear — elevated where appropriate", "detail": "how it shifts the mood for night", "accentColor": "lemon" },
+    { "category": "Accessories", "item": "evening accessories", "detail": "finish the night look", "accentColor": "iris" }
   ],
   "avoid": ["specific item to avoid", "another mistake", "one more thing the Oracle forbids"]
 }`;

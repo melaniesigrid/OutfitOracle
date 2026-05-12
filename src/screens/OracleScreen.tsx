@@ -63,7 +63,7 @@ export function OracleScreen() {
   // Record consult in history + streak
   useEffect(() => {
     if (status === 'done' && !isFromCache && weather && verdict) {
-      historyCtx.addEntry(city, gender, weather, verdict);
+      historyCtx.addEntry(city, gender, weather, verdict, occasion);
       streakCtx.recordConsult();
     }
   }, [status, isFromCache]);
@@ -262,17 +262,17 @@ export function OracleScreen() {
               <VerdictCard verdict={verdict} />
               {verdict.outfitsAlt && (
                 <View style={styles.lookToggle}>
-                  {(['polished', 'casual'] as const).map(mode => (
+                  {([['polished', 'DAY'], ['casual', 'NIGHT']] as const).map(([mode, label]) => (
                     <Pressable
                       key={mode}
                       style={[styles.lookToggleBtn, lookMode === mode && styles.lookToggleBtnActive]}
                       onPress={() => { Haptics.selectionAsync(); setLookMode(mode); }}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: lookMode === mode }}
-                      accessibilityLabel={`${mode} look`}
+                      accessibilityLabel={`${label} look`}
                     >
                       <Text style={[styles.lookToggleText, lookMode === mode && styles.lookToggleTextActive]}>
-                        {mode.toUpperCase()}
+                        {label}
                       </Text>
                     </Pressable>
                   ))}
@@ -304,7 +304,7 @@ export function OracleScreen() {
           {/* Off-screen share card */}
           {showResult ? (
             <View style={{ position: 'absolute', left: Dimensions.get('window').width + 10, top: 0 }}>
-              <ShareCard ref={shareCardRef} weather={weather} verdict={verdict} />
+              <ShareCard ref={shareCardRef} weather={weather} verdict={verdict} occasion={occasion} />
             </View>
           ) : null}
 

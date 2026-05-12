@@ -43,7 +43,6 @@ export function OccasionPicker({ selected, onChange }: Props) {
 
 const styles = StyleSheet.create({
   row: {
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
   label: {
@@ -52,11 +51,12 @@ const styles = StyleSheet.create({
     letterSpacing: 2.5,
     color: colors.textMuted,
     marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   chips: {
     flexDirection: 'row',
     gap: spacing.sm,
-    paddingRight: spacing.lg,
+    paddingHorizontal: spacing.lg,
   },
   chip: {
     paddingHorizontal: spacing.md,

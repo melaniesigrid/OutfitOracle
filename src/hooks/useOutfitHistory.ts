@@ -12,6 +12,7 @@ export interface HistoryEntry {
   id: string;
   city: string;
   gender: string;
+  occasion?: string;
   weather: WeatherData;
   verdict: OracleVerdict;
   consultedAt: number;
@@ -37,6 +38,7 @@ export function useOutfitHistory() {
     gender: string,
     weather: WeatherData,
     verdict: OracleVerdict,
+    occasion?: string,
   ) => {
     const now = Date.now();
     setHistory(prev => {
@@ -44,7 +46,7 @@ export function useOutfitHistory() {
         e => e.city !== city || (now - e.consultedAt) > DEDUP_WINDOW_MS,
       );
       const next = [
-        { id: String(now), city, gender, weather, verdict, consultedAt: now },
+        { id: String(now), city, gender, occasion, weather, verdict, consultedAt: now },
         ...deduped,
       ].slice(0, MAX_ENTRIES);
       AsyncStorage.setItem(KEY, JSON.stringify(next));
