@@ -28,7 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>outfitoracle</string>
-          <string>com.yourname.outfitoracle</string>
+          <string>com.melaniesigrid.outfitoracle</string>
         </array>
       </dict>
     </array>

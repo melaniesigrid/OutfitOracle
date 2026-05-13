@@ -29,10 +29,10 @@ function openShop(itemName: string) {
   Linking.openURL(`https://www.google.com/search?tbm=shop&q=${q}`);
 }
 
-// Split "scarf, gloves and sunglasses" into ["scarf", "gloves", "sunglasses"]
+// Split "scarf, gloves and sunglasses" or "clutch + earrings + scarf" into individual items
 function splitItems(raw: string): string[] {
   return raw
-    .split(/,\s*|\s+and\s+/i)
+    .split(/,\s*|\s+and\s+|\s*\+\s*/i)
     .map(s => s.trim())
     .filter(Boolean);
 }

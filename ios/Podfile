@@ -57,7 +57,19 @@ target 'OutfitOracle' do
       :ccache_enabled => podfile_properties['apple.ccacheEnabled'] == 'true',
     )
 
-    # This is necessary for Xcode 14, because it signs resource bundles by default
+    # Lift any pod whose deployment target is below the project minimum to avoid
+    # Xcode 26 "deployment version mismatch" warnings (e.g. react-native-view-shot).
+    min_target = podfile_properties['ios.deploymentTarget'] || '15.1'
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        current = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if current && current.to_f < min_target.to_f
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_target
+        end
+      end
+    end
+
+    # This is necessary for Xcode 14+, because it signs resource bundles by default
     # when building for devices.
     installer.target_installation_results.pod_target_installation_results
       .each do |pod_name, target_installation_result|
