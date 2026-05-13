@@ -205,7 +205,7 @@ const BADGE_DEFS: BadgeDef[] = [
     id: 'streak_100',
     title: 'Century Streak',
     desc: '100-day consult streak',
-    icon: 'flash-circle',
+    icon: 'lightning-bolt-circle',
     evaluate: (_h, _f, ex) => ex.streak >= 100 ? Date.now() : false,
   },
   {
