@@ -4,6 +4,10 @@
 
 A weather-powered AI fashion advisor built with the editorial sensibility of a Vogue editor who is mildly disappointed by most things. Enter a city, choose an occasion, receive a verdict.
 
+<!-- Your unsolicited style authority.
+
+A weather-powered AI fashion advisor with the energy of a Y2K fashion editor who's seen everything and is mildly disappointed by most of it. Enter a city, receive a verdict. -->
+
 ---
 
 ## What it does
