@@ -25,3 +25,10 @@ __pycache__/
 # Orchestrator results (generated output, not source)
 src/files/results/
 .gstack/
+
+# Sentry auth tokens — contain secrets, never commit
+android/sentry.properties
+ios/sentry.properties
+
+# Claude Code local settings — personal IDE config
+.claude/

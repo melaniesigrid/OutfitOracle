@@ -80,6 +80,15 @@ const PERSONALITY_VOICE = {
   savage:     'Be ruthlessly honest. If the weather is terrible or certain choices are unacceptable, say so with sharp wit and zero softening. Fashion is a serious matter.',
 };
 
+function getSeason(month, lat) {
+  const isNorthern = (lat ?? 45) >= 0;
+  const m = isNorthern ? month : (month + 6) % 12;
+  if (m >= 2 && m <= 4) return 'Spring';
+  if (m >= 5 && m <= 7) return 'Summer';
+  if (m >= 8 && m <= 10) return 'Autumn';
+  return 'Winter';
+}
+
 function buildPrompt(weather, gender, styleProfile, occasion) {
   const voiceInstruction = PERSONALITY_VOICE[styleProfile?.personality ?? 'editorial'];
   const profileSection = styleProfile?.keywords?.length
@@ -97,10 +106,13 @@ function buildPrompt(weather, gender, styleProfile, occasion) {
   const colorAvoids = styleProfile?.colorAvoids?.length ? `- Colour avoids: ${styleProfile.colorAvoids.join(', ')} — never recommend items in these colours.\n` : '';
   const colorNote   = colorLoves + colorAvoids;
 
+  const season = getSeason(new Date().getMonth(), weather.latitude);
+
   return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
 ${profileSection}
 Weather right now:
 - City: ${weather.city}, ${weather.country}
+- Season: ${season}
 - Temperature: ${weather.temp}°C (feels like ${weather.feelsLike}°C)
 - Condition: ${weather.conditionLabel} — ${weather.description}
 - Humidity: ${weather.humidity}%

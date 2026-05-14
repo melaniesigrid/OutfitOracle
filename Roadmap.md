@@ -39,9 +39,9 @@
 ### Must-do before archive
 
 - [x] **Rotate the Anthropic API key** — new key generated; old key removed from `.env`; Cloudflare Worker secret updated via `wrangler secret put ANTHROPIC_API_KEY`. ✅ 2026/05/12
-- [-] **Host the privacy policy** — `docs/index.html` created, ready for GitHub Pages. **Action required: go to github.com → repo Settings → Pages → Source → Deploy from branch → main → /docs → Save.** URL will be `https://melaniesigrid.github.io/OutfitOracle/`. 🏗️ 2026/05/12
-- [-] **Configure Sentry DSN** — Sentry is initialized in `App.tsx` (`Sentry.init` + `Sentry.wrap`). **Action required: create a project at sentry.io → copy the DSN → paste into `EXPO_PUBLIC_SENTRY_DSN` in `.env` → rebuild.** 🏗️ 2026/05/12
-- [x] **Add PrivacyInfo.xcprivacy** — file created at `ios/OutfitOracle/PrivacyInfo.xcprivacy` with all four standard RN Required Reasons API entries. **Must be dragged into Xcode project navigator** (File → Add Files) before archiving — the file exists on disk but is not yet referenced in the `.xcodeproj`. ✅ 2026/05/11
+- [x] **Host the privacy policy** — `docs/index.html` deployed to GitHub Pages at `https://melaniesigrid.github.io/OutfitOracle/`. ✅ 2026/05/14
+- [-] **Configure Sentry DSN** — Sentry project created at `outfitoracle.sentry.io` (project ID 4511388656205824). **Action required: copy DSN from sentry.io → Project Settings → Client Keys → add `EXPO_PUBLIC_SENTRY_DSN=<dsn>` to `.env` → rebuild.** `App.tsx` is already wired: `Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN })`, only enabled in non-DEV builds when key is set. 🏗️ 2026/05/14
+- [-] **Add PrivacyInfo.xcprivacy to Xcode** — file created at `ios/OutfitOracle/PrivacyInfo.xcprivacy` with all four standard RN Required Reasons API entries. **Action required: open Xcode → File → Add Files to "OutfitOracle" → select `ios/OutfitOracle/PrivacyInfo.xcprivacy` → Add.** Without this step, Apple will reject the archive. 🏗️ 2026/05/11
 - [x] **Mandatory profile onboarding gate** — `AppNavigator` now gates on `profileCtx.profileState.status`; skippable inline flow replaced with mandatory full-screen onboarding; returning users who previously skipped are redirected to the style step. ✅ 2026/05/13
 
 ### Nice-to-have before archive
@@ -95,7 +95,7 @@
 ### Virality
 - [x] **Share card** — editorial portrait card with masthead, vibe, weather, top 3 outfits ✅ 2026/05/11
 - [ ] **"Rate my outfit day"** — time-delayed local notification fired 8 hours after a consult ("Did the Oracle get it right?"); 1–5 star tap-to-rate sheet; rating stored in history entry; feeds Oracle Accuracy score; shown as a star indicator in Oracle Archives in YouScreen
-- [ ] **First-consult magic moment** — after mandatory onboarding completes and the user runs their very first consult, show a brief full-screen brand moment before revealing results: Oracle wordmark + an editorial line referencing their city + first keyword. One-time only, never shown again. Sets the emotional hook before they've seen a single outfit card.
+- [x] **First-consult magic moment** — full-screen dark overlay on first-ever result: Oracle logo + city + vibe. 700ms fade-in, 2.8s hold, 500ms fade-out. Tap to skip. One-time only (`@outfit_oracle_magic_shown`). ✅ 2026/05/14
 - [ ] **App Clip** — a shareable link (`outfitoracle.app/clip?city=Paris`) renders a lightweight clip showing today's verdict for any city; non-users can try the Oracle without installing; drives conversion. Requires a domain and Clip target in Xcode.
 
 ### Retention
@@ -103,7 +103,7 @@
 - [x] **Last result cache** — 12hr TTL, city pre-filled, one-tap refresh ✅ 2026/05/11
 - [x] **Analytics** — PostHog HTTP API, tracks 7 events, no-op if key not set ✅ 2026/05/11
 - [ ] **Daily push notification** — opt-in prompt shown after first consult; user sets preferred time; notification body: "{city}, {temp}° — the Oracle has a verdict for you"; deep-links directly into Oracle tab with city pre-filled; uses `expo-notifications`. Schedule notification at opt-in time; reschedule daily on app open if user hasn't consulted yet that day.
-- [ ] **Offline graceful state** — when network is unavailable, show the last cached result with a subtle "CACHED" label and the timestamp; clear error messaging if no cache exists ("The Oracle requires a connection. Return when the signal is clear."); currently a network error just shows the generic error state.
+- [x] **Offline graceful state** — network errors restore cache from AsyncStorage (skips TTL when offline); badge shows "OFFLINE — CACHED · HH:MM" with no refresh button; no-cache path shows "The Oracle requires a connection. Return when the signal is clear." ✅ 2026/05/14
 - [ ] **iOS Home Screen Widget** — "Today's Vibe" widget via WidgetKit (requires a native Swift extension target in Xcode; React Native cannot render in widgets); shows current city, temp, condition icon, and vibe word in editorial type; refreshes hourly. Drives daily return better than any notification. *High effort, very high impact.*
 
 ### Input Quality
@@ -113,7 +113,7 @@
 
 ### Content Depth
 - [ ] **Item imagery on OutfitCard** — Pexels API (free, 200 req/hr, fashion-quality photography); search with `{category} {simplified descriptor}`; cache per session in a Map keyed by item ID; thumbnail renders in OutfitCard as an 80×80 bordered image beside the item name. API key is non-sensitive (public search) and can live in `.env` as `EXPO_PUBLIC_PEXELS_KEY`. Fetches run in parallel after verdict arrives. *Medium effort, high delight.*
-- [ ] **Seasonal prompt tuning** — Claude's prompt currently adapts to weather condition but not season. Add a `season` field derived from hemisphere + month to `buildPrompt`; Claude reference seasonality in vibe copy ("Spring's first warm day calls for..."). Minimal code change, noticeable editorial quality lift.
+- [x] **Seasonal prompt tuning** — `getSeason(month, lat)` added to both app and Worker `buildPrompt`; hemisphere-aware (southern hemisphere shifts by 6 months); "Season: Spring/Summer/Autumn/Winter" injected into weather context. ✅ 2026/05/14
 - [ ] **"Oracle of the Week" in TodayScreen** — a curated editorial card surfacing the most-saved vibe from the current week across the user's own history; no AI call, pure aggregation from `useOutfitHistory`. Gives the Today tab a reason to be opened even without consulting.
 - [x] **Skeleton loading UI** — shimmer placeholder during fetch ✅ 2026/05/11
 - [x] **Expanded TodayScreen** — hourly forecast, 7-day daily, UV index, sun/moon, allergens & AQI ✅ 2026/05/11
@@ -168,6 +168,7 @@
 - [ ] **Keyboard avoidance on Oracle tab** — on smaller devices (iPhone SE), the city input can be obscured by the keyboard; verify `KeyboardAvoidingView` behaviour with `behavior="padding"` is consistent across all supported device sizes.
 - [ ] **Haptic on save** — `OutfitCard` heart fires `selectionAsync` on toggle; upgrade the save action to `impactAsync(Medium)` to make saving feel more satisfying than unsaving.
 - [x] **Three-theme system** — Classic (IBM Plex Mono, broad scarlet), Editorial Light (Space Mono, one scarlet per screen, cream bg), Editorial Dark (Space Mono, warm near-black palette); `ThemeContext` + `useTheme` hook; persisted to AsyncStorage; picker in SettingsScreen; full makeStyles refactor across all 26 theme-importing files; TodayScreen scroll bg themes to cream/dark per mode ✅ 2026/05/14
+- [x] **Y2K theme** — digital zine / fashion club aesthetic; lavender + hot pink + deep purple + cream palette; Syne ExtraBold display + Cormorant Italic serif + IBM Plex Mono; Y2KOracleScreen with double-border Y2KCard system, Y2KDecreeCard (44px headline, scarlet rating pip bar, oracle signature), Y2KWeatherCard (80px temp hero, file-label headers), Y2KOutfitCard, Y2KAvoidSection, Y2KBadge, Y2KSticker, Y2KSignature components; OracleScreen routes to Y2KOracleScreen via isY2KTheme(); 61/61 tests pass ✅ 2026/05/14
 - [x] **Achievement unlock toast** — dark editorial bottom-sheet slide-up with badge icon, title, desc, and `Haptics.notificationAsync(Success)`; auto-dismisses after 3.5s; badge detection moves to AppContext so toast fires from any tab ✅ 2026/05/14
 - [ ] **`AppIcons` type — icon-set extensibility** — introduce an `icons` token object in the theme type (`AppIcons`); components reference `icons.settings` instead of hardcoded `"cog-outline"`; enables per-theme icon library swapping (MCi → Feather → Ionicons). Requires also decoupling weather condition icons from MCi-specific names in the weather service (return semantic name like `"partly-cloudy"`, map per theme). See `DESIGN.md → Theme Extensibility Guide`. *Prerequisite for custom themes.*
 - [ ] **Custom theme (beyond the three)** — design and ship one new theme from the future-themes list in DESIGN.md; Brutalist or Archive are the strongest candidates. Requires `AppIcons` type and at least one new font family. Full checklist in DESIGN.md.
@@ -242,6 +243,10 @@
 
 ## Recently Completed
 
+- [x] **Seven-theme system** — Classic / Editorial Light / Editorial Dark / Terra Firma (terracotta) / Morning Paper (sage, Syne display) / Golden Hour (amber-gold) / Electric (TREVO-inspired vivid cobalt + hot-pink, Syne_800ExtraBold display); each with distinct palette, fonts, `isWarmTheme`/`isBannerTheme` TodayScreen flags; Electric is `isDark: true`, cobalt throughout (`#1E2DFF` scrollable content, `#0A15CC` header); all 7 wired in `ThemeName` union, `THEMES` record, SettingsScreen picker ✅ 2026/05/14
+- [x] **DESIGN.md full rewrite** — comprehensive 7-theme design system doc; complete token specs per theme, scarlet token semantics, Syne font role table, `isWarmTheme`/`isBannerTheme` flag logic, motion spec, decisions log ✅ 2026/05/14
+- [x] **Allergen widget icons** — bee (AQI), grass (grass pollen), leaf-maple (birch), flower-pollen (ragweed) added to TodayScreen pollen widget; `graphPad` style added ✅ 2026/05/14
+- [x] **useFocusEffect flicker fix** — TodayScreen hero opacity animation wrapped in `useCallback([heroOpacity, heroY])`; prevents re-fire on parent re-render (e.g., badge toast); fixes flash under achievements section ✅ 2026/05/14
 - [x] **Three-theme system** — Classic (IBM Plex Mono, broad scarlet), Editorial Light (Space Mono, strict one-scarlet-per-screen, cream bg), Editorial Dark (Space Mono, warm near-black palette); `ThemeContext` + `useTheme`; persisted at `@outfit_oracle_theme`; ORACLE THEME picker in SettingsScreen; makeStyles pattern across all 26 theme-importing files; TodayScreen scroll background themes to cream (light) or warm near-black (dark) ✅ 2026/05/14
 - [x] **Founding Member badge** — first 100 unique devices earn a scarlet "FOUNDING MEMBER" chip in YouScreen; server-controlled via KV; LLM trust boundary enforced (`delete verdict.foundingMember` before KV logic); X-Device-ID UUID validation + identifier requirement added to Worker; KV reads parallelized ✅ 2026/05/13
 - [x] **Test suite (ts-jest)** — 43 tests across 4 suites covering oracle type shapes, analytics events, weather badge exports, and proxy routing; compatible with Node 23 via ts-jest (jest-expo incompatible with Node 23) ✅ 2026/05/13
