@@ -150,16 +150,17 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
     expect(body.occasion).toBe('Work');
   });
 
-  it('throws when proxy returns non-ok status with error body', async () => {
+  it('throws rate-limit editorial message when proxy returns 429', async () => {
     const { oracle, asyncStorage } = loadOracleModule('https://fake-proxy.example.com/api');
     asyncStorage.getItem.mockResolvedValueOnce(null);
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 429,
+      headers: { get: () => null },
       json: () => Promise.resolve({ error: 'Rate limited' }),
     });
 
-    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('Rate limited');
+    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle has spoken enough today');
   });
 
   it('throws with fallback message when proxy returns non-ok with no error field', async () => {
@@ -171,7 +172,7 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
       json: () => Promise.resolve({}),
     });
 
-    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('Proxy error 503');
+    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle is momentarily unavailable');
   });
 });
 
