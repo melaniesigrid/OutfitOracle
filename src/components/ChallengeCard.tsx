@@ -1,14 +1,17 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WeeklyChallengeState } from '../hooks/useWeeklyChallenge';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Props {
   state: WeeklyChallengeState;
 }
 
 export function ChallengeCard({ state }: Props) {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const { challenge, completed, daysLeft } = state;
 
   const shimmer = useRef(new Animated.Value(0)).current;
@@ -70,74 +73,76 @@ export function ChallengeCard({ state }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    flexDirection: 'row',
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardComplete: {
-    backgroundColor: colors.scarletDim,
-    borderColor: colors.scarlet,
-  },
-  accent: {
-    width: 3,
-    backgroundColor: colors.border,
-  },
-  accentComplete: {
-    backgroundColor: colors.scarlet,
-  },
-  body: {
-    flex: 1,
-    padding: spacing.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  kicker: {
-    fontFamily: fonts.mono,
-    fontSize: 8,
-    letterSpacing: 2,
-    color: colors.textMuted,
-  },
-  kickerComplete: {
-    color: colors.scarlet,
-  },
-  daysLeft: {
-    fontFamily: fonts.mono,
-    fontSize: 8,
-    letterSpacing: 1,
-    color: colors.textMuted,
-  },
-  title: {
-    fontFamily: fonts.display,
-    fontSize: 20,
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-    lineHeight: 24,
-    marginBottom: 5,
-  },
-  titleComplete: {
-    color: colors.scarlet,
-  },
-  brief: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    color: colors.textSecondary,
-    lineHeight: 16,
-    letterSpacing: 0.1,
-  },
-  completedMsg: {
-    fontFamily: fonts.serif,
-    fontSize: 12,
-    color: colors.scarlet,
-    fontStyle: 'italic',
-    lineHeight: 18,
-  },
-});
+function makeStyles(colors: AppColors, fonts: AppFonts) {
+  return StyleSheet.create({
+    card: {
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.lg,
+      flexDirection: 'row',
+      backgroundColor: colors.bgSurface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cardComplete: {
+      backgroundColor: colors.scarletDim,
+      borderColor: colors.scarlet,
+    },
+    accent: {
+      width: 3,
+      backgroundColor: colors.border,
+    },
+    accentComplete: {
+      backgroundColor: colors.scarlet,
+    },
+    body: {
+      flex: 1,
+      padding: spacing.md,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+    kicker: {
+      fontFamily: fonts.mono,
+      fontSize: 8,
+      letterSpacing: 2,
+      color: colors.textMuted,
+    },
+    kickerComplete: {
+      color: colors.scarlet,
+    },
+    daysLeft: {
+      fontFamily: fonts.mono,
+      fontSize: 8,
+      letterSpacing: 1,
+      color: colors.textMuted,
+    },
+    title: {
+      fontFamily: fonts.display,
+      fontSize: 20,
+      color: colors.textPrimary,
+      letterSpacing: -0.3,
+      lineHeight: 24,
+      marginBottom: 5,
+    },
+    titleComplete: {
+      color: colors.scarlet,
+    },
+    brief: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      color: colors.textSecondary,
+      lineHeight: 16,
+      letterSpacing: 0.1,
+    },
+    completedMsg: {
+      fontFamily: fonts.serif,
+      fontSize: 12,
+      color: colors.scarlet,
+      fontStyle: 'italic',
+      lineHeight: 18,
+    },
+  });
+}

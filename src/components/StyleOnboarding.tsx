@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,16 @@ import {
   StatusBar,
 } from 'react-native';
 import { StyleProfile, STYLE_KEYWORDS, BUDGET_TIERS, BudgetTier } from '../hooks/useStyleProfile';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Props {
   onSave: (profile: StyleProfile) => void;
 }
 
 export function StyleOnboarding({ onSave }: Props) {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const [step, setStep] = useState<1 | 2>(1);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [budget, setBudget] = useState<BudgetTier | null>(null);
@@ -152,7 +155,7 @@ export function StyleOnboarding({ onSave }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -341,4 +344,4 @@ const styles = StyleSheet.create({
     color: 'rgba(250,249,246,0.55)',
   },
 
-});
+}); }

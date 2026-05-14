@@ -8,7 +8,8 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
 import { HistoryEntry } from '../hooks/useOutfitHistory';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 // ── Fashion capitals shown as inspiration markers ──────────────────────────
 const FASHION_CAPITALS = [
@@ -78,6 +79,8 @@ function formatDate(ts: number): string {
 }
 
 export function MapScreen() {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation  = useNavigation<any>();
   const { historyCtx } = useAppData();
   const { history } = historyCtx;
@@ -272,7 +275,7 @@ export function MapScreen() {
 
 const HEADER_TOP = Platform.OS === 'ios' ? 56 : 40;
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -552,4 +555,4 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     maxWidth: 240,
   },
-});
+}); }

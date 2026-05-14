@@ -9,7 +9,8 @@ import { useAppData } from '../contexts/AppContext';
 import { BUDGET_TIERS, PERSONALITY_OPTIONS } from '../hooks/useStyleProfile';
 import { getRankTitle } from '../hooks/useConsultStreak';
 import { useWeatherBadges, BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const PASSPORT_MILESTONES = [
   { cities: 50, title: 'The Nomad Oracle',  icon: 'earth' as const },
@@ -26,6 +27,8 @@ const RANK_PROGRESS = [
 ];
 
 export function YouScreen() {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation<any>();
   const [lockedExpanded, setLockedExpanded] = useState(false);
   const [isFoundingMember, setIsFoundingMember] = useState(false);
@@ -307,7 +310,7 @@ export function YouScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: {
     paddingTop: Platform.OS === 'ios' ? 16 : 12,
@@ -657,4 +660,4 @@ const styles = StyleSheet.create({
   archiveCity: { fontFamily: fonts.display, fontSize: 20, color: colors.textPrimary, letterSpacing: -0.3 },
   archiveVibe: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, letterSpacing: 0.3, marginTop: 1 },
   archiveTemp: { fontFamily: fonts.displayBold, fontSize: 20, color: colors.textPrimary, marginLeft: spacing.sm },
-});
+}); }

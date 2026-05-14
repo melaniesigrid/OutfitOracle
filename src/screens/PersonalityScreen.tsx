@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, Pressable, StyleSheet, Platform,
   StatusBar, ScrollView,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PERSONALITY_OPTIONS, OraclePersonality } from '../hooks/useStyleProfile';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Props {
   onSelect: (personality: OraclePersonality) => void;
 }
 
 export function PersonalityScreen({ onSelect }: Props) {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const [selected, setSelected] = useState<OraclePersonality>('editorial');
 
   const confirm = () => {
@@ -76,7 +79,7 @@ export function PersonalityScreen({ onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -181,4 +184,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     color: '#FAF9F6',
   },
-});
+}); }

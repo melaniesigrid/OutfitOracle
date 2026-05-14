@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView, RefreshControl,
   StyleSheet, KeyboardAvoidingView, Platform, StatusBar,
@@ -26,9 +26,12 @@ import { searchCities, CitySuggestion } from '../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../services/analytics';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export function OracleScreen() {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const { oracle, profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
   const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache } = oracle;
   const profile = profileCtx.profile;
@@ -348,7 +351,7 @@ export function OracleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   content: { paddingBottom: 60 },
@@ -455,4 +458,4 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     fontStyle: 'italic',
   },
-});
+}); }
