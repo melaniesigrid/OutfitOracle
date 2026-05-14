@@ -9,7 +9,7 @@ import { useAppData } from '../contexts/AppContext';
 import { BUDGET_TIERS, PERSONALITY_OPTIONS } from '../hooks/useStyleProfile';
 import { getRankTitle } from '../hooks/useConsultStreak';
 import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isEditorialTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 const PASSPORT_MILESTONES = [
@@ -27,8 +27,8 @@ const RANK_PROGRESS = [
 ];
 
 export function YouScreen() {
-  const { colors, fonts, isDark } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, isDark, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const navigation = useNavigation<any>();
   const [lockedExpanded, setLockedExpanded] = useState(false);
   const [isFoundingMember, setIsFoundingMember] = useState(false);
@@ -114,7 +114,7 @@ export function YouScreen() {
             accessibilityRole="button"
             accessibilityLabel="View your city map"
           >
-            <MaterialCommunityIcons name="map-outline" size={12} color={colors.scarlet} />
+            <MaterialCommunityIcons name="map-outline" size={12} color={!isEditorialTheme(themeName) ? colors.scarlet : colors.textSecondary} />
             <Text style={styles.mapLinkText}>VIEW ON MAP</Text>
           </Pressable>
 
@@ -266,7 +266,7 @@ export function YouScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${s.item.item} from saved looks`}
                 >
-                  <MaterialCommunityIcons name="heart" size={16} color={colors.scarlet} />
+                  <MaterialCommunityIcons name="heart" size={16} color={!isEditorialTheme(themeName) ? colors.scarlet : colors.textMuted} />
                 </Pressable>
               </View>
             ))}
@@ -304,7 +304,7 @@ export function YouScreen() {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: {
     paddingTop: Platform.OS === 'ios' ? 16 : 12,
@@ -364,7 +364,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     marginTop: spacing.md,
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: colors.scarlet,
+    borderColor: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.25)',
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
@@ -372,7 +372,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.mono,
     fontSize: 9,
     letterSpacing: 1.5,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.50)',
   },
   foundingChip: {
     flexDirection: 'row',
@@ -444,14 +444,14 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     alignSelf: 'flex-start',
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.scarlet,
+    borderColor: !isEditorialTheme(themeName) ? colors.scarlet : colors.borderMid,
     paddingHorizontal: spacing.sm,
     paddingVertical: 5,
   },
   mapLinkText: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarlet : colors.textSecondary,
     letterSpacing: 1.5,
   },
   passportNext: {
@@ -529,7 +529,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   setupProfileText: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarlet : colors.textSecondary,
     letterSpacing: 0.5,
   },
 
@@ -541,7 +541,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.mono,
     fontSize: 9,
     letterSpacing: 2,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarlet : colors.textMuted,
     marginBottom: spacing.sm,
   },
 

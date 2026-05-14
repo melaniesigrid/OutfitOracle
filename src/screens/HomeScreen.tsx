@@ -26,6 +26,16 @@ import {
   IBMPlexMono_400Regular,
   IBMPlexMono_500Medium,
 } from '@expo-google-fonts/ibm-plex-mono';
+import {
+  SpaceMono_400Regular,
+  SpaceMono_700Bold,
+} from '@expo-google-fonts/space-mono';
+import {
+  Syne_400Regular,
+  Syne_600SemiBold,
+  Syne_700Bold,
+  Syne_800ExtraBold,
+} from '@expo-google-fonts/syne';
 
 import * as Haptics from 'expo-haptics';
 import { useOracle } from '../hooks/useOracle';
@@ -87,6 +97,12 @@ export function HomeScreen() {
     CormorantGaramond_400Regular_Italic,
     IBMPlexMono_400Regular,
     IBMPlexMono_500Medium,
+    SpaceMono_400Regular,
+    SpaceMono_700Bold,
+    Syne_400Regular,
+    Syne_600SemiBold,
+    Syne_700Bold,
+    Syne_800ExtraBold,
   });
 
   const scrollRef = useRef<ScrollView>(null);

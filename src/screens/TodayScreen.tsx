@@ -1,14 +1,42 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState, useCallback } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  Platform, StatusBar, Animated,
+  Platform, StatusBar, Animated, LayoutChangeEvent,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isEditorialTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+
+// ─── Theme icon mapping ───────────────────────────────────────────────────────
+// Each warm theme substitutes a curated set of MCIcons for the base weather icons.
+// Morning Paper → outline / botanical  Terra Firma → solid / earthy  Golden Hour → glowing / warm
+
+const THEME_ICON_MAP: Partial<Record<ThemeName, Record<string, string>>> = {
+  'morning-paper': {
+    'weather-sunny':       'white-balance-sunny',   // geometric circle, clean
+    'weather-cloudy':      'cloud-outline',          // delicate outline
+    'weather-rainy':       'water-outline',          // droplet outline, botanical
+    'weather-pouring':     'weather-rainy',          // keep legible
+    'weather-snowy':       'snowflake',              // precise geometric
+    'weather-snowy-heavy': 'snowflake-variant',      // alternate geometric
+  },
+  'terra-firma': {
+    'weather-cloudy':      'cloud',                  // solid, heavy
+    'weather-fog':         'weather-fog',            // keep
+  },
+  'golden-hour': {
+    'weather-sunny':         'flare',               // starburst glow
+    'weather-partly-cloudy': 'weather-sunset',      // warm horizon
+    'weather-fog':           'weather-hazy',        // hazier, warmer
+  },
+};
+
+function themeIcon(base: string, theme: ThemeName): string {
+  return THEME_ICON_MAP[theme]?.[base] ?? base;
+}
 
 // ─── Word of the Day ──────────────────────────────────────────────────────────
 
@@ -120,6 +148,163 @@ function pollenLevel(val: number): string {
 
 // ─── Widget shell ─────────────────────────────────────────────────────────────
 
+// ─── Hourly graph ─────────────────────────────────────────────────────────────
+
+const GRAPH_COL_W  = 64;
+const GRAPH_H      = 110; // range for the curve
+const GRAPH_TOP    = 44;  // space above curve: time + icon
+const GRAPH_BOTTOM = 28;  // space below curve: precip/uv
+
+interface HourlyPoint {
+  time: string;
+  temp: number;
+  conditionIcon: string;
+  precipProb: number;
+  uvIndex: number;
+}
+
+function HourlyGraph({
+  hours,
+  accentColor,
+  textHigh,
+  textFaint,
+  lineColor,
+  iconColor,
+  fonts,
+  themeIconFn,
+}: {
+  hours: HourlyPoint[];
+  accentColor: string;
+  textHigh: string;
+  textFaint: string;
+  lineColor: string;
+  iconColor: string;
+  fonts: AppFonts;
+  themeIconFn: (base: string) => string;
+}) {
+  const temps  = hours.map(h => h.temp);
+  const minT   = Math.min(...temps);
+  const maxT   = Math.max(...temps);
+  const range  = Math.max(maxT - minT, 4); // minimum range of 4° to avoid degenerate curve
+  const totalH = GRAPH_TOP + GRAPH_H + GRAPH_BOTTOM;
+  const totalW = hours.length * GRAPH_COL_W;
+
+  function yFor(t: number): number {
+    return GRAPH_TOP + (1 - (t - minT) / range) * GRAPH_H;
+  }
+  function xFor(i: number): number {
+    return i * GRAPH_COL_W + GRAPH_COL_W / 2;
+  }
+
+  // Build rotated line segments connecting adjacent temp points
+  const lines = hours.slice(0, -1).map((h, i) => {
+    const x1 = xFor(i); const y1 = yFor(h.temp);
+    const x2 = xFor(i + 1); const y2 = yFor(hours[i + 1].temp);
+    const dx = x2 - x1; const dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    return { x1, y1, len, angle, key: i };
+  });
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View style={{ width: totalW, height: totalH }}>
+
+        {/* Connecting curve lines */}
+        {lines.map(l => (
+          <View
+            key={l.key}
+            style={{
+              position: 'absolute',
+              left: l.x1,
+              top: l.y1 - 0.75,
+              width: l.len,
+              height: 1.5,
+              backgroundColor: lineColor,
+              transformOrigin: '0% 50%',
+              transform: [{ rotate: `${l.angle}deg` }],
+            }}
+          />
+        ))}
+
+        {/* Data points */}
+        {hours.map((h, i) => {
+          const cx = xFor(i);
+          const cy = yFor(h.temp);
+          return (
+            <React.Fragment key={i}>
+              {/* Dot on curve */}
+              <View style={{
+                position: 'absolute',
+                left: cx - 3,
+                top: cy - 3,
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: lineColor,
+              }} />
+
+              {/* Time label (always at top) */}
+              <Text style={{
+                position: 'absolute',
+                left: cx - GRAPH_COL_W / 2,
+                top: 0,
+                width: GRAPH_COL_W,
+                textAlign: 'center',
+                fontFamily: fonts.mono,
+                fontSize: 9,
+                color: textFaint,
+                letterSpacing: 0.3,
+              }}>{h.time}</Text>
+
+              {/* Icon — floats just above the curve */}
+              <MaterialCommunityIcons
+                name={themeIconFn(h.conditionIcon) as any}
+                size={16}
+                color={iconColor}
+                style={{
+                  position: 'absolute',
+                  left: cx - 8,
+                  top: cy - 26,
+                }}
+              />
+
+              {/* Temp label — just below the curve dot */}
+              <Text style={{
+                position: 'absolute',
+                left: cx - GRAPH_COL_W / 2,
+                top: cy + 6,
+                width: GRAPH_COL_W,
+                textAlign: 'center',
+                fontFamily: fonts.mono,
+                fontSize: 11,
+                color: textHigh,
+                letterSpacing: -0.3,
+              }}>{h.temp}°</Text>
+
+              {/* Precip % — pinned to bottom */}
+              {h.precipProb > 0 && (
+                <Text style={{
+                  position: 'absolute',
+                  left: cx - GRAPH_COL_W / 2,
+                  top: totalH - GRAPH_BOTTOM + 4,
+                  width: GRAPH_COL_W,
+                  textAlign: 'center',
+                  fontFamily: fonts.mono,
+                  fontSize: 9,
+                  color: accentColor,
+                  letterSpacing: 0.2,
+                }}>{h.precipProb}%</Text>
+              )}
+            </React.Fragment>
+          );
+        })}
+
+      </View>
+    </ScrollView>
+  );
+}
+
 type Styles = ReturnType<typeof makeStyles>;
 function Widget({ label, children, noPad, styles }: { label: string; children: React.ReactNode; noPad?: boolean; styles: Styles }) {
   return (
@@ -133,8 +318,8 @@ function Widget({ label, children, noPad, styles }: { label: string; children: R
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function TodayScreen() {
-  const { colors, fonts } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const { oracle, profileCtx, streakCtx } = useAppData();
   const { weather, verdict, cachedAt, cachedCity, isFromCache, status } = oracle;
   const profile = profileCtx.profile;
@@ -143,19 +328,25 @@ export function TodayScreen() {
   const heroOpacity = useRef(new Animated.Value(0)).current;
   const heroY       = useRef(new Animated.Value(12)).current;
 
-  useFocusEffect(() => {
-    heroOpacity.setValue(0);
-    heroY.setValue(12);
-    Animated.parallel([
-      Animated.timing(heroOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(heroY,       { toValue: 0, duration: 450, useNativeDriver: true }),
-    ]).start();
-  });
+  useFocusEffect(
+    useCallback(() => {
+      heroOpacity.setValue(0);
+      heroY.setValue(12);
+      Animated.parallel([
+        Animated.timing(heroOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(heroY,       { toValue: 0, duration: 450, useNativeDriver: true }),
+      ]).start();
+    }, [heroOpacity, heroY])
+  );
 
   const showResult = !!weather && !!verdict;
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const hoursAgo   = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
   const word       = getWord();
+
+  const isWarmTheme   = themeName === 'terra-firma' || themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
+  const isBannerTheme = themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
+  const heroIconColor = isWarmTheme ? colors.scarlet : 'rgba(250,249,246,0.60)';
 
   return (
     <View style={styles.root}>
@@ -183,10 +374,23 @@ export function TodayScreen() {
       >
         {/* ── WORD OF THE DAY (always visible) ── */}
         <Widget label="WORD OF THE DAY" styles={styles}>
-          <View style={styles.wotdAccent} />
-          <Text style={styles.wotdWord}>{word.word}</Text>
-          <Text style={styles.wotdOrigin}>{word.origin}</Text>
-          <Text style={styles.wotdDef}>{word.definition}</Text>
+          {isWarmTheme ? (
+            <View style={styles.wotdInner}>
+              <View style={styles.wotdRule} />
+              <View style={styles.wotdTextCol}>
+                <Text style={[styles.wotdWord, { paddingHorizontal: 0, paddingTop: 0 }]}>{word.word}</Text>
+                <Text style={[styles.wotdOrigin, { paddingHorizontal: 0 }]}>{word.origin}</Text>
+                <Text style={[styles.wotdDef, { paddingHorizontal: 0, paddingBottom: 0 }]}>{word.definition}</Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={styles.wotdAccent} />
+              <Text style={styles.wotdWord}>{word.word}</Text>
+              <Text style={styles.wotdOrigin}>{word.origin}</Text>
+              <Text style={styles.wotdDef}>{word.definition}</Text>
+            </>
+          )}
         </Widget>
 
         {showResult ? (
@@ -201,9 +405,9 @@ export function TodayScreen() {
                   <Text style={styles.heroCondition}>{weather.conditionLabel.toUpperCase()}</Text>
                 </View>
                 <MaterialCommunityIcons
-                  name={weather.conditionIcon as any}
-                  size={48}
-                  color="rgba(250,249,246,0.60)"
+                  name={themeIcon(weather.conditionIcon, themeName) as any}
+                  size={isWarmTheme ? 52 : 48}
+                  color={heroIconColor}
                 />
               </View>
 
@@ -231,33 +435,18 @@ export function TodayScreen() {
             {/* ── HOURLY FORECAST ── */}
             {!!weather.hourly?.length && (
               <Widget label="NEXT 24 HOURS" noPad styles={styles}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.hourlyList}
-                >
-                  {weather.hourly.map((h, i) => (
-                    <View key={i} style={styles.hourlyItem}>
-                      <Text style={styles.hourlyTime}>{h.time}</Text>
-                      <MaterialCommunityIcons
-                        name={h.conditionIcon as any}
-                        size={18}
-                        color="rgba(250,249,246,0.60)"
-                      />
-                      <Text style={styles.hourlyTemp}>{h.temp}°</Text>
-                      {h.precipProb > 0 && (
-                        <Text style={styles.hourlyPrecip}>{h.precipProb}%</Text>
-                      )}
-                      {h.uvIndex > 0 && (
-                        <View style={[styles.hourlyUV, { borderColor: uvColor(h.uvIndex) + '60' }]}>
-                          <Text style={[styles.hourlyUVText, { color: uvColor(h.uvIndex) }]}>
-                            UV{h.uvIndex}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </ScrollView>
+                <View style={styles.graphPad}>
+                  <HourlyGraph
+                    hours={weather.hourly}
+                    accentColor='#4FA3D4'
+                    textHigh={styles.hourlyTemp.color as string}
+                    textFaint={styles.hourlyTime.color as string}
+                    lineColor={isWarmTheme ? colors.scarlet + 'A0' : 'rgba(250,249,246,0.30)'}
+                    iconColor={heroIconColor}
+                    fonts={fonts}
+                    themeIconFn={(base) => themeIcon(base, themeName)}
+                  />
+                </View>
               </Widget>
             )}
 
@@ -321,9 +510,9 @@ export function TodayScreen() {
                   >
                     <Text style={styles.dailyDay}>{d.dayLabel}</Text>
                     <MaterialCommunityIcons
-                      name={d.conditionIcon as any}
+                      name={themeIcon(d.conditionIcon, themeName) as any}
                       size={18}
-                      color="rgba(250,249,246,0.55)"
+                      color={isWarmTheme ? colors.scarlet + '80' : 'rgba(250,249,246,0.55)'}
                     />
                     <Text style={styles.dailyCondLabel} numberOfLines={1}>{d.conditionLabel}</Text>
                     {d.precipProb > 0 ? (
@@ -344,16 +533,20 @@ export function TodayScreen() {
             {weather.pollen && (
               <Widget label="ALLERGENS & AIR" styles={styles}>
                 <View style={styles.aqiRow}>
-                  <Text style={styles.aqiVal}>{weather.pollen.aqi}</Text>
+                  <View style={styles.aqiValRow}>
+                    <MaterialCommunityIcons name="bee" size={22} color={styles.aqiVal.color as string} />
+                    <Text style={styles.aqiVal}>{weather.pollen.aqi}</Text>
+                  </View>
                   <Text style={styles.aqiLabel}>AQI — {weather.pollen.aqiLabel.toUpperCase()}</Text>
                 </View>
                 <View style={styles.pollenGrid}>
                   {[
-                    { label: 'GRASS',   val: weather.pollen.grass },
-                    { label: 'BIRCH',   val: weather.pollen.birch },
-                    { label: 'RAGWEED', val: weather.pollen.ragweed },
+                    { label: 'GRASS',   val: weather.pollen.grass,   icon: 'grass'         as const },
+                    { label: 'BIRCH',   val: weather.pollen.birch,   icon: 'leaf-maple'    as const },
+                    { label: 'RAGWEED', val: weather.pollen.ragweed, icon: 'flower-pollen' as const },
                   ].map(p => (
                     <View key={p.label} style={styles.pollenItem}>
+                      <MaterialCommunityIcons name={p.icon} size={16} color={styles.pollenTypeLabel.color as string} />
                       <Text style={styles.pollenVal}>{p.val}</Text>
                       <Text style={styles.pollenSubLabel}>{pollenLevel(p.val).toUpperCase()}</Text>
                       <Text style={styles.pollenTypeLabel}>{p.label}</Text>
@@ -386,12 +579,25 @@ export function TodayScreen() {
 
             {/* ── TODAY'S LOOK (outfit chips) ── */}
             <Widget label="TODAY'S LOOK" styles={styles}>
-              {verdict.outfits.slice(0, 3).map(item => (
-                <View key={item.category} style={styles.chip}>
-                  <Text style={styles.chipCategory}>{item.category.toUpperCase()}</Text>
-                  <Text style={styles.chipItem}>{item.item}</Text>
+              {isWarmTheme ? (
+                <View style={styles.chipWrap}>
+                  {verdict.outfits.slice(0, 3).map((item, i) => (
+                    <View
+                      key={item.category}
+                      style={[styles.chipTag, i === 0 && styles.chipTagAccent]}
+                    >
+                      <Text style={styles.chipTagText}>{item.item}</Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
+              ) : (
+                verdict.outfits.slice(0, 3).map(item => (
+                  <View key={item.category} style={styles.chip}>
+                    <Text style={styles.chipCategory}>{item.category.toUpperCase()}</Text>
+                    <Text style={styles.chipItem}>{item.item}</Text>
+                  </View>
+                ))
+              )}
             </Widget>
 
             {/* ── REFRESH ROW ── */}
@@ -446,7 +652,63 @@ export function TodayScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isWarm       = themeName === 'terra-firma' || themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
+  const isBanner     = themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
+  const isTerraFirma = themeName === 'terra-firma';
+
+  // ── Surface token set ───────────────────────────────────────────────────────
+  // Warm themes use a light scrollable surface; Classic/Editorial use dark cards.
+  const S = {
+    widgetBg:   isWarm ? colors.bg      : colors.bgDark,
+    label:      isWarm ? colors.textMuted       : 'rgba(250,249,246,0.30)',
+    high:       isWarm ? colors.textPrimary     : '#FAF9F6',
+    med:        isWarm ? colors.textSecondary   : 'rgba(250,249,246,0.80)',
+    low:        isWarm ? colors.textMuted       : 'rgba(250,249,246,0.55)',
+    faint:      isWarm ? colors.borderMid       : 'rgba(250,249,246,0.40)',
+    ghost:      isWarm ? colors.border          : 'rgba(250,249,246,0.15)',
+    divider:    isWarm ? colors.border          : 'rgba(250,249,246,0.07)',
+    divMed:     isWarm ? colors.borderMid       : 'rgba(250,249,246,0.10)',
+  };
+
+  // ── Hero temperature (always dark panel) ────────────────────────────────────
+  const heroTempColor =
+    themeName === 'golden-hour' ? colors.scarlet :
+    themeName === 'terra-firma' ? '#D4873A' :
+    themeName === 'electric'    ? colors.scarlet :
+    '#FAF9F6';
+
+  const heroTempSize =
+    themeName === 'golden-hour' ? 130 :
+    themeName === 'terra-firma' ? 112 :
+    96;
+
+  const heroTempShadow = themeName === 'golden-hour' ? {
+    textShadowColor: 'rgba(200,128,64,0.40)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 40,
+  } : {};
+
+  // ── Hero accent colors ──────────────────────────────────────────────────────
+  const heroCityColor      = themeName === 'golden-hour' ? '#C4A87A' : '#FAF9F6';
+  const heroStatValColor   = themeName === 'golden-hour' ? '#C4A87A' : '#FAF9F6';
+  const heroStatLabelColor = themeName === 'golden-hour' ? 'rgba(196,168,122,0.50)' : 'rgba(250,249,246,0.40)';
+  const heroStatValFamily  = isWarm ? fonts.mono : fonts.displayBold;
+  const heroStatValSize    = isWarm ? 14 : 20;
+  const heroStatValLine    = isWarm ? 18 : 24;
+
+  const statDividerColor =
+    themeName === 'terra-firma'   ? 'rgba(181,73,26,0.25)'   :
+    themeName === 'morning-paper' ? 'rgba(107,127,94,0.25)'  :
+    themeName === 'golden-hour'   ? 'rgba(200,128,64,0.25)'  :
+    'rgba(250,249,246,0.10)';
+
+  const heroConditionColor  = isWarm ? colors.scarlet : 'rgba(250,249,246,0.55)';
+  const cityChipBorderColor = isWarm ? colors.scarlet : 'rgba(250,249,246,0.20)';
+  const cityChipTextColor   = isWarm ? colors.scarlet : 'rgba(250,249,246,0.50)';
+  const wotdDefFont         = isWarm ? fonts.serif    : fonts.mono;
+
+return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -471,19 +733,19 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.mono,
     fontSize: 8,
     letterSpacing: 1.5,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.45)',
     marginTop: 2,
   },
   cityChip: {
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.20)',
+    borderColor: cityChipBorderColor,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
   cityChipText: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: 'rgba(250,249,246,0.50)',
+    color: cityChipTextColor,
     letterSpacing: 1,
   },
 
@@ -491,23 +753,31 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   content: { paddingBottom: 48 },
 
   /* ── Widget shell ── */
+  // Terra Firma: white card, heavy 2px terracotta border, side margins (architectural)
+  // Banner (Morning Paper / Golden Hour): full-width section, no border, bottom divider only
+  // Classic/Editorial: dark card, 1px subtle border, side margins
   widget: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    backgroundColor: '#111009',
-    borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.08)',
+    marginHorizontal: isBanner ? 0 : spacing.lg,
+    marginTop: isBanner ? 0 : spacing.sm,
+    backgroundColor: isTerraFirma ? colors.bgCard : S.widgetBg,
+    borderWidth: isTerraFirma ? 2 : isBanner ? 0 : 1,
+    borderColor: isTerraFirma ? colors.scarlet + '50' : 'rgba(250,249,246,0.07)',
+    borderBottomWidth: isBanner ? 1 : 0,
+    borderBottomColor: S.divider,
   },
   widgetLabel: {
     fontFamily: fonts.mono,
     fontSize: 9,
     letterSpacing: 2.5,
-    color: 'rgba(250,249,246,0.30)',
+    color: S.label,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(250,249,246,0.06)',
+    borderBottomColor: S.divider,
+    // Terra Firma: left terracotta rule as an architectural detail
+    borderLeftWidth: isTerraFirma ? 3 : 0,
+    borderLeftColor: colors.scarlet,
   },
   widgetBody: {
     padding: spacing.md,
@@ -524,10 +794,10 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   wotdWord: {
     fontFamily: fonts.display,
-    fontSize: 34,
-    color: '#FAF9F6',
+    fontSize: isWarm ? 30 : 34,
+    color: S.high,
     letterSpacing: -0.5,
-    lineHeight: 38,
+    lineHeight: isWarm ? 34 : 38,
     marginBottom: 4,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
@@ -535,29 +805,29 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   wotdOrigin: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.40)',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.md,
   },
   wotdDef: {
-    fontFamily: fonts.mono,
-    fontSize: 12,
-    color: 'rgba(250,249,246,0.55)',
-    lineHeight: 18,
-    letterSpacing: 0.2,
+    fontFamily: wotdDefFont,
+    fontSize: isWarm ? 14 : 12,
+    color: S.low,
+    lineHeight: isWarm ? 22 : 18,
+    letterSpacing: isWarm ? 0.1 : 0.2,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
 
   /* ── Weather hero ── */
   weatherHero: {
-    backgroundColor: '#111009',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
+    backgroundColor: colors.bgDark,
+    marginHorizontal: isBanner ? 0 : spacing.lg,
+    marginTop: isBanner ? 0 : spacing.sm,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.08)',
+    borderWidth: isTerraFirma ? 2 : isBanner ? 0 : 1,
+    borderColor: isTerraFirma ? colors.scarlet + '30' : 'rgba(250,249,246,0.07)',
   },
   heroTop: {
     flexDirection: 'row',
@@ -567,11 +837,12 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   heroLeft: { flex: 1 },
   heroCity: {
-    fontFamily: fonts.display,
-    fontSize: 28,
-    color: '#FAF9F6',
-    letterSpacing: -0.5,
-    lineHeight: 32,
+    fontFamily: isWarm ? fonts.mono : fonts.display,
+    fontSize: isWarm ? 13 : 28,
+    fontWeight: isWarm ? '700' : undefined,
+    color: heroCityColor,
+    letterSpacing: isWarm ? 0.05 : -0.5,
+    lineHeight: isWarm ? 18 : 32,
   },
   heroCountry: {
     fontFamily: fonts.mono,
@@ -583,22 +854,23 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   heroCondition: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.55)',
+    color: heroConditionColor,
     letterSpacing: 2,
     marginTop: 6,
   },
   heroTemp: {
     fontFamily: fonts.displayLight,
-    fontSize: 96,
-    color: '#FAF9F6',
-    lineHeight: 96,
+    fontSize: heroTempSize,
+    color: heroTempColor,
+    lineHeight: heroTempSize,
     letterSpacing: -4,
     marginBottom: spacing.lg,
+    ...heroTempShadow,
   },
   heroStats: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(250,249,246,0.10)',
+    borderTopColor: statDividerColor,
     paddingTop: spacing.md,
   },
   heroStat: {
@@ -607,20 +879,20 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   heroStatDivider: {
     width: 1,
-    backgroundColor: 'rgba(250,249,246,0.10)',
+    backgroundColor: statDividerColor,
   },
   heroStatLabel: {
     fontFamily: fonts.mono,
     fontSize: 8,
     letterSpacing: 1.5,
-    color: 'rgba(250,249,246,0.40)',
+    color: heroStatLabelColor,
     marginBottom: 4,
   },
   heroStatVal: {
-    fontFamily: fonts.displayBold,
-    fontSize: 20,
-    color: '#FAF9F6',
-    lineHeight: 24,
+    fontFamily: heroStatValFamily,
+    fontSize: heroStatValSize,
+    color: heroStatValColor,
+    lineHeight: heroStatValLine,
   },
   heroStatUnit: {
     fontFamily: fonts.mono,
@@ -641,18 +913,18 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.07)',
+    borderColor: S.divider,
   },
   hourlyTime: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: 'rgba(250,249,246,0.40)',
+    color: S.faint,
     letterSpacing: 0.5,
   },
   hourlyTemp: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 16,
-    color: '#FAF9F6',
+    color: S.high,
   },
   hourlyPrecip: {
     fontFamily: fonts.mono,
@@ -683,21 +955,21 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     alignItems: 'center',
     gap: 5,
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.09)',
+    borderColor: S.divider,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
   },
   condCardVal: {
-    fontFamily: fonts.displayBold,
-    fontSize: 22,
-    color: '#FAF9F6',
-    lineHeight: 26,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
+    fontSize: isWarm ? 16 : 22,
+    color: S.high,
+    lineHeight: isWarm ? 20 : 26,
   },
   condCardLabel: {
     fontFamily: fonts.mono,
     fontSize: 8,
     letterSpacing: 1,
-    color: 'rgba(250,249,246,0.35)',
+    color: S.label,
     textAlign: 'center',
   },
 
@@ -710,19 +982,19 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   dailyRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(250,249,246,0.07)',
+    borderBottomColor: S.divider,
   },
   dailyDay: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.55)',
+    color: S.med,
     letterSpacing: 0.5,
     width: 38,
   },
   dailyCondLabel: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: 'rgba(250,249,246,0.35)',
+    color: S.low,
     flex: 1,
     letterSpacing: 0.3,
   },
@@ -737,7 +1009,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   dailyPrecipEmpty: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.15)',
+    color: S.ghost,
     width: 32,
     textAlign: 'right',
   },
@@ -748,29 +1020,39 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     justifyContent: 'flex-end',
   },
   dailyTempMax: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 16,
-    color: '#FAF9F6',
+    color: S.high,
   },
   dailyTempMin: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 16,
-    color: 'rgba(250,249,246,0.30)',
+    color: S.faint,
+  },
+
+  /* ── Hourly graph padding ── */
+  graphPad: {
+    paddingVertical: spacing.sm,
   },
 
   /* ── Allergens & AQI ── */
   aqiRow: { marginBottom: spacing.md },
+  aqiValRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   aqiVal: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 36,
-    color: '#FAF9F6',
+    color: S.high,
     lineHeight: 40,
     letterSpacing: -0.5,
   },
   aqiLabel: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: 'rgba(250,249,246,0.35)',
+    color: S.label,
     letterSpacing: 1.5,
     marginTop: 2,
   },
@@ -781,36 +1063,36 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   pollenItem: {
     flex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.09)',
+    borderColor: S.divider,
     padding: spacing.sm,
     gap: 3,
     alignItems: 'center',
   },
   pollenVal: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 22,
-    color: '#FAF9F6',
+    color: S.high,
     lineHeight: 26,
   },
   pollenSubLabel: {
     fontFamily: fonts.mono,
     fontSize: 8,
-    color: 'rgba(250,249,246,0.45)',
+    color: S.low,
     letterSpacing: 0.5,
   },
   pollenTypeLabel: {
     fontFamily: fonts.mono,
     fontSize: 8,
-    color: 'rgba(250,249,246,0.25)',
+    color: S.ghost,
     letterSpacing: 1,
   },
 
   /* ── Oracle verdict ── */
   verdictPull: {
     fontFamily: fonts.display,
-    fontSize: 20,
-    color: '#FAF9F6',
-    lineHeight: 28,
+    fontSize: isWarm ? 22 : 20,
+    color: S.high,
+    lineHeight: isWarm ? 30 : 28,
     letterSpacing: -0.3,
     marginBottom: spacing.md,
   },
@@ -819,26 +1101,26 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(250,249,246,0.10)',
+    borderTopColor: S.divMed,
     paddingTop: spacing.md,
   },
   verdictMetaLabel: {
     fontFamily: fonts.mono,
     fontSize: 9,
     letterSpacing: 2,
-    color: 'rgba(250,249,246,0.35)',
+    color: S.label,
     marginBottom: 4,
   },
   verdictVibe: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 16,
-    color: '#FAF9F6',
+    color: S.high,
   },
   ratingBlock: { alignItems: 'flex-end' },
   ratingDashes: { flexDirection: 'row', gap: 4, marginTop: 4 },
   dash: { width: 16, height: 3 },
-  dashFilled: { backgroundColor: '#FAF9F6' },
-  dashEmpty:  { backgroundColor: 'rgba(250,249,246,0.15)' },
+  dashFilled: { backgroundColor: S.high },
+  dashEmpty:  { backgroundColor: S.ghost },
 
   /* ── Outfit chips ── */
   chip: {
@@ -847,21 +1129,63 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     gap: spacing.sm,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(250,249,246,0.07)',
+    borderBottomColor: S.divider,
   },
   chipCategory: {
     fontFamily: fonts.mono,
     fontSize: 8,
     letterSpacing: 1.5,
-    color: 'rgba(250,249,246,0.35)',
+    color: S.label,
     width: 72,
   },
   chipItem: {
-    fontFamily: fonts.displayBold,
-    fontSize: 16,
-    color: '#FAF9F6',
+    fontFamily: isWarm ? fonts.display : fonts.displayBold,
+    fontSize: isWarm ? 18 : 16,
+    color: S.high,
     flex: 1,
-    letterSpacing: -0.2,
+    letterSpacing: isWarm ? -0.3 : -0.2,
+  },
+
+  /* ── WOTD warm layout (flex-row rule + text) ── */
+  wotdInner: {
+    flexDirection: 'row',
+    gap: 14,
+    padding: spacing.md,
+  },
+  wotdRule: {
+    width: 2,
+    backgroundColor: colors.scarlet,
+    minHeight: 64,
+  },
+  wotdTextCol: {
+    flex: 1,
+  },
+
+  /* ── Outfit chips — horizontal wrap (warm themes) ── */
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chipTag: {
+    borderWidth: 1,
+    borderColor: colors.scarlet,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  chipTagAccent: {
+    backgroundColor: colors.scarlet + '12',
+  },
+  chipTagText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.15,
+    color: colors.scarlet,
+    textTransform: 'uppercase' as const,
+  },
+  chipTagTextSecondary: {
+    color: colors.textSecondary,
+    borderColor: colors.border,
   },
 
   /* ── Refresh row ── */

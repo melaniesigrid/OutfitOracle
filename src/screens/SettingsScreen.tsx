@@ -36,9 +36,13 @@ const APP_VERSION = Constants.expoConfig?.version ?? '1.1.0';
 const PRIVACY_POLICY_URL = 'https://melaniesigrid.github.io/OutfitOracle/';
 
 const THEME_OPTIONS: { id: ThemeName; label: string }[] = [
-  { id: 'classic', label: 'Classic' },
-  { id: 'editorial-light', label: 'Editorial Light' },
-  { id: 'editorial-dark', label: 'Editorial Dark' },
+  { id: 'classic',          label: 'Classic' },
+  { id: 'editorial-light',  label: 'Editorial Light' },
+  { id: 'editorial-dark',   label: 'Editorial Dark' },
+  { id: 'terra-firma',      label: 'Terra Firma' },
+  { id: 'morning-paper',    label: 'Morning Paper' },
+  { id: 'golden-hour',      label: 'Golden Hour' },
+  { id: 'electric',         label: 'Electric' },
 ];
 
 export function SettingsScreen() {
@@ -340,11 +344,12 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   /* Theme picker */
   themeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     padding: spacing.md,
   },
   themeChip: {
-    flex: 1,
+    width: '47%',
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: 'rgba(250,249,246,0.18)',

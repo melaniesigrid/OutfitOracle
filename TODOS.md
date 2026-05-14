@@ -46,6 +46,66 @@ Design and UX debt tracked here. Each item has a what, why, and context for anyo
 
 ---
 
+### Style presets — curated occasion templates
+**What:** A curated library of 10–15 ready-made outfit combinations for named occasions: Smart Casual, Business Formal, Weekend Brunch, Date Night, Gym & Active, Beach Day, Black Tie, etc. Each preset contains 4–5 item categories with example descriptors but no specific items — Claude fills in the specifics using the user's profile and current weather. Surfaced as a horizontal scroll of preset chips above the occasion picker in OracleScreen, or as a dedicated "Presets" section in TodayScreen.
+**Why:** TREVO (design inspo, 2026-05-14) shows "Style Presets" as a marquee feature. For users who know what kind of occasion they're dressing for but lack outfit vocabulary, presets remove the blank-page problem and dramatically improve verdict quality by seeding Claude with a structured template rather than relying purely on the occasion tag.
+**Pros:** Reduces cognitive load for new users; improves Claude output quality; zero cost (no additional API call — the preset just augments the existing prompt); builds a content differentiation layer that gets richer over time.
+**Cons:** Preset taxonomy needs editorial curation (10–15 presets × gender × season = non-trivial content work). Risk of overlap with the existing occasion picker — needs to complement, not replace.
+**Context:** Added 2026-05-14 from TREVO design reference. Implementation: (1) Define a `STYLE_PRESETS` constant (name, icon, keyItems[], occasions[]); (2) render as horizontal chip scroll in OracleScreen above the existing occasion row; (3) tapping a preset auto-selects the matching occasion AND appends preset key items to the prompt as "structure guide". The user can still override city, gender, and weather.
+**Depends on:** Existing occasion input system (already shipped). Can be layered on top without architecture changes.
+
+---
+
+### Outfit avatar / virtual dressing room
+**What:** Show the user's outfit verdict as a visual — a figure wearing the items — rather than a text list. Three tiers of ambition:
+
+**Tier 1 — Flat editorial mannequin (achievable now, ~4 hrs CC)**
+A fixed SVG silhouette (front-facing, gender-neutral or selectable M/F/NB) in the centre of a grid. Each of Claude's outfit items gets a card around it: category icon + item name + "Buy" (Google Shopping link) or "You own" (if it matches a saved look). No 3D, no image generation. Pure React Native. The silhouette is decorative — the power is the "Buy / You own" split which is data Outfit Oracle already has (saved outfits in `useSavedOutfits`). This is shippable as part of OracleScreen today.
+
+**Tier 2 — AI outfit flat-lay (medium effort, ~1 day CC + API cost)**
+After the verdict arrives, fire a second call to an image generation API (Stability AI, DALL·E, or Ideogram) with a structured prompt: "editorial flat-lay photograph, white background, {items}, fashion magazine style". Show the generated image as a hero above the outfit cards. Cache per verdict (don't regenerate on refresh). Adds ~$0.04 per consult at current image gen pricing — viable for a Pro tier feature. No avatar, no body — just a styled product photograph.
+
+**Tier 3 — Personalized 3D avatar (high effort, Phase 5+)**
+ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 3D avatar (face, skin, hair, body proportions) once; the avatar renders wearing outfit items using glTF clothing models. Requires: (a) a 3D clothing model pipeline for every item category, or a partnership with a fashion SDK provider; (b) native Xcode targets; (c) significant ongoing art/model maintenance. This is what StyleScape shows (design inspo, 2026-05-14). Technically feasible but ~2–4 weeks of human engineering + ongoing asset cost. Do not attempt until after monetisation is proven.
+
+**Why:** Verdict comprehension improves dramatically when users can see the items together as an outfit, not parse a list. "You own" / "Buy" split (Tier 1) also surfaces wardrobe overlap in a genuinely useful way without requiring photo upload.
+**Pros:** Tier 1 is the best effort/delight ratio — ships fast and makes the OracleScreen feel like a product, not a chatbot. Tier 2 would be a marquee Pro feature. Tier 3 is the long-term moat.
+**Cons:** Tier 2 adds per-consult cost that needs paywall gating. Tier 3 is a separate engineering track, not an extension of the current app.
+**Context:** Added 2026-05-14 from StyleScape design reference (outfit detail screen with 3D avatar + item grid + Buy/You own buttons). Start with Tier 1 in Phase 3.5. Gate Tier 2 behind Pro in Phase 4.
+**Depends on:** Tier 1 is self-contained. Tier 2 needs Pro paywall (Phase 4). Tier 3 needs identity + Pro + native target (Phase 5+).
+
+---
+
+### Size / fit preference in style profile
+**What:** Add a clothing size selector (XS / S / M / L / XL / XXL) to the onboarding flow and `ProfileEditScreen`. Store as `size` in the style profile and inject into `buildPrompt` so Claude can reference fit — "an oversized trench works for XS, a tailored coat for L."
+**Why:** Two users in the same city with the same weather can need entirely different outfit advice based on their preferred fit and available sizing. Size is the single highest-signal missing field. StyleScape (design inspo, 2026-05-14) shows this as a horizontal slider in step 1 of their quiz.
+**Pros:** Improves recommendation specificity for free; tiny surface area (one new profile key, one prompt line); no additional AI calls.
+**Cons:** Requires adding a step or expanding an existing step in the 3-screen onboarding. Returning users need a migration path (prompt to fill in once on next Settings open).
+**Context:** Added 2026-05-14 from StyleScape design reference. Implementation: (1) add `size?: string` to `StyleProfile` type, (2) render a chip row (not a slider — RN slider is harder to style) in `PersonalityScreen` or a new Step 3, (3) render the same chips in `ProfileEditScreen`, (4) add to `buildPrompt` in both app and Worker.
+**Depends on:** Existing `StyleProfile` AsyncStorage schema (safe to add optional field).
+
+---
+
+### Clothing category preferences in style profile
+**What:** Add a multi-select chip grid for garment categories to the onboarding / `ProfileEditScreen`: Shirts, Trousers, Dresses, Skirts, Denim, Knitwear, Outerwear, Sneakers, Boots, Heels, Accessories. Stored as `categories: string[]` in the style profile; injected into the prompt ("User prefers dresses and boots — avoid suggesting trousers"). Claude can then give results that match what the user actually owns and wears.
+**Why:** Without this, Claude suggests complete outfit types the user might never wear (e.g. suits, heels). StyleScape (design inspo, 2026-05-14) shows this as the most prominent onboarding question after style aesthetic. This is the missing link between "I like minimal style" and "I actually wear dresses and sneakers."
+**Pros:** Dramatically improves verdict relevance; reuses the chip pattern already used for style keywords; no AI cost increase.
+**Cons:** Medium onboarding length increase. Must guard against over-constraining Claude (inject as preferences, not hard rules).
+**Context:** Added 2026-05-14 from StyleScape design reference. Can ship as an expansion of `StyleOnboarding` step 2 or as a new step 3, pushing the size field to step 4. Keep to ≤ 12 chips to avoid scroll. Selected chips should highlight in `colors.scarlet`.
+**Depends on:** Size preference field (above) — ideally shipped together as an "onboarding expansion" PR.
+
+---
+
+### Time-aware greeting in TodayScreen header
+**What:** Replace the static wordmark + streak line in the TodayScreen header with a time-sensitive greeting when the user has a name set: "Good morning, [Name]" / "Good afternoon, [Name]" / "Good evening, [Name]". Morning = before 12, Afternoon = 12–17, Evening = 17+. The wordmark ("Outfit Oracle") moves to a smaller label above the greeting or is dropped in favour of the greeting entirely.
+**Why:** StyleScape (design inspo, 2026-05-14) demonstrates how much warmer a personalised time-aware greeting feels vs. a static brand name on the home screen. The TodayScreen already has `profile.name` available via `profileCtx`; this is a one-line conditional.
+**Pros:** High delight, near-zero effort. Makes the app feel alive and personal. Pairs with name collection in onboarding (already in Roadmap Phase 3).
+**Cons:** Falls back gracefully to wordmark if no name is set. No downside once name collection is shipped.
+**Context:** Added 2026-05-14 from StyleScape design reference. Blocked on name collection in onboarding — ship both together. Implementation: `const hour = new Date().getHours(); const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';`
+**Depends on:** Name collection in onboarding (Phase 3 Roadmap).
+
+---
+
 ### `earnedAt` timestamps inaccurate for streak and count badges
 **What:** `consecutiveDayStreak()` in `useWeatherBadges.ts` returns `entries[entries.length - 1].consultedAt` — the oldest consult on the qualifying day — instead of the most recent. Streak and consult-count badges also use `Date.now()` at memo evaluation time, not the actual moment the milestone was crossed.
 **Why:** `earnedAt` is exposed on the `WeatherBadge` interface and will naturally become the source of truth for "Earned on [date]" display in a future achievements expansion. Fixing stale timestamps after users have persisted data is harder than fixing them before the UI ships.
