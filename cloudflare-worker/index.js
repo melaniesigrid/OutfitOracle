@@ -20,8 +20,8 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type, X-Device-ID',
 };
 
-const RATE_LIMIT_REQUESTS  = 20;  // per window
-const RATE_LIMIT_WINDOW_S  = 3600; // 1 hour
+const RATE_LIMIT_REQUESTS  = 20;    // per window
+const RATE_LIMIT_WINDOW_S  = 86400; // 24 hours (daily limit)
 const FOUNDING_MEMBER_CAP  = 100;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -151,10 +151,14 @@ export default {
 
     const rateCheck = await checkRateLimit(request, env);
     if (rateCheck.limited) {
-      return json(
-        { error: `Too many requests. Please wait ${rateCheck.retryAfter}s before trying again.` },
-        429
-      );
+      return new Response(JSON.stringify({ error: 'Daily limit reached.' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(rateCheck.retryAfter),
+          ...CORS,
+        },
+      });
     }
 
     let body;
