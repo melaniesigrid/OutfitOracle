@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WeatherData } from '../services/weather';
 import { AppColors, AppFonts, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTempUnit } from '../contexts/TemperatureContext';
 
 interface Props {
   weather: WeatherData;
@@ -11,6 +12,7 @@ interface Props {
 
 export function WeatherStrip({ weather }: Props) {
   const { colors, fonts } = useTheme();
+  const { formatTemp } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const opacity    = useRef(new Animated.Value(0)).current;
   const translateX = useRef(new Animated.Value(-10)).current;
@@ -36,9 +38,9 @@ export function WeatherStrip({ weather }: Props) {
           color={colors.textMuted}
         />
       </View>
-      <Text style={styles.tempHero}>{weather.temp}°</Text>
+      <Text style={styles.tempHero}>{formatTemp(weather.temp)}</Text>
       <Text style={styles.metaLine}>
-        {'FEELS ' + weather.feelsLike + '°  ·  HUMIDITY ' + weather.humidity + '%  ·  WIND ' + weather.windSpeed + ' km/h'}
+        {'FEELS ' + formatTemp(weather.feelsLike) + '  ·  HUMIDITY ' + weather.humidity + '%  ·  WIND ' + weather.windSpeed + ' km/h'}
       </Text>
       <View style={styles.rule} />
     </Animated.View>

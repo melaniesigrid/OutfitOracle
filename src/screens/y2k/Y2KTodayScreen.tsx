@@ -648,17 +648,15 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   tempBlock: {
     backgroundColor: y2kTokens.deepPurple,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
     paddingBottom: spacing.md,
   },
   heroTemp: {
     fontFamily: typo.displayHero.fontFamily,
     fontSize: 96,
     color: y2kTokens.lime,
-    lineHeight: 100,
+    lineHeight: 112,
     letterSpacing: typo.displayHero.letterSpacing,
-    marginTop: -4,
-    marginBottom: -4,
   },
   heroMeta: {
     fontFamily: typo.monoMicro.fontFamily,

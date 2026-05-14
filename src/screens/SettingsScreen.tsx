@@ -24,6 +24,9 @@ const ALL_KEYS = [
   '@onboarding_complete',
   '@outfit_oracle_founding_member',
   '@outfit_oracle_theme',
+  '@outfit_oracle_temp_unit',
+  '@outfit_oracle_y2k_font_subtheme',
+  '@outfit_oracle_magic_shown',
 ];
 
 const SOFT_KEYS = [
@@ -32,6 +35,7 @@ const SOFT_KEYS = [
   '@outfit_oracle_recent_cities',
   '@outfit_oracle_last_result',
   '@outfit_oracle_saved',
+  '@outfit_oracle_magic_shown',
 ];
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.1.0';

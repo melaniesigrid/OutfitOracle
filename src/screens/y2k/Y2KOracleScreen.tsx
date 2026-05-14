@@ -26,10 +26,12 @@ import { Y2KOutfitCard } from '../../components/y2k/Y2KOutfitCard';
 import { Y2KAvoidSection } from '../../components/y2k/Y2KAvoidSection';
 import { Y2KBadge } from '../../components/y2k/Y2KBadge';
 import { Y2KSticker } from '../../components/y2k/Y2KSticker';
+import { useTempUnit } from '../../contexts/TemperatureContext';
 
 export function Y2KOracleScreen() {
   const { y2kFontSubtheme } = useTheme();
   const typo = useMemo(() => getY2KTypography(y2kFontSubtheme), [y2kFontSubtheme]);
+  const { formatTemp } = useTempUnit();
 
   const { oracle, profileCtx, historyCtx, streakCtx } = useAppData();
   const {
@@ -317,7 +319,7 @@ export function Y2KOracleScreen() {
                 </View>
               ) : null}
 
-              <Y2KWeatherCard weather={weather} />
+              <Y2KWeatherCard weather={weather} formatTemp={formatTemp} />
               <Y2KDecreeCard verdict={verdict} />
 
               {/* Day / Night toggle */}
