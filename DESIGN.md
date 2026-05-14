@@ -228,6 +228,136 @@ Base unit: 8px.
 
 ---
 
+## Theme Extensibility Guide
+
+> This section is for building new themes beyond the current three. Read this before touching `src/theme/index.ts`.
+
+### What a theme controls today
+
+Every theme is a plain object with three fields:
+
+```typescript
+{
+  colors: AppColors,   // all color tokens (bg, text, borders, accents)
+  fonts:  AppFonts,    // font family strings for each role
+  isDark: boolean,     // true → StatusBar "light-content", false → "dark-content"
+}
+```
+
+`AppColors` and `AppFonts` are structural types inferred from the Classic defaults in `src/theme/index.ts`. Every theme must supply every token — no optional fields. This is intentional: missing a token is a TypeScript error, not a runtime surprise.
+
+---
+
+### Extending colors
+
+Add or rename a token by modifying the `classicColors` object (the canonical source of all token names) and propagating to the other theme objects. Run `npx tsc --noEmit` — the compiler will flag every makeStyles function that references a token that no longer exists.
+
+**Do not add theme-specific tokens.** Every token must be in every theme, even if its value is the same as Classic. A component cannot check which theme is active — it only reads the colors object. If a concept only makes sense in one theme, it belongs in the component's hard-coded style, not in the token set.
+
+---
+
+### Extending fonts
+
+The current `AppFonts` type covers five roles:
+
+| Token | Role | Classic | Editorial |
+|---|---|---|---|
+| `display` | Bold italic headline (Cormorant 700) | CormorantGaramond_700Bold_Italic | same |
+| `displayBold` | Semibold display (Cormorant 600) | CormorantGaramond_600SemiBold | same |
+| `displayLight` | Light display (Cormorant 300) | CormorantGaramond_300Light | same |
+| `serif` | Regular italic body (Cormorant 400) | CormorantGaramond_400Regular_Italic | same |
+| `mono` | All UI text / labels | IBMPlexMono_400Regular | SpaceMono_400Regular |
+| `monoMedium` | Bold mono / buttons | IBMPlexMono_500Medium | SpaceMono_700Bold |
+
+**To add a new display font for a future theme:**
+
+1. Install the font package: `npx expo install @expo-google-fonts/<family>`
+2. Import the weights you need in `App.tsx` and add them to the `useFonts` call alongside the existing fonts
+3. Add the font family strings to the theme's `fonts` object in `src/theme/index.ts`
+4. The font is now available via `fonts.display` (or whichever role you mapped it to) in every `makeStyles` call
+
+> **Constraint:** Fonts must be loaded in `useFonts` before the navigator renders. The app holds on a blank view until all fonts resolve. Adding a large font family with many weights noticeably increases cold-start load time. Load only the weights you actually use.
+
+**A theme could replace Cormorant Garamond entirely.** The display roles (`display`, `displayBold`, `displayLight`, `serif`) are just strings — nothing hardcodes Cormorant. A future "Brutalist" theme might use `SpaceGrotesk_700Bold` for display and a different serif for body. Just swap the strings and load the fonts.
+
+---
+
+### Extending icons
+
+The app currently uses **MaterialCommunityIcons** from `@expo/vector-icons` (bundled with Expo SDK — no separate install). Icon names are referenced as plain strings at two levels:
+
+1. **Static usage** — icon names written directly in components (e.g., `"fire"`, `"cog-outline"`, `"heart"`)
+2. **Data-driven usage** — icon names returned from the weather service (`conditionIcon` in `WeatherData`) and badge definitions (`icon` field in each `BadgeDef`)
+
+To make icons themeable, add an `icons` token set to the theme type:
+
+```typescript
+// Proposed addition to src/theme/index.ts
+
+export type AppIcons = {
+  library: 'MaterialCommunityIcons' | 'Feather' | 'Ionicons';
+  // Semantic icon name map — component uses icons.settings, not "cog-outline"
+  settings:       string;
+  close:          string;
+  chevronRight:   string;
+  chevronDown:    string;
+  chevronUp:      string;
+  heart:          string;
+  heartOutline:   string;
+  fire:           string;
+  eye:            string;
+  map:            string;
+  seal:           string;
+  share:          string;
+  history:        string;
+  delete:         string;
+  chart:          string;
+  shield:         string;
+  info:           string;
+  brain:          string;
+  cloud:          string;
+};
+
+// Each THEMES entry gains: icons: AppIcons
+```
+
+**Once `AppIcons` is added to the theme type:**
+
+- Components import `const { icons } = useTheme()` and reference `icons.settings` instead of `"cog-outline"`
+- A different icon library can be swapped per theme by changing `library` and re-mapping all names
+- The render layer checks `icons.library` and renders the correct `@expo/vector-icons` component
+
+> **Constraint on data-driven icons:** Weather condition icons (returned by Open-Meteo → `fetchWeather`) and badge icons (defined in `useWeatherBadges.ts`) are hardcoded MaterialCommunityIcons names. To make these themeable, the weather service would need to return a **semantic condition name** (e.g., `"partly-cloudy"`) that the theme maps to its own icon name. This is a planned decoupling — see Roadmap.
+
+---
+
+### Adding a new theme — checklist
+
+1. **Choose a name** — add the string literal to the `ThemeName` union in `src/theme/index.ts`
+2. **Define colors** — create a `const myThemeColors = { ...someBaseColors, /* overrides */ }` object that satisfies `AppColors`
+3. **Define fonts** — create a `const myThemeFonts = { ... }` object that satisfies `AppFonts`. Load any new font families in `App.tsx`
+4. **Define icons** *(once AppIcons exists)* — create an `AppIcons` object for the theme
+5. **Register** — add an entry to the `THEMES` record: `'my-theme': { colors, fonts, icons, isDark }`
+6. **Settings picker** — add `{ id: 'my-theme', label: 'My Theme' }` to `THEME_OPTIONS` in `SettingsScreen.tsx`
+7. **Type-check** — `npx tsc --noEmit`. Fix every error before testing on device.
+8. **Scarlet audit** — if your theme uses the one-scarlet-per-screen rule, verify every screen in the theme manually
+
+---
+
+### Future theme ideas
+
+These are directions, not commitments. Document your decision in the Decisions Log when one ships.
+
+| Name | Concept | Font direction | Icon direction | Color direction |
+|---|---|---|---|---|
+| **Brutalist** | Anti-fashion. Stark monochrome, typewriter aesthetic, deliberate ugliness | Courier Prime or iA Writer Duo (monospace only — no display serif) | Outlined, geometric (Feather) | Pure black `#000000` + pure white + one neon accent |
+| **Parisian** | Soft luxury. Not editorial authority, but French nonchalance | Playfair Display (serif) + DM Mono | Same MCi but lighter weight (outline variants) | Ivory `#F8F4EF`, dusty rose `#D4A5A5`, warm gold `#C9A84C` |
+| **Tokyo** | Graphic novel meets fashion editorial. High contrast, bold geometry | Noto Sans JP (when user locale is Japanese) + monospace | Bold, filled variants | Near-black + acid yellow `#E8F000` + deep indigo `#1A0F5E` |
+| **Archive** | The app set in the past. Sepia tones, aged paper, library card | Libre Baskerville (aged serif) + Courier New | Same icon names, sepia-tinted color tokens | Aged paper `#EDE0C4`, brown ink `#3B2F2F`, muted red `#8B1A1A` |
+| **Gallery** | Museum-white. Maximum negative space, no decoration | Helvetica Neue (system) + system mono | Minimal — only outline icons, never filled | Pure white `#FFFFFF`, cool gray `#999`, black `#111` |
+
+---
+
 ## Implementation Notes — Theme Switching
 
 ### Required additions to `src/theme/index.ts`
@@ -306,3 +436,4 @@ There is no enforcement mechanism — this is a design discipline. When building
 | 2026-05-14 | Sharp corners (radius: 0) retained | Single most differentiating UI choice in the category. Every AI style app rounds everything. Sharp corners are editorial, not approachable. |
 | 2026-05-14 | Asymmetric grid (Editorial themes) | Headlines flush left. Single items bleed right margin. Negative space is deliberate. Biggest layout departure from current centered system. |
 | 2026-05-14 | Outfit accent palette retained (all themes) | Mint/lavender/coral/lemon/iris are semantically tied to outfit categories. They work. They don't compete with the primary palette. Keep. |
+| 2026-05-14 | Theme extensibility guide added | Future themes may vary colors, mono font, display font, and icon set independently. AppIcons type planned (not yet implemented) to make icon names swappable per theme. Data-driven icons (weather conditions, badge icons) require semantic name decoupling before they can be fully themeable. |

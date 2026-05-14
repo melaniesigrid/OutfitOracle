@@ -168,6 +168,9 @@
 - [ ] **Keyboard avoidance on Oracle tab** — on smaller devices (iPhone SE), the city input can be obscured by the keyboard; verify `KeyboardAvoidingView` behaviour with `behavior="padding"` is consistent across all supported device sizes.
 - [ ] **Haptic on save** — `OutfitCard` heart fires `selectionAsync` on toggle; upgrade the save action to `impactAsync(Medium)` to make saving feel more satisfying than unsaving.
 - [x] **Three-theme system** — Classic (IBM Plex Mono, broad scarlet), Editorial Light (Space Mono, one scarlet per screen, cream bg), Editorial Dark (Space Mono, warm near-black palette); `ThemeContext` + `useTheme` hook; persisted to AsyncStorage; picker in SettingsScreen; full makeStyles refactor across all 26 theme-importing files; TodayScreen scroll bg themes to cream/dark per mode ✅ 2026/05/14
+- [x] **Achievement unlock toast** — dark editorial bottom-sheet slide-up with badge icon, title, desc, and `Haptics.notificationAsync(Success)`; auto-dismisses after 3.5s; badge detection moves to AppContext so toast fires from any tab ✅ 2026/05/14
+- [ ] **`AppIcons` type — icon-set extensibility** — introduce an `icons` token object in the theme type (`AppIcons`); components reference `icons.settings` instead of hardcoded `"cog-outline"`; enables per-theme icon library swapping (MCi → Feather → Ionicons). Requires also decoupling weather condition icons from MCi-specific names in the weather service (return semantic name like `"partly-cloudy"`, map per theme). See `DESIGN.md → Theme Extensibility Guide`. *Prerequisite for custom themes.*
+- [ ] **Custom theme (beyond the three)** — design and ship one new theme from the future-themes list in DESIGN.md; Brutalist or Archive are the strongest candidates. Requires `AppIcons` type and at least one new font family. Full checklist in DESIGN.md.
 
 ---
 
