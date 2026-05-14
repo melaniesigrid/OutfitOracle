@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { OracleStatus } from '../hooks/useOracle';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const WEATHER_MESSAGES = [
   'Consulting the atmospheric archives…',
@@ -59,6 +60,8 @@ interface Props {
 }
 
 export function LoadingOracle({ status }: Props) {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const opacity = useRef(new Animated.Value(1)).current;
   const [msgIndex, setMsgIndex] = useState(0);
 
@@ -97,28 +100,30 @@ export function LoadingOracle({ status }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  text: {
-    fontFamily: fonts.serif,
-    fontSize: 18,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    lineHeight: 26,
-    letterSpacing: -0.2,
-  },
-  track: {
-    width: 100,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  fill: {
-    width: '55%',
-    height: '100%',
-    backgroundColor: colors.textPrimary,
-  },
-});
+function makeStyles(colors: AppColors, fonts: AppFonts) {
+  return StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+    },
+    text: {
+      fontFamily: fonts.serif,
+      fontSize: 18,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: spacing.lg,
+      lineHeight: 26,
+      letterSpacing: -0.2,
+    },
+    track: {
+      width: 100,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+    fill: {
+      width: '55%',
+      height: '100%',
+      backgroundColor: colors.textPrimary,
+    },
+  });
+}

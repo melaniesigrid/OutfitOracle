@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { OracleVerdict } from '../services/oracle';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Props {
   verdict: OracleVerdict;
@@ -34,6 +35,8 @@ function vibeIcons(vibe: string): MCIName[] {
 }
 
 export function VerdictCard({ verdict }: Props) {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const filled = verdict.rating;
   const icons = vibeIcons(verdict.vibe);
 
@@ -94,89 +97,91 @@ export function VerdictCard({ verdict }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.xl,
-  },
-  eyebrow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  eyebrowLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.borderHard,
-  },
-  eyebrowText: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 2.5,
-    color: colors.textMuted,
-  },
-  verdictText: {
-    fontFamily: fonts.display,
-    fontSize: 22,
-    color: colors.textPrimary,
-    lineHeight: 32,
-    marginBottom: spacing.lg,
-    letterSpacing: -0.3,
-  },
-  rule: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingTop: spacing.xs,
-  },
-  vibeBlock: {
-    flex: 1,
-  },
-  ratingBlock: {
-    alignItems: 'flex-end',
-  },
-  metaLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 2,
-    color: colors.textMuted,
-    marginBottom: 6,
-  },
-  vibeName: {
-    fontFamily: fonts.displayBold,
-    fontSize: 18,
-    color: colors.textPrimary,
-    lineHeight: 22,
-    marginBottom: 8,
-  },
-  vibeIcons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  ratingDashes: {
-    flexDirection: 'row',
-    gap: 4,
-    marginBottom: 6,
-  },
-  dash: {
-    width: 18,
-    height: 3,
-  },
-  dashFilled: {
-    backgroundColor: colors.textPrimary,
-  },
-  dashEmpty: {
-    backgroundColor: colors.border,
-  },
-  ratingNum: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    color: colors.textMuted,
-    letterSpacing: 1,
-  },
-});
+function makeStyles(colors: AppColors, fonts: AppFonts) {
+  return StyleSheet.create({
+    container: {
+      marginBottom: spacing.xl,
+    },
+    eyebrow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    eyebrowLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: colors.borderHard,
+    },
+    eyebrowText: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      letterSpacing: 2.5,
+      color: colors.textMuted,
+    },
+    verdictText: {
+      fontFamily: fonts.display,
+      fontSize: 22,
+      color: colors.textPrimary,
+      lineHeight: 32,
+      marginBottom: spacing.lg,
+      letterSpacing: -0.3,
+    },
+    rule: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginBottom: spacing.md,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      paddingTop: spacing.xs,
+    },
+    vibeBlock: {
+      flex: 1,
+    },
+    ratingBlock: {
+      alignItems: 'flex-end',
+    },
+    metaLabel: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      letterSpacing: 2,
+      color: colors.textMuted,
+      marginBottom: 6,
+    },
+    vibeName: {
+      fontFamily: fonts.displayBold,
+      fontSize: 18,
+      color: colors.textPrimary,
+      lineHeight: 22,
+      marginBottom: 8,
+    },
+    vibeIcons: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    ratingDashes: {
+      flexDirection: 'row',
+      gap: 4,
+      marginBottom: 6,
+    },
+    dash: {
+      width: 18,
+      height: 3,
+    },
+    dashFilled: {
+      backgroundColor: colors.textPrimary,
+    },
+    dashEmpty: {
+      backgroundColor: colors.border,
+    },
+    ratingNum: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      color: colors.textMuted,
+      letterSpacing: 1,
+    },
+  });
+}

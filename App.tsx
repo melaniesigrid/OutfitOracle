@@ -16,9 +16,14 @@ import {
   IBMPlexMono_400Regular,
   IBMPlexMono_500Medium,
 } from '@expo-google-fonts/ibm-plex-mono';
+import {
+  SpaceMono_400Regular,
+  SpaceMono_700Bold,
+} from '@expo-google-fonts/space-mono';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Sentry from '@sentry/react-native';
 import { AppDataProvider } from './src/contexts/AppContext';
+import { ThemeProvider } from './src/contexts/ThemeContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { colors } from './src/theme';
 
@@ -40,6 +45,8 @@ function App() {
     CormorantGaramond_400Regular_Italic,
     IBMPlexMono_400Regular,
     IBMPlexMono_500Medium,
+    SpaceMono_400Regular,
+    SpaceMono_700Bold,
   });
 
   // If fonts fail to load, dismiss the splash so the app isn't bricked.
@@ -54,11 +61,13 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AppDataProvider>
-          <NavigationContainer>
-            <AppNavigator />
-          </NavigationContainer>
-        </AppDataProvider>
+        <ThemeProvider>
+          <AppDataProvider>
+            <NavigationContainer>
+              <AppNavigator />
+            </NavigationContainer>
+          </AppDataProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

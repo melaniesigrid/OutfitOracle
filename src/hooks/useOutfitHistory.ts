@@ -21,16 +21,19 @@ export interface HistoryEntry {
 export function useOutfitHistory() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [firstConsultAt, setFirstConsultAt] = useState<number | undefined>();
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(KEY).then(raw => {
-      if (!raw) return;
-      try { setHistory(JSON.parse(raw)); }
-      catch { AsyncStorage.removeItem(KEY); }
-    });
-    AsyncStorage.getItem(FIRST_CONSULT_KEY).then(raw => {
-      if (raw) setFirstConsultAt(Number(raw));
-    });
+    Promise.all([
+      AsyncStorage.getItem(KEY).then(raw => {
+        if (!raw) return;
+        try { setHistory(JSON.parse(raw)); }
+        catch { AsyncStorage.removeItem(KEY); }
+      }),
+      AsyncStorage.getItem(FIRST_CONSULT_KEY).then(raw => {
+        if (raw) setFirstConsultAt(Number(raw));
+      }),
+    ]).finally(() => setHistoryLoaded(true));
   }, []);
 
   const addEntry = useCallback((
@@ -65,5 +68,5 @@ export function useOutfitHistory() {
     AsyncStorage.removeItem(KEY);
   }, []);
 
-  return { history, addEntry, clear, firstConsultAt };
+  return { history, addEntry, clear, firstConsultAt, historyLoaded };
 }

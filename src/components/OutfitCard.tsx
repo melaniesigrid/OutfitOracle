@@ -1,18 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Linking, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { OutfitItem } from '../services/oracle';
 import { useAppData } from '../contexts/AppContext';
-import { colors, fonts, spacing } from '../theme';
-
-const accentMap = {
-  mint:     { color: colors.mint },
-  lavender: { color: colors.lavender },
-  coral:    { color: colors.coral },
-  lemon:    { color: colors.lemon },
-  iris:     { color: colors.iris },
-};
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const NONE_NEEDED_RE = /\bnone\b|not needed|no outer|skip the|universe has gifted|weather permits|too warm|unnecessary/i;
 
@@ -38,8 +31,19 @@ function splitItems(raw: string): string[] {
 }
 
 export function OutfitCard({ item, index, city, vibe, weather }: Props) {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const { savedCtx } = useAppData();
-  const accent = accentMap[item.accentColor] ?? accentMap.mint;
+
+  const accentMap = useMemo(() => ({
+    mint:     { color: colors.mint },
+    lavender: { color: colors.lavender },
+    coral:    { color: colors.coral },
+    lemon:    { color: colors.lemon },
+    iris:     { color: colors.iris },
+  }), [colors]);
+
+  const accent = accentMap[item.accentColor as keyof typeof accentMap] ?? accentMap.mint;
   const num = String(index + 1).padStart(2, '0');
   const isNoneNeeded = NONE_NEEDED_RE.test(item.item);
   const shopItems = splitItems(item.item);
@@ -124,85 +128,87 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    marginBottom: spacing.lg,
-  },
-  rule: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  inner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  num: {
-    fontFamily: fonts.displayLight,
-    fontSize: 52,
-    color: colors.textPrimary,
-    opacity: 0.10,
-    lineHeight: 54,
-    width: 52,
-    textAlign: 'right',
-  },
-  content: {
-    flex: 1,
-    paddingTop: 4,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  category: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 2.5,
-  },
-  itemName: {
-    fontFamily: fonts.display,
-    fontSize: 22,
-    color: colors.textPrimary,
-    lineHeight: 26,
-    marginBottom: spacing.xs,
-    letterSpacing: -0.3,
-  },
-  detail: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textSecondary,
-    lineHeight: 17,
-    marginBottom: spacing.sm,
-  },
-  shopBtns: {
-    gap: 6,
-  },
-  shopBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-    gap: 4,
-  },
-  shopBtnPressed: {
-    opacity: 0.6,
-  },
-  shopText: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 2,
-  },
-  shopIcon: {
-    marginTop: 1,
-  },
-  blessingNote: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    letterSpacing: 0.2,
-  },
-});
+function makeStyles(colors: AppColors, fonts: AppFonts) {
+  return StyleSheet.create({
+    card: {
+      marginBottom: spacing.lg,
+    },
+    rule: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginBottom: spacing.md,
+    },
+    inner: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+    },
+    num: {
+      fontFamily: fonts.displayLight,
+      fontSize: 52,
+      color: colors.textPrimary,
+      opacity: 0.10,
+      lineHeight: 54,
+      width: 52,
+      textAlign: 'right',
+    },
+    content: {
+      flex: 1,
+      paddingTop: 4,
+    },
+    categoryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+    category: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      letterSpacing: 2.5,
+    },
+    itemName: {
+      fontFamily: fonts.display,
+      fontSize: 22,
+      color: colors.textPrimary,
+      lineHeight: 26,
+      marginBottom: spacing.xs,
+      letterSpacing: -0.3,
+    },
+    detail: {
+      fontFamily: fonts.mono,
+      fontSize: 11,
+      color: colors.textSecondary,
+      lineHeight: 17,
+      marginBottom: spacing.sm,
+    },
+    shopBtns: {
+      gap: 6,
+    },
+    shopBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      paddingVertical: 4,
+      gap: 4,
+    },
+    shopBtnPressed: {
+      opacity: 0.6,
+    },
+    shopText: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      letterSpacing: 2,
+    },
+    shopIcon: {
+      marginTop: 1,
+    },
+    blessingNote: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      color: colors.textMuted,
+      fontStyle: 'italic',
+      letterSpacing: 0.2,
+    },
+  });
+}

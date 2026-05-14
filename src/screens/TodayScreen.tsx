@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
   Platform, StatusBar, Animated,
@@ -7,7 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 // ─── Word of the Day ──────────────────────────────────────────────────────────
 
@@ -119,7 +120,8 @@ function pollenLevel(val: number): string {
 
 // ─── Widget shell ─────────────────────────────────────────────────────────────
 
-function Widget({ label, children, noPad }: { label: string; children: React.ReactNode; noPad?: boolean }) {
+type Styles = ReturnType<typeof makeStyles>;
+function Widget({ label, children, noPad, styles }: { label: string; children: React.ReactNode; noPad?: boolean; styles: Styles }) {
   return (
     <View style={styles.widget}>
       <Text style={styles.widgetLabel}>{label}</Text>
@@ -131,6 +133,8 @@ function Widget({ label, children, noPad }: { label: string; children: React.Rea
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function TodayScreen() {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const { oracle, profileCtx, streakCtx } = useAppData();
   const { weather, verdict, cachedAt, cachedCity, isFromCache, status } = oracle;
   const profile = profileCtx.profile;
@@ -178,7 +182,7 @@ export function TodayScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── WORD OF THE DAY (always visible) ── */}
-        <Widget label="WORD OF THE DAY">
+        <Widget label="WORD OF THE DAY" styles={styles}>
           <View style={styles.wotdAccent} />
           <Text style={styles.wotdWord}>{word.word}</Text>
           <Text style={styles.wotdOrigin}>{word.origin}</Text>
@@ -226,7 +230,7 @@ export function TodayScreen() {
 
             {/* ── HOURLY FORECAST ── */}
             {!!weather.hourly?.length && (
-              <Widget label="NEXT 24 HOURS" noPad>
+              <Widget label="NEXT 24 HOURS" noPad styles={styles}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -259,7 +263,7 @@ export function TodayScreen() {
 
             {/* ── CONDITIONS (UV / SUN / MOON) ── */}
             {(weather.uvIndex !== undefined || weather.sunrise || weather.moonPhaseName) && (
-              <Widget label="CONDITIONS">
+              <Widget label="CONDITIONS" styles={styles}>
                 <View style={styles.conditionsRow}>
                   {weather.uvIndex !== undefined && (
                     <View style={styles.condCard}>
@@ -306,7 +310,7 @@ export function TodayScreen() {
 
             {/* ── WEEKLY FORECAST ── */}
             {!!weather.daily?.length && (
-              <Widget label="WEEKLY FORECAST">
+              <Widget label="WEEKLY FORECAST" styles={styles}>
                 {weather.daily.map((d, i) => (
                   <View
                     key={d.date}
@@ -338,7 +342,7 @@ export function TodayScreen() {
 
             {/* ── ALLERGENS & AIR QUALITY ── */}
             {weather.pollen && (
-              <Widget label="ALLERGENS & AIR">
+              <Widget label="ALLERGENS & AIR" styles={styles}>
                 <View style={styles.aqiRow}>
                   <Text style={styles.aqiVal}>{weather.pollen.aqi}</Text>
                   <Text style={styles.aqiLabel}>AQI — {weather.pollen.aqiLabel.toUpperCase()}</Text>
@@ -360,7 +364,7 @@ export function TodayScreen() {
             )}
 
             {/* ── THE ORACLE SPEAKS ── */}
-            <Widget label="— THE ORACLE SPEAKS —">
+            <Widget label="— THE ORACLE SPEAKS —" styles={styles}>
               <Text style={styles.verdictPull} numberOfLines={4}>
                 "{verdict.verdict}"
               </Text>
@@ -381,7 +385,7 @@ export function TodayScreen() {
             </Widget>
 
             {/* ── TODAY'S LOOK (outfit chips) ── */}
-            <Widget label="TODAY'S LOOK">
+            <Widget label="TODAY'S LOOK" styles={styles}>
               {verdict.outfits.slice(0, 3).map(item => (
                 <View key={item.category} style={styles.chip}>
                   <Text style={styles.chipCategory}>{item.category.toUpperCase()}</Text>
@@ -416,7 +420,7 @@ export function TodayScreen() {
         ) : (
           /* ── EMPTY STATE ── */
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="eye-outline" size={40} color="rgba(250,249,246,0.20)" />
+            <MaterialCommunityIcons name="eye-outline" size={40} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>The Oracle awaits.</Text>
             <Text style={styles.emptySub}>
               Head to the Oracle tab to receive{'\n'}today's verdict.
@@ -442,7 +446,7 @@ export function TodayScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -483,7 +487,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: 48 },
 
   /* ── Widget shell ── */
@@ -871,13 +875,13 @@ const styles = StyleSheet.create({
   refreshMeta: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: 'rgba(250,249,246,0.30)',
+    color: colors.textMuted,
     letterSpacing: 0.5,
   },
   refreshBtn: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.50)',
+    color: colors.textSecondary,
     letterSpacing: 0.5,
   },
 
@@ -890,13 +894,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: fonts.display,
     fontSize: 32,
-    color: 'rgba(250,249,246,0.45)',
+    color: colors.textSecondary,
     letterSpacing: -0.5,
   },
   emptySub: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: 'rgba(250,249,246,0.25)',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 18,
     letterSpacing: 0.3,
@@ -908,12 +912,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(250,249,246,0.06)',
+    borderTopColor: colors.border,
   },
   greetingSub: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.20)',
+    color: colors.textMuted,
     letterSpacing: 0.3,
   },
-});
+}); }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView,
   StyleSheet, Platform, StatusBar,
@@ -10,9 +10,12 @@ import {
   STYLE_KEYWORDS, BUDGET_TIERS, PERSONALITY_OPTIONS, TEMP_SENSITIVITY_OPTIONS, COLOR_OPTIONS,
   OraclePersonality, BudgetTier, TempSensitivity,
 } from '../hooks/useStyleProfile';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export function ProfileEditScreen() {
+  const { colors, fonts, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation();
   const { profileCtx } = useAppData();
   const existing = profileCtx.profile;
@@ -40,7 +43,7 @@ export function ProfileEditScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
 
       {/* Header */}
       <View style={styles.header}>
@@ -233,7 +236,7 @@ export function ProfileEditScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
@@ -390,4 +393,4 @@ const styles = StyleSheet.create({
   },
   colorLabelLoved:   { color: colors.textPrimary },
   colorLabelAvoided: { color: colors.scarlet },
-});
+}); }

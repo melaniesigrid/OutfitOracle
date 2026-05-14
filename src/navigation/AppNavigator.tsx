@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAppData } from '../contexts/AppContext';
+import { BadgeToast } from '../components/BadgeToast';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { OnboardingCarousel } from '../screens/OnboardingCarousel';
 import { PersonalityScreen } from '../screens/PersonalityScreen';
@@ -44,7 +46,7 @@ function MainStack() {
 }
 
 export function AppNavigator() {
-  const { profileCtx } = useAppData();
+  const { profileCtx, newBadgeQueue, dismissBadgeToast } = useAppData();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [pendingPersonality, setPendingPersonality] = useState<OraclePersonality>('editorial');
@@ -115,5 +117,10 @@ export function AppNavigator() {
     );
   }
 
-  return <MainStack />;
+  return (
+    <View style={{ flex: 1 }}>
+      <MainStack />
+      <BadgeToast badge={newBadgeQueue[0]} onDismiss={dismissBadgeToast} />
+    </View>
+  );
 }

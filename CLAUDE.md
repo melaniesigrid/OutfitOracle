@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `TODOS.md` — design/engineering debt with context
 - `BEST_PRACTICES.md` — commit conventions, TypeScript rules, RN constraints
 - `PRIVACY_POLICY.md` — privacy policy (also hosted at GitHub Pages)
+- `DESIGN.md` — design system: three themes (Classic / Editorial Light / Editorial Dark), typography, color, spacing, motion spec
 
 ## Roadmap Management
 
@@ -116,3 +117,15 @@ Key routing rules:
 - Ship/deploy/PR → invoke /ship or /land-and-deploy
 - Save progress → invoke /context-save
 - Resume context → invoke /context-restore
+
+## Design System
+
+Always read DESIGN.md before making any visual or UI decisions.
+All font choices, colors, spacing, motion, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+
+**Three themes:** Classic (IBM Plex Mono, broad scarlet) / Editorial Light (Space Mono, scarlet 1x per screen, cream bg) / Editorial Dark (Space Mono, scarlet 1x per screen, dark bg). User preference stored at `@outfit_oracle_theme`. Default: Classic.
+
+**Scarlet discipline (Editorial themes):** One scarlet element per screen maximum. Priority: verdict rule > Founding Member badge > error state > category marker. Everything else uses near-black `#1A1714` + cream type.
+
+In QA mode, flag any code that doesn't match the active theme's spec in DESIGN.md.

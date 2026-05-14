@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, Pressable, StyleSheet, Platform,
   StatusBar, Animated, Image, Dimensions,
 } from 'react-native';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { height } = Dimensions.get('window');
 
@@ -12,6 +13,8 @@ interface Props {
 }
 
 export function WelcomeScreen({ onContinue }: Props) {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoY       = useRef(new Animated.Value(24)).current;
   const tagOpacity  = useRef(new Animated.Value(0)).current;
@@ -66,70 +69,72 @@ export function WelcomeScreen({ onContinue }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bgDark,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: Platform.OS === 'ios' ? 48 : 32,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'space-between',
-  },
-  logoWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    width: '85%',
-    height: height * 0.35,
-  },
-  bottom: {
-    marginBottom: spacing.xl,
-  },
-  tagline: {
-    fontFamily: fonts.display,
-    fontSize: 36,
-    color: '#FAF9F6',
-    lineHeight: 42,
-    letterSpacing: -0.5,
-    marginBottom: spacing.lg,
-  },
-  rule: {
-    height: 1,
-    backgroundColor: 'rgba(250,249,246,0.15)',
-    marginBottom: spacing.md,
-  },
-  sub: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: 'rgba(250,249,246,0.45)',
-    letterSpacing: 0.5,
-    lineHeight: 18,
-  },
-  ctaWrap: {
-    marginTop: spacing.md,
-  },
-  cta: {
-    backgroundColor: '#FAF9F6',
-    paddingVertical: 18,
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  ctaPressed: {
-    opacity: 0.85,
-  },
-  ctaText: {
-    fontFamily: fonts.serif,
-    fontSize: 20,
-    color: colors.bgDark,
-    letterSpacing: -0.2,
-  },
-  ctaArrow: {
-    fontFamily: fonts.mono,
-    fontSize: 16,
-    color: colors.bgDark,
-  },
-});
+function makeStyles(colors: AppColors, fonts: AppFonts) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bgDark,
+      paddingTop: Platform.OS === 'ios' ? 60 : 40,
+      paddingBottom: Platform.OS === 'ios' ? 48 : 32,
+      paddingHorizontal: spacing.lg,
+      justifyContent: 'space-between',
+    },
+    logoWrap: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    logo: {
+      width: '85%',
+      height: height * 0.35,
+    },
+    bottom: {
+      marginBottom: spacing.xl,
+    },
+    tagline: {
+      fontFamily: fonts.display,
+      fontSize: 36,
+      color: '#FAF9F6',
+      lineHeight: 42,
+      letterSpacing: -0.5,
+      marginBottom: spacing.lg,
+    },
+    rule: {
+      height: 1,
+      backgroundColor: 'rgba(250,249,246,0.15)',
+      marginBottom: spacing.md,
+    },
+    sub: {
+      fontFamily: fonts.mono,
+      fontSize: 11,
+      color: 'rgba(250,249,246,0.45)',
+      letterSpacing: 0.5,
+      lineHeight: 18,
+    },
+    ctaWrap: {
+      marginTop: spacing.md,
+    },
+    cta: {
+      backgroundColor: '#FAF9F6',
+      paddingVertical: 18,
+      paddingHorizontal: spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    ctaPressed: {
+      opacity: 0.85,
+    },
+    ctaText: {
+      fontFamily: fonts.serif,
+      fontSize: 20,
+      color: colors.bgDark,
+      letterSpacing: -0.2,
+    },
+    ctaArrow: {
+      fontFamily: fonts.mono,
+      fontSize: 16,
+      color: colors.bgDark,
+    },
+  });
+}

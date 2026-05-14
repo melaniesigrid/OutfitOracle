@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { CitySuggestion } from '../services/weather';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Props {
   suggestions: CitySuggestion[];
@@ -9,6 +10,9 @@ interface Props {
 }
 
 export function CitySuggestions({ suggestions, onSelect }: Props) {
+  const { colors, fonts } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+
   if (!suggestions.length) return null;
 
   return (
@@ -37,36 +41,38 @@ export function CitySuggestions({ suggestions, onSelect }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-    marginHorizontal: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  row: {
-    paddingVertical: 12,
-  },
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  rowPressed: {
-    backgroundColor: colors.bgSurface,
-  },
-  name: {
-    fontFamily: fonts.display,
-    fontSize: 18,
-    color: colors.textPrimary,
-    lineHeight: 22,
-    letterSpacing: -0.2,
-  },
-  meta: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    color: colors.textMuted,
-    marginTop: 2,
-    letterSpacing: 0.3,
-  },
-});
+function makeStyles(colors: AppColors, fonts: AppFonts) {
+  return StyleSheet.create({
+    container: {
+      marginTop: spacing.xs,
+      marginBottom: spacing.lg,
+      marginHorizontal: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    row: {
+      paddingVertical: 12,
+    },
+    rowBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    rowPressed: {
+      backgroundColor: colors.bgSurface,
+    },
+    name: {
+      fontFamily: fonts.display,
+      fontSize: 18,
+      color: colors.textPrimary,
+      lineHeight: 22,
+      letterSpacing: -0.2,
+    },
+    meta: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      color: colors.textMuted,
+      marginTop: 2,
+      letterSpacing: 0.3,
+    },
+  });
+}

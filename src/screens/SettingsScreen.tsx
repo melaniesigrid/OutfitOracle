@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
   Platform, StatusBar, Alert, Linking, Switch,
@@ -8,7 +8,8 @@ import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const ALL_KEYS = [
   '@outfit_oracle_history',
@@ -20,6 +21,7 @@ const ALL_KEYS = [
   '@outfit_oracle_saved',
   '@onboarding_complete',
   '@outfit_oracle_founding_member',
+  '@outfit_oracle_theme',
 ];
 
 const SOFT_KEYS = [
@@ -33,7 +35,15 @@ const SOFT_KEYS = [
 const APP_VERSION = Constants.expoConfig?.version ?? '1.1.0';
 const PRIVACY_POLICY_URL = 'https://melaniesigrid.github.io/OutfitOracle/';
 
+const THEME_OPTIONS: { id: ThemeName; label: string }[] = [
+  { id: 'classic', label: 'Classic' },
+  { id: 'editorial-light', label: 'Editorial Light' },
+  { id: 'editorial-dark', label: 'Editorial Dark' },
+];
+
 export function SettingsScreen() {
+  const { colors, fonts, themeName, setTheme } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation<any>();
   const { historyCtx } = useAppData();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
@@ -95,6 +105,30 @@ export function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+        {/* ── ORACLE THEME ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>ORACLE THEME</Text>
+          <View style={styles.themeRow}>
+            {THEME_OPTIONS.map(opt => {
+              const active = themeName === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  style={[styles.themeChip, active && styles.themeChipActive]}
+                  onPress={() => setTheme(opt.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={opt.label}
+                >
+                  <Text style={[styles.themeChipText, active && styles.themeChipTextActive]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
         {/* ── DATA ── */}
         <View style={styles.section}>
@@ -210,7 +244,7 @@ export function SettingsScreen() {
 
 const HEADER_TOP = Platform.OS === 'ios' ? 56 : 32;
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -303,6 +337,33 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
   },
 
+  /* Theme picker */
+  themeRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  themeChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(250,249,246,0.18)',
+    alignItems: 'center',
+  },
+  themeChipActive: {
+    borderColor: colors.bg,
+    backgroundColor: 'rgba(250,249,246,0.08)',
+  },
+  themeChipText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    color: 'rgba(250,249,246,0.40)',
+  },
+  themeChipTextActive: {
+    color: colors.bg,
+  },
+
   /* Footer */
   footer: {
     fontFamily: fonts.mono,
@@ -314,4 +375,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     marginTop: spacing.md,
   },
-});
+}); }

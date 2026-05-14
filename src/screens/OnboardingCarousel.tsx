@@ -1,10 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   View, Text, Pressable, StyleSheet, Platform,
   StatusBar, ScrollView, Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, fonts, spacing } from '../theme';
+import { AppColors, AppFonts, spacing } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -35,6 +36,8 @@ interface Props {
 }
 
 export function OnboardingCarousel({ onContinue, onSkip }: Props) {
+  const { colors, fonts, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const scrollRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
   const isLast = page === SLIDES.length - 1;
@@ -48,7 +51,7 @@ export function OnboardingCarousel({ onContinue, onSkip }: Props) {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
 
       {onSkip && (
         <Pressable
@@ -108,7 +111,7 @@ export function OnboardingCarousel({ onContinue, onSkip }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -197,4 +200,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     color: '#FAF9F6',
   },
-});
+}); }

@@ -93,21 +93,36 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
 
 async function viaProxy(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string): Promise<OracleVerdict> {
   const deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY).catch(() => null);
-  const resp = await fetch(PROXY_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(deviceId ? { 'X-Device-ID': deviceId } : {}),
-    },
-    body: JSON.stringify({ weather, gender, styleProfile: profile, occasion }),
-  });
 
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({})) as { error?: string };
-    throw new Error(err.error ?? `Proxy error ${resp.status}`);
+  let resp: Response;
+  try {
+    resp = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(deviceId ? { 'X-Device-ID': deviceId } : {}),
+      },
+      body: JSON.stringify({ weather, gender, styleProfile: profile, occasion }),
+    });
+  } catch {
+    throw new Error('The Oracle requires a signal. Check your connection and try again.');
   }
 
-  return resp.json() as Promise<OracleVerdict>;
+  if (!resp.ok) {
+    if (resp.status === 429) {
+      const retrySeconds = Number(resp.headers.get('Retry-After') ?? 86400);
+      const hours = Math.ceil(retrySeconds / 3600);
+      throw new Error(`The Oracle has spoken enough today. Available again in ${hours === 1 ? '1 hour' : `${hours} hours`}.`);
+    }
+    if (resp.status >= 500) {
+      throw new Error('The Oracle is momentarily unavailable. The fashion world waits.');
+    }
+    throw new Error('The Oracle is displeased. Something went wrong.');
+  }
+
+  return resp.json().catch(() => {
+    throw new Error('The Oracle is displeased. The response was unreadable.');
+  }) as Promise<OracleVerdict>;
 }
 
 async function viaDirect(weather: WeatherData, gender: string, apiKey: string, profile?: StyleProfile, occasion?: string): Promise<OracleVerdict> {
