@@ -74,3 +74,7 @@ export function trackRecentCityTapped(city: string) {
 export function trackAutocompleteCitySelected(city: string) {
   track('autocomplete_city_selected', { city });
 }
+
+export function trackOnboardingCompleted() {
+  track('onboarding_completed');
+}
