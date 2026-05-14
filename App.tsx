@@ -31,11 +31,12 @@ enableScreens();
 const _appearanceSub = Appearance.addChangeListener(() => {});
 SplashScreen.preventAutoHideAsync();
 
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? '',
-  enabled: !__DEV__ && !!process.env.EXPO_PUBLIC_SENTRY_DSN,
-  tracesSampleRate: 0.05,
-});
+if (!__DEV__ && process.env.EXPO_PUBLIC_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    tracesSampleRate: 0.05,
+  });
+}
 
 function App() {
   const [fontsLoaded, fontError] = useFonts({
