@@ -126,6 +126,31 @@ const goldenHourColors = {
   borderMid:     '#B89870',
 };
 
+// Y2K — digital zine / fashion club. Lavender + hot pink + deep purple + cream.
+
+const y2kColors = {
+  ...sharedColors,
+  // Override shared lavender/lemon with Y2K-calibrated versions
+  lavender:    '#9B5CA8',
+  lavenderDim: '#F0E0F8',
+  lemon:       '#A09A00',
+  lemonDim:    '#F6E85F',
+  // Core palette
+  bg:          '#D8C2F2',   // lavender page background
+  bgDark:      '#35106E',   // deep purple — hero panels, headers
+  bgSurface:   '#F8BBD4',   // soft pink surface
+  bgCard:      '#FFFBEF',   // cream card background
+  bgCardAlt:   '#FFFDF7',   // sticker white
+  textPrimary:   '#24113F', // ink — primary text
+  textSecondary: '#35106E', // deep purple — secondary text
+  textMuted:     '#7B5CA8', // muted purple
+  border:      '#B088D4',   // subtle lavender dividers
+  borderHard:  '#35106E',   // deep purple — card outlines, rules
+  borderMid:   '#7B5CA8',   // mid-strength purple border
+  scarlet:    '#EC1E79',    // hot pink — the singular accent
+  scarletDim: '#FDDDF0',   // blush tint for scarlet backgrounds
+};
+
 // ── Font sets ─────────────────────────────────────────────────────────────
 
 const cormorantFonts = {
@@ -157,6 +182,16 @@ const electricFonts = {
   monoMedium:   'IBMPlexMono_500Medium',
 };
 
+// Y2K — Syne ExtraBold for maximum Y2K headline impact; Cormorant Italic for script-like editorial
+const y2kFonts = {
+  display:      'Syne_800ExtraBold',
+  displayBold:  'Syne_800ExtraBold',
+  displayLight: 'Syne_600SemiBold',
+  serif:        'CormorantGaramond_700Bold_Italic',
+  mono:         'IBMPlexMono_400Regular',
+  monoMedium:   'IBMPlexMono_500Medium',
+};
+
 // Morning Paper — geometric sans-serif (Syne) replaces Cormorant for display
 const syneFonts = {
   display:      'Syne_700Bold',
@@ -176,13 +211,36 @@ export type ThemeName =
   | 'terra-firma'
   | 'morning-paper'
   | 'golden-hour'
-  | 'electric';
+  | 'electric'
+  | 'y2k';
 export type AppColors = typeof classicColors;
 export type AppFonts = typeof classicFonts;
 
 export function isEditorialTheme(name: ThemeName): boolean {
   return name === 'editorial-light' || name === 'editorial-dark';
 }
+
+export function isY2KTheme(name: ThemeName): boolean {
+  return name === 'y2k';
+}
+
+// Extra decorative tokens only used by Y2K components
+export const y2kTokens = {
+  lime:          '#C7F238',
+  yellowHighlight: '#F6E85F',
+  hotPink:       '#EC1E79',
+  deepPurple:    '#35106E',
+  mutedPurple:   '#7B5CA8',
+  ink:           '#24113F',
+  cream:         '#FFFBEF',
+  blush:         '#FDDDF0',
+  lavenderBg:    '#D8C2F2',
+  softPink:      '#F8BBD4',
+  radius:        16,     // rounded corners for Y2K cards
+  radiusSm:      10,
+  shadowOffset:  4,      // offset shadow depth
+  borderWidth:   1.5,    // Y2K card outer border
+} as const;
 
 // ── Named theme objects ────────────────────────────────────────────────────
 
@@ -221,6 +279,11 @@ export const THEMES: Record<ThemeName, { colors: AppColors; fonts: AppFonts; isD
     colors: electricColors,
     fonts:  electricFonts,
     isDark: true,
+  },
+  'y2k': {
+    colors: y2kColors,
+    fonts:  y2kFonts,
+    isDark: false,
   },
 };
 
