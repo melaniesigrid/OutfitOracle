@@ -22,6 +22,11 @@ type OnboardingStep = 'welcome' | 'carousel' | 'personality' | 'style';
 
 const Stack = createNativeStackNavigator();
 
+function BadgeToastPortal() {
+  const { newBadgeQueue, dismissBadgeToast } = useAppData();
+  return <BadgeToast badge={newBadgeQueue[0]} onDismiss={dismissBadgeToast} />;
+}
+
 function MainStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -46,7 +51,7 @@ function MainStack() {
 }
 
 export function AppNavigator() {
-  const { profileCtx, newBadgeQueue, dismissBadgeToast } = useAppData();
+  const { profileCtx } = useAppData();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [pendingPersonality, setPendingPersonality] = useState<OraclePersonality>('editorial');
@@ -120,7 +125,7 @@ export function AppNavigator() {
   return (
     <View style={{ flex: 1 }}>
       <MainStack />
-      <BadgeToast badge={newBadgeQueue[0]} onDismiss={dismissBadgeToast} />
+      <BadgeToastPortal />
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useRef, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useOracle } from '../hooks/useOracle';
 import { useStyleProfile } from '../hooks/useStyleProfile';
 import { useOutfitHistory } from '../hooks/useOutfitHistory';
@@ -47,8 +47,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const dismissBadgeToast = useCallback(() => setNewBadgeQueue(prev => prev.slice(1)), []);
 
+  const contextValue = useMemo(
+    () => ({ oracle, profileCtx, historyCtx, streakCtx, savedCtx, badges, newBadgeQueue, dismissBadgeToast }),
+    [oracle, profileCtx, historyCtx, streakCtx, savedCtx, badges, newBadgeQueue, dismissBadgeToast],
+  );
+
   return (
-    <AppContext.Provider value={{ oracle, profileCtx, historyCtx, streakCtx, savedCtx, badges, newBadgeQueue, dismissBadgeToast }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
