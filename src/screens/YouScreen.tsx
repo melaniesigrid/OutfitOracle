@@ -11,6 +11,7 @@ import { getRankTitle } from '../hooks/useConsultStreak';
 import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
 import { AppColors, AppFonts, ThemeName, isEditorialTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTempUnit } from '../contexts/TemperatureContext';
 
 const PASSPORT_MILESTONES = [
   { cities: 50, title: 'The Nomad Oracle',  icon: 'earth' as const },
@@ -29,6 +30,7 @@ const RANK_PROGRESS = [
 export function YouScreen() {
   const { colors, fonts, isDark, themeName } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
+  const { formatTemp } = useTempUnit();
   const navigation = useNavigation<any>();
   const [lockedExpanded, setLockedExpanded] = useState(false);
   const [isFoundingMember, setIsFoundingMember] = useState(false);
@@ -85,7 +87,7 @@ export function YouScreen() {
           </View>
           {isFoundingMember && (
             <View style={styles.foundingChip}>
-              <MaterialCommunityIcons name="seal" size={12} color={colors.bg} />
+              <MaterialCommunityIcons name="seal" size={12} color="#FAF9F6" />
               <Text style={styles.foundingChipText}>FOUNDING MEMBER</Text>
             </View>
           )}
@@ -247,13 +249,14 @@ export function YouScreen() {
         </View>
 
         {/* ── SAVED LOOKS ── */}
-        {savedCtx.saved.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>SAVED LOOKS</Text>
-              <Text style={styles.badgeCount}>{savedCtx.saved.length}</Text>
-            </View>
-            {savedCtx.saved.map(s => (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>SAVED LOOKS</Text>
+            {savedCtx.saved.length > 0 && <Text style={styles.badgeCount}>{savedCtx.saved.length}</Text>}
+          </View>
+          {savedCtx.saved.length === 0 ? (
+            <Text style={styles.emptyState}>No looks saved. The wardrobe is a blank canvas.</Text>
+          ) : savedCtx.saved.map(s => (
               <View key={`${s.item.item}-${s.savedAt}`} style={styles.savedRow}>
                 <View style={styles.savedLeft}>
                   <Text style={styles.savedCategory}>{s.item.category.toUpperCase()}</Text>
@@ -270,34 +273,33 @@ export function YouScreen() {
                 </Pressable>
               </View>
             ))}
-          </View>
-        )}
+        </View>
 
         {/* ── ORACLE ARCHIVES ── */}
-        {history.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>ORACLE ARCHIVES</Text>
-            </View>
-            {history.map(entry => (
-              <View key={entry.id} style={styles.archiveRow}>
-                <View style={styles.archiveDate}>
-                  <Text style={styles.archiveDateDay}>
-                    {new Date(entry.consultedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                  </Text>
-                  <Text style={styles.archiveDateTime}>
-                    {new Date(entry.consultedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                </View>
-                <View style={styles.archiveCenter}>
-                  <Text style={styles.archiveCity}>{entry.city}</Text>
-                  <Text style={styles.archiveVibe}>{entry.verdict.vibe}</Text>
-                </View>
-                <Text style={styles.archiveTemp}>{entry.weather.temp}°</Text>
-              </View>
-            ))}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>ORACLE ARCHIVES</Text>
           </View>
-        )}
+          {history.length === 0 ? (
+            <Text style={styles.emptyState}>The Oracle awaits your first inquiry.</Text>
+          ) : history.map(entry => (
+            <View key={entry.id} style={styles.archiveRow}>
+              <View style={styles.archiveDate}>
+                <Text style={styles.archiveDateDay}>
+                  {new Date(entry.consultedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                </Text>
+                <Text style={styles.archiveDateTime}>
+                  {new Date(entry.consultedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+              <View style={styles.archiveCenter}>
+                <Text style={styles.archiveCity}>{entry.city}</Text>
+                <Text style={styles.archiveVibe}>{entry.verdict.vibe}</Text>
+              </View>
+              <Text style={styles.archiveTemp}>{formatTemp(entry.weather.temp)}°</Text>
+            </View>
+          ))}
+        </View>
 
       </ScrollView>
     </View>
@@ -388,7 +390,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
     fontFamily: fonts.mono,
     fontSize: 9,
     letterSpacing: 1.5,
-    color: colors.bg,
+    color: '#FAF9F6',
   },
 
   /* Sections */
@@ -606,6 +608,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
     color: colors.textMuted,
     letterSpacing: 0.3,
     lineHeight: 17,
+  },
+  emptyState: {
+    fontFamily: fonts.serif,
+    fontSize: 16,
+    color: colors.textMuted,
+    lineHeight: 24,
+    fontStyle: 'italic',
   },
 
   /* Saved looks */
