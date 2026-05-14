@@ -4,6 +4,33 @@ All notable changes to Outfit Oracle are documented here.
 
 ---
 
+## [1.2.0] — 2026-05-14
+
+### Added
+- **Three-theme system** — Classic (IBM Plex Mono, broad scarlet), Editorial Light (Space Mono, cream background, restrained scarlet), and Editorial Dark (Space Mono, near-black background). Theme persists across sessions via AsyncStorage. Switch in Settings.
+- **Achievement badge toasts** — unlocking a new weather badge triggers an animated bottom-sheet toast with haptic feedback. Scarlet accent in Classic; neutral in Editorial themes (scarlet discipline: one per screen max).
+- **Cold-start badge spam fix** — badge diff detection now gates on `historyLoaded`, preventing all previously-earned badges from firing as "new" toasts on every app open.
+- **DESIGN.md** — full three-theme design system specification: color tokens, typography, spacing, motion rules, scarlet discipline, and theme extensibility guide for contributors.
+
+### Changed
+- **StatusBar adapts to theme** — five screens now use `isDark ? 'light-content' : 'dark-content'` so status bar icons are visible on all three theme backgrounds.
+- **ThemeProvider wraps AppDataProvider** — corrected provider nesting so theme tokens are available to all app hooks at the context level.
+- **ThemeContext value memoized** — context object wrapped in `useMemo` to prevent unnecessary re-renders across all `useTheme()` consumers.
+- **BadgeToast animation** — entrance/exit uses `Timing + Easing.out(Easing.cubic)` per DESIGN.md motion spec (spring physics prohibited).
+
+### Fixed
+- **TodayScreen theme tokens** — scroll background and content colors now follow theme tokens instead of hardcoded dark values; Editorial Light is fully legible.
+- **Editorial error messages** — rate limit, server, network, and parse errors now use editorial voice ("The Oracle has spoken enough today…") matching the app's persona.
+- **SettingsScreen active theme chip** — active chip border and text use `colors.bg` (not hardcoded cream `#FAF9F6`) so the active state is visible in all themes.
+- **Oracle proxy test assertions** — two tests updated to match editorial error message strings after the error-map refactor.
+
+### For contributors
+- **Theme extensibility** — adding a new theme requires entries in `THEMES` (theme/index.ts) and `THEME_OPTIONS` (SettingsScreen.tsx) only; all consumers call `useTheme()` and require no changes.
+- **Accent color discipline** — `accentMap`/`ACCENT` objects in `OutfitCard` and `ShareCard` are now memoized with `useMemo([colors])` to prevent unnecessary renders.
+- **`dismissBadgeToast`** stabilized with `useCallback` to prevent AppContext consumers re-rendering on every badge state change.
+
+---
+
 ## [1.1.1] — 2026-05-14
 
 ### Fixed
