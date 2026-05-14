@@ -84,7 +84,6 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
       fontFamily: fonts.displayLight,
       fontSize: 84,
       color: colors.textPrimary,
-      lineHeight: 88,
       letterSpacing: -3,
       marginTop: spacing.xs,
       marginBottom: spacing.xs,

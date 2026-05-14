@@ -732,7 +732,6 @@ return StyleSheet.create({
     fontFamily: fonts.displayLight,
     fontSize: heroTempSize,
     color: heroTempColor,
-    lineHeight: heroTempSize,
     letterSpacing: -4,
     marginBottom: spacing.lg,
     ...heroTempShadow,
@@ -1089,7 +1088,6 @@ return StyleSheet.create({
   emptyGlyph: {
     fontFamily: fonts.displayLight,
     fontSize: 80,
-    lineHeight: 72,
     color: S.faint,
     letterSpacing: -2,
   },

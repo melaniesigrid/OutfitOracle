@@ -664,7 +664,6 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontFamily: typo.displayHero.fontFamily,
     fontSize: 96,
     color: y2kTokens.lime,
-    lineHeight: 112,
     letterSpacing: typo.displayHero.letterSpacing,
   },
   heroMeta: {
@@ -906,7 +905,6 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontFamily: typo.displayMedium.fontFamily,
     fontSize: 36,
     color: y2kTokens.deepPurple,
-    lineHeight: 48,
     letterSpacing: typo.displayMedium.letterSpacing,
   },
   aqiLabel: {

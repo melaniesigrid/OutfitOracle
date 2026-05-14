@@ -130,7 +130,6 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontFamily: typo.displayLarge.fontFamily,
     fontSize: 44,
     color: y2kTokens.hotPink,
-    lineHeight: 58,
     letterSpacing: typo.displayLarge.letterSpacing,
     marginBottom: spacing.md,
   },
