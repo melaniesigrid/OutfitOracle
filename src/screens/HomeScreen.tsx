@@ -65,7 +65,7 @@ export function HomeScreen() {
   const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache } = useOracle(CLAUDE_API_KEY);
   const [locationLoading, setLocationLoading] = useState(false);
   const { recents, addCity } = useRecentCities();
-  const { profileState, profile, saveProfile, skip, edit } = useStyleProfile();
+  const { profileState, profile, saveProfile, edit } = useStyleProfile();
   const { history, addEntry } = useOutfitHistory();
   const { streak, rankTitle, newMilestone, newRank, recordConsult, clearMilestone, clearRank } = useConsultStreak();
   const shareCardRef = useRef<View>(null);
@@ -246,7 +246,7 @@ export function HomeScreen() {
 
   if (!fontsLoaded || profileState.status === 'loading') return <View style={styles.root} />;
   if (profileState.status === 'not-set') {
-    return <StyleOnboarding onSave={saveProfile} onSkip={skip} />;
+    return <StyleOnboarding onSave={saveProfile} />;
   }
 
   return (

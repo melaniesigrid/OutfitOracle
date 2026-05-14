@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, Pressable, ScrollView, StyleSheet, Platform, StatusBar,
 } from 'react-native';
@@ -45,9 +45,13 @@ export function YouScreen() {
     streak,
     savedCount: savedCtx.saved.length,
   });
-  const earnedBadges   = badges.filter(b => b.earned);
-  const unearnedBadges = badges.filter(b => !b.earned);
-  const isFoundingMember = history.some(e => e.verdict.foundingMember === true);
+  const earnedBadges     = useMemo(() => badges.filter(b => b.earned), [badges]);
+  const unearnedBadges   = useMemo(() => badges.filter(b => !b.earned), [badges]);
+  const isFoundingMember = useMemo(() => history.some(e => e.verdict.foundingMember === true), [history]);
+  const badgesByCategory = useMemo(
+    () => Object.fromEntries(BADGE_CATEGORY_ORDER.map(cat => [cat, earnedBadges.filter(b => b.category === cat)])),
+    [earnedBadges],
+  );
 
   return (
     <View style={styles.root}>
@@ -142,7 +146,7 @@ export function YouScreen() {
           )}
 
           {earnedBadges.length > 0 && BADGE_CATEGORY_ORDER.map(cat => {
-            const catBadges = badges.filter(b => b.earned && b.category === cat);
+            const catBadges = badgesByCategory[cat] ?? [];
             if (catBadges.length === 0) return null;
             return (
               <View key={cat} style={styles.badgeCategory}>

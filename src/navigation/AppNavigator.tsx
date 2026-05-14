@@ -56,10 +56,10 @@ export function AppNavigator() {
 
   // Returning skipped users: once both sources have loaded, jump straight to the style step
   useEffect(() => {
-    if (onboardingDone === true && (profileCtx.status === 'not-set' || profileCtx.status === 'skipped')) {
+    if (onboardingDone === true && (profileCtx.profileState.status === 'not-set' || profileCtx.profileState.status === 'skipped')) {
       setStep('style');
     }
-  }, [onboardingDone, profileCtx.status]);
+  }, [onboardingDone, profileCtx.profileState.status]);
 
   const completeOnboarding = async () => {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
@@ -68,12 +68,12 @@ export function AppNavigator() {
   };
 
   // Wait for both AsyncStorage and profile context to hydrate
-  if (onboardingDone === null || profileCtx.status === 'loading') return null;
+  if (onboardingDone === null || profileCtx.profileState.status === 'loading') return null;
 
   // Gate: show onboarding if fresh install OR returning user who previously skipped
   const needsOnboarding = !onboardingDone
-    || profileCtx.status === 'not-set'
-    || profileCtx.status === 'skipped';
+    || profileCtx.profileState.status === 'not-set'
+    || profileCtx.profileState.status === 'skipped';
 
   if (needsOnboarding) {
     if (step === 'welcome') {

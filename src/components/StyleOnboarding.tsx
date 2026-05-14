@@ -341,15 +341,4 @@ const styles = StyleSheet.create({
     color: 'rgba(250,249,246,0.55)',
   },
 
-  skipBtn: {
-    alignSelf: 'center',
-    paddingVertical: spacing.md,
-    marginTop: spacing.xl,
-  },
-  skipText: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: colors.textMuted,
-  },
 });
