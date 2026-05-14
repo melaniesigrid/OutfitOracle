@@ -4,6 +4,21 @@ All notable changes to Outfit Oracle are documented here.
 
 ---
 
+## [1.1.1] — 2026-05-14
+
+### Fixed
+- **Founding Member badge persistence** — badge now stored in a dedicated `@outfit_oracle_founding_member` AsyncStorage key rather than derived from history; survives the 20-entry history cap and soft clears
+- **Splash screen hang on storage failure** — `.catch()` fallbacks added to AsyncStorage reads in `AppNavigator` and `useStyleProfile` so a storage rejection no longer leaves the splash screen visible forever
+- **Splash screen hang on font load failure** — `useFonts` error is now handled; `SplashScreen.hideAsync()` fires even when font loading fails so the app is never bricked on the launch screen
+- **APP_VERSION stale value** — Settings screen now reads version from `Constants.expoConfig?.version` (expo-constants) instead of the hardcoded `'1.0.0'`
+- **Locked achievements UI** — badge grid now collapses behind a pressable header; chip order corrected (Founding Member before Streak); `badgeDescLocked` style consolidated into `badgeDesc`
+
+### Added
+- **Test suite expanded** — 61 tests across 6 suites (added `foundingMember.test.ts` and `appNavigator.test.ts` covering FM badge key isolation, onboarding gate logic, hydration contract, and the D6 storage-rejection fallback)
+- **TODOS.md** — design and engineering debt tracked with context; three open items: achievements empty-state copy, analytics toggle wiring, and `earnedAt` timestamp accuracy for streak/count badges
+
+---
+
 ## [1.1.0] — 2026-05-13
 
 ### Added
