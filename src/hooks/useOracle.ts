@@ -29,6 +29,7 @@ export function useOracle(apiKey: string) {
   const [error, setError]     = useState<string | null>(null);
   const [cachedCity, setCachedCity]     = useState<string | null>(null);
   const [cachedAt, setCachedAt]         = useState<number | null>(null);
+  const [isOffline, setIsOffline]       = useState(false);
   const isFromCacheRef = useRef(false);
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export function useOracle(apiKey: string) {
     setWeather(null);
     setCachedCity(null);
     setCachedAt(null);
+    setIsOffline(false);
 
     const startedAt = Date.now();
     trackConsultStarted(city, gender);
@@ -84,9 +86,31 @@ export function useOracle(apiKey: string) {
     } catch (e: unknown) {
       const phase = weather ? 'verdict' : 'weather';
       const msg = e instanceof Error ? e.message : 'Something went wrong. The Oracle is displeased.';
-      Sentry.captureException(e, { tags: { city, phase } });
+      const isNetworkError = /signal|Network request failed/i.test(msg);
+
+      if (isNetworkError) {
+        // Network failure — try to restore the last cached result before surfacing an error
+        try {
+          const raw = await AsyncStorage.getItem(CACHE_KEY);
+          if (raw) {
+            const parsed: CachedResult = JSON.parse(raw);
+            isFromCacheRef.current = true;
+            setWeather(parsed.weather);
+            setVerdict(parsed.verdict);
+            setCachedCity(parsed.city);
+            setCachedAt(parsed.timestamp);
+            setIsOffline(true);
+            setStatus('done');
+            return;
+          }
+        } catch {}
+        // No cache available — show the offline-specific message
+        setError('The Oracle requires a connection. Return when the signal is clear.');
+      } else {
+        Sentry.captureException(e, { tags: { city, phase } });
+        setError(msg);
+      }
       trackConsultError(city, phase, msg);
-      setError(msg);
       setStatus('error');
     }
   }, [apiKey]);
@@ -111,6 +135,7 @@ export function useOracle(apiKey: string) {
     setError(null);
     setCachedCity(null);
     setCachedAt(null);
+    setIsOffline(false);
   }, []);
 
   return {
@@ -124,5 +149,6 @@ export function useOracle(apiKey: string) {
     cachedCity,
     cachedAt,
     isFromCache: isFromCacheRef.current,
+    isOffline,
   };
 }

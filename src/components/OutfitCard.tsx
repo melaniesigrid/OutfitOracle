@@ -60,7 +60,7 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   }, []);
 
   const toggleSave = () => {
-    Haptics.selectionAsync();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (hearted) {
       savedCtx.removeOutfit(item, city);
     } else {

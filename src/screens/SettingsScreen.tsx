@@ -8,8 +8,10 @@ import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, ThemeName, THEMES, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, THEMES, spacing, isY2KTheme } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTempUnit, TempUnit } from '../contexts/TemperatureContext';
+import { Y2KFontSubtheme, Y2K_SUBTHEME_LABELS } from '../theme/y2kTypography';
 
 const ALL_KEYS = [
   '@outfit_oracle_history',
@@ -43,14 +45,27 @@ const THEME_OPTIONS: { id: ThemeName; label: string }[] = [
   { id: 'morning-paper',    label: 'Morning Paper' },
   { id: 'golden-hour',      label: 'Golden Hour' },
   { id: 'electric',         label: 'Electric' },
+  { id: 'y2k',              label: 'Y2K ♡' },
+];
+
+const Y2K_FONT_OPTIONS: { id: Y2KFontSubtheme; label: string; sub: string }[] = [
+  { id: 'decree', label: 'Decree',  sub: 'Syne · Cormorant' },
+  { id: 'club',   label: 'Club ♡',  sub: 'Baloo 2 · Knewave' },
+];
+
+const TEMP_OPTIONS: { id: TempUnit; label: string }[] = [
+  { id: 'C', label: '°C' },
+  { id: 'F', label: '°F' },
 ];
 
 export function SettingsScreen() {
-  const { colors, fonts, themeName, setTheme } = useTheme();
+  const { colors, fonts, themeName, setTheme, y2kFontSubtheme, setY2KFontSubtheme } = useTheme();
+  const { unit: tempUnit, setUnit: setTempUnit } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation<any>();
   const { historyCtx } = useAppData();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
+  const showY2KFonts = isY2KTheme(themeName);
 
   async function clearHistory() {
     Alert.alert(
@@ -135,6 +150,61 @@ export function SettingsScreen() {
             })}
           </View>
         </View>
+
+        {/* ── TEMPERATURE ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>TEMPERATURE</Text>
+          <View style={styles.themeRow}>
+            {TEMP_OPTIONS.map(opt => {
+              const active = tempUnit === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  style={[styles.themeChip, active && styles.themeChipActive, { width: '47%' }]}
+                  onPress={() => setTempUnit(opt.id)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={opt.label}
+                >
+                  <Text style={[styles.themeChipText, active && styles.themeChipTextActive, { fontSize: 13 }]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ── Y2K FONT STYLE (only when Y2K theme active) ── */}
+        {showY2KFonts && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Y2K FONT STYLE</Text>
+            <View style={styles.themeRow}>
+              {Y2K_FONT_OPTIONS.map(opt => {
+                const active = y2kFontSubtheme === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    style={[styles.themeChip, active && styles.themeChipActive]}
+                    onPress={() => setY2KFontSubtheme(opt.id)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={opt.label}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.themeChipText, active && styles.themeChipTextActive]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={[styles.themeChipText, { fontSize: 8, opacity: 0.6 }]}>
+                        {opt.sub}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* ── DATA ── */}
         <View style={styles.section}>

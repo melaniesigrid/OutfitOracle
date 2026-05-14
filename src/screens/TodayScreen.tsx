@@ -7,8 +7,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, ThemeName, isEditorialTheme, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isEditorialTheme, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTempUnit } from '../contexts/TemperatureContext';
+import { HourlyGraph } from '../components/HourlyGraph';
+import { Y2KTodayScreen } from './y2k/Y2KTodayScreen';
 
 // ─── Theme icon mapping ───────────────────────────────────────────────────────
 // Each warm theme substitutes a curated set of MCIcons for the base weather icons.
@@ -148,162 +151,7 @@ function pollenLevel(val: number): string {
 
 // ─── Widget shell ─────────────────────────────────────────────────────────────
 
-// ─── Hourly graph ─────────────────────────────────────────────────────────────
-
-const GRAPH_COL_W  = 64;
-const GRAPH_H      = 110; // range for the curve
-const GRAPH_TOP    = 44;  // space above curve: time + icon
-const GRAPH_BOTTOM = 28;  // space below curve: precip/uv
-
-interface HourlyPoint {
-  time: string;
-  temp: number;
-  conditionIcon: string;
-  precipProb: number;
-  uvIndex: number;
-}
-
-function HourlyGraph({
-  hours,
-  accentColor,
-  textHigh,
-  textFaint,
-  lineColor,
-  iconColor,
-  fonts,
-  themeIconFn,
-}: {
-  hours: HourlyPoint[];
-  accentColor: string;
-  textHigh: string;
-  textFaint: string;
-  lineColor: string;
-  iconColor: string;
-  fonts: AppFonts;
-  themeIconFn: (base: string) => string;
-}) {
-  const temps  = hours.map(h => h.temp);
-  const minT   = Math.min(...temps);
-  const maxT   = Math.max(...temps);
-  const range  = Math.max(maxT - minT, 4); // minimum range of 4° to avoid degenerate curve
-  const totalH = GRAPH_TOP + GRAPH_H + GRAPH_BOTTOM;
-  const totalW = hours.length * GRAPH_COL_W;
-
-  function yFor(t: number): number {
-    return GRAPH_TOP + (1 - (t - minT) / range) * GRAPH_H;
-  }
-  function xFor(i: number): number {
-    return i * GRAPH_COL_W + GRAPH_COL_W / 2;
-  }
-
-  // Build rotated line segments connecting adjacent temp points
-  const lines = hours.slice(0, -1).map((h, i) => {
-    const x1 = xFor(i); const y1 = yFor(h.temp);
-    const x2 = xFor(i + 1); const y2 = yFor(hours[i + 1].temp);
-    const dx = x2 - x1; const dy = y2 - y1;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    return { x1, y1, len, angle, key: i };
-  });
-
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View style={{ width: totalW, height: totalH }}>
-
-        {/* Connecting curve lines */}
-        {lines.map(l => (
-          <View
-            key={l.key}
-            style={{
-              position: 'absolute',
-              left: l.x1,
-              top: l.y1 - 0.75,
-              width: l.len,
-              height: 1.5,
-              backgroundColor: lineColor,
-              transformOrigin: '0% 50%',
-              transform: [{ rotate: `${l.angle}deg` }],
-            }}
-          />
-        ))}
-
-        {/* Data points */}
-        {hours.map((h, i) => {
-          const cx = xFor(i);
-          const cy = yFor(h.temp);
-          return (
-            <React.Fragment key={i}>
-              {/* Dot on curve */}
-              <View style={{
-                position: 'absolute',
-                left: cx - 3,
-                top: cy - 3,
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: lineColor,
-              }} />
-
-              {/* Time label (always at top) */}
-              <Text style={{
-                position: 'absolute',
-                left: cx - GRAPH_COL_W / 2,
-                top: 0,
-                width: GRAPH_COL_W,
-                textAlign: 'center',
-                fontFamily: fonts.mono,
-                fontSize: 9,
-                color: textFaint,
-                letterSpacing: 0.3,
-              }}>{h.time}</Text>
-
-              {/* Icon — floats just above the curve */}
-              <MaterialCommunityIcons
-                name={themeIconFn(h.conditionIcon) as any}
-                size={16}
-                color={iconColor}
-                style={{
-                  position: 'absolute',
-                  left: cx - 8,
-                  top: cy - 26,
-                }}
-              />
-
-              {/* Temp label — just below the curve dot */}
-              <Text style={{
-                position: 'absolute',
-                left: cx - GRAPH_COL_W / 2,
-                top: cy + 6,
-                width: GRAPH_COL_W,
-                textAlign: 'center',
-                fontFamily: fonts.mono,
-                fontSize: 11,
-                color: textHigh,
-                letterSpacing: -0.3,
-              }}>{h.temp}°</Text>
-
-              {/* Precip % — pinned to bottom */}
-              {h.precipProb > 0 && (
-                <Text style={{
-                  position: 'absolute',
-                  left: cx - GRAPH_COL_W / 2,
-                  top: totalH - GRAPH_BOTTOM + 4,
-                  width: GRAPH_COL_W,
-                  textAlign: 'center',
-                  fontFamily: fonts.mono,
-                  fontSize: 9,
-                  color: accentColor,
-                  letterSpacing: 0.2,
-                }}>{h.precipProb}%</Text>
-              )}
-            </React.Fragment>
-          );
-        })}
-
-      </View>
-    </ScrollView>
-  );
-}
+// HourlyGraph is now in src/components/HourlyGraph.tsx (shared with Y2K screen)
 
 type Styles = ReturnType<typeof makeStyles>;
 function Widget({ label, children, noPad, styles }: { label: string; children: React.ReactNode; noPad?: boolean; styles: Styles }) {
@@ -318,7 +166,14 @@ function Widget({ label, children, noPad, styles }: { label: string; children: R
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function TodayScreen() {
+  const { themeName } = useTheme();
+  if (isY2KTheme(themeName)) return <Y2KTodayScreen />;
+  return <StandardTodayScreen />;
+}
+
+function StandardTodayScreen() {
   const { colors, fonts, themeName } = useTheme();
+  const { formatTemp, unit } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const { oracle, profileCtx, streakCtx } = useAppData();
   const { weather, verdict, cachedAt, cachedCity, isFromCache, status } = oracle;
@@ -344,11 +199,12 @@ export function TodayScreen() {
   const hoursAgo   = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
   const word       = getWord();
 
-  const isWarmTheme   = themeName === 'terra-firma' || themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
-  const isBannerTheme = themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
+  const isY2K         = themeName === 'y2k';
+  const isWarmTheme   = themeName === 'terra-firma' || themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric' || isY2K;
+  const isBannerTheme = themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric' || isY2K;
   const heroIconColor = isWarmTheme ? colors.scarlet : 'rgba(250,249,246,0.60)';
   // Precipitation color: Electric has vivid-blue bg — light-blue #4FA3D4 blends in; use periwinkle textSecondary instead
-  const precipAccentColor = themeName === 'electric' ? colors.textSecondary : '#4FA3D4';
+  const precipAccentColor = (themeName === 'electric' || isY2K) ? colors.textSecondary : '#4FA3D4';
   // Condition widget icons: warm themes render on light bg, dark-surface rgba is invisible there
   const condIconColor = isWarmTheme ? colors.textMuted : 'rgba(250,249,246,0.50)';
 
@@ -415,12 +271,12 @@ export function TodayScreen() {
                 />
               </View>
 
-              <Text style={styles.heroTemp}>{weather.temp}°</Text>
+              <Text style={styles.heroTemp}>{formatTemp(weather.temp)}°</Text>
 
               <View style={styles.heroStats}>
                 <View style={styles.heroStat}>
                   <Text style={styles.heroStatLabel}>FEELS</Text>
-                  <Text style={styles.heroStatVal}>{weather.feelsLike}°</Text>
+                  <Text style={styles.heroStatVal}>{formatTemp(weather.feelsLike)}°</Text>
                 </View>
                 <View style={styles.heroStatDivider} />
                 <View style={styles.heroStat}>
@@ -447,7 +303,8 @@ export function TodayScreen() {
                     textFaint={styles.hourlyTime.color as string}
                     lineColor={isWarmTheme ? colors.scarlet + 'A0' : 'rgba(250,249,246,0.30)'}
                     iconColor={heroIconColor}
-                    fonts={fonts}
+                    monoFont={fonts.mono}
+                    formatTemp={formatTemp}
                     themeIconFn={(base) => themeIcon(base, themeName)}
                   />
                 </View>
@@ -525,8 +382,8 @@ export function TodayScreen() {
                       <Text style={styles.dailyPrecipEmpty}>—</Text>
                     )}
                     <View style={styles.dailyTemps}>
-                      <Text style={styles.dailyTempMax}>{d.tempMax}°</Text>
-                      <Text style={styles.dailyTempMin}>{d.tempMin}°</Text>
+                      <Text style={styles.dailyTempMax}>{formatTemp(d.tempMax)}°</Text>
+                      <Text style={styles.dailyTempMin}>{formatTemp(d.tempMin)}°</Text>
                     </View>
                   </View>
                 ))}

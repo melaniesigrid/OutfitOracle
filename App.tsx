@@ -20,10 +20,16 @@ import {
   SpaceMono_400Regular,
   SpaceMono_700Bold,
 } from '@expo-google-fonts/space-mono';
+import {
+  Baloo2_700Bold,
+  Baloo2_800ExtraBold,
+} from '@expo-google-fonts/baloo-2';
+import { Knewave_400Regular } from '@expo-google-fonts/knewave';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Sentry from '@sentry/react-native';
 import { AppDataProvider } from './src/contexts/AppContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
+import { TemperatureProvider } from './src/contexts/TemperatureContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { colors } from './src/theme';
 
@@ -48,6 +54,9 @@ function App() {
     IBMPlexMono_500Medium,
     SpaceMono_400Regular,
     SpaceMono_700Bold,
+    Baloo2_700Bold,
+    Baloo2_800ExtraBold,
+    Knewave_400Regular,
   });
 
   // If fonts fail to load, dismiss the splash so the app isn't bricked.
@@ -62,6 +71,7 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        <TemperatureProvider>
         <ThemeProvider>
           <AppDataProvider>
             <NavigationContainer>
@@ -69,6 +79,7 @@ function App() {
             </NavigationContainer>
           </AppDataProvider>
         </ThemeProvider>
+        </TemperatureProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

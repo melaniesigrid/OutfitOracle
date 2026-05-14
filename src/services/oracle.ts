@@ -36,6 +36,15 @@ export interface OracleVerdict {
   foundingMember?: boolean;
 }
 
+function getSeason(month: number, lat?: number): string {
+  const isNorthern = (lat ?? 45) >= 0;
+  const m = isNorthern ? month : (month + 6) % 12;
+  if (m >= 2 && m <= 4) return 'Spring';
+  if (m >= 5 && m <= 7) return 'Summer';
+  if (m >= 8 && m <= 10) return 'Autumn';
+  return 'Winter';
+}
+
 // DEV-ONLY: this prompt is used by the viaDirect path (no proxy, local API key).
 // Production uses the Cloudflare Worker's buildPrompt — keep both in sync when editing.
 function buildPrompt(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string): string {
@@ -57,10 +66,13 @@ function buildPrompt(weather: WeatherData, gender: string, profile?: StyleProfil
     return loves + avoids;
   })();
 
+  const season = getSeason(new Date().getMonth(), weather.latitude);
+
   return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
 ${profileSection}
 Weather right now:
 - City: ${weather.city}, ${weather.country}
+- Season: ${season}
 - Temperature: ${weather.temp}°C (feels like ${weather.feelsLike}°C)
 - Condition: ${weather.conditionLabel} — ${weather.description}
 - Humidity: ${weather.humidity}%
