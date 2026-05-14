@@ -167,6 +167,7 @@
 - [ ] **Empty state illustrations** — Oracle Archives, Saved Looks, and the Map are blank on first launch; replace with editorial one-liners ("The Oracle awaits your first inquiry." / "No looks saved. The wardrobe is a blank canvas.") in Cormorant Garamond italic. Currently shows nothing, which reads as broken.
 - [ ] **Keyboard avoidance on Oracle tab** — on smaller devices (iPhone SE), the city input can be obscured by the keyboard; verify `KeyboardAvoidingView` behaviour with `behavior="padding"` is consistent across all supported device sizes.
 - [ ] **Haptic on save** — `OutfitCard` heart fires `selectionAsync` on toggle; upgrade the save action to `impactAsync(Medium)` to make saving feel more satisfying than unsaving.
+- [x] **Three-theme system** — Classic (IBM Plex Mono, broad scarlet), Editorial Light (Space Mono, one scarlet per screen, cream bg), Editorial Dark (Space Mono, warm near-black palette); `ThemeContext` + `useTheme` hook; persisted to AsyncStorage; picker in SettingsScreen; full makeStyles refactor across all 26 theme-importing files; TodayScreen scroll bg themes to cream/dark per mode ✅ 2026/05/14
 
 ---
 
@@ -238,6 +239,7 @@
 
 ## Recently Completed
 
+- [x] **Three-theme system** — Classic (IBM Plex Mono, broad scarlet), Editorial Light (Space Mono, strict one-scarlet-per-screen, cream bg), Editorial Dark (Space Mono, warm near-black palette); `ThemeContext` + `useTheme`; persisted at `@outfit_oracle_theme`; ORACLE THEME picker in SettingsScreen; makeStyles pattern across all 26 theme-importing files; TodayScreen scroll background themes to cream (light) or warm near-black (dark) ✅ 2026/05/14
 - [x] **Founding Member badge** — first 100 unique devices earn a scarlet "FOUNDING MEMBER" chip in YouScreen; server-controlled via KV; LLM trust boundary enforced (`delete verdict.foundingMember` before KV logic); X-Device-ID UUID validation + identifier requirement added to Worker; KV reads parallelized ✅ 2026/05/13
 - [x] **Test suite (ts-jest)** — 43 tests across 4 suites covering oracle type shapes, analytics events, weather badge exports, and proxy routing; compatible with Node 23 via ts-jest (jest-expo incompatible with Node 23) ✅ 2026/05/13
 - [x] **Mandatory onboarding gate** — skip button removed from StyleOnboarding; AppNavigator gates tab navigator on profileState.status; returning skipped users redirected to style step on next launch ✅ 2026/05/13
