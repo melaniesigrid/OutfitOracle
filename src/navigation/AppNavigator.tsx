@@ -11,6 +11,7 @@ import { MapScreen } from '../screens/MapScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { TabNavigator } from './TabNavigator';
 import { OraclePersonality } from '../hooks/useStyleProfile';
+import { trackOnboardingCompleted } from '../services/analytics';
 
 const ONBOARDING_KEY = '@onboarding_complete';
 
@@ -53,14 +54,28 @@ export function AppNavigator() {
     });
   }, []);
 
+  // Returning skipped users: once both sources have loaded, jump straight to the style step
+  useEffect(() => {
+    if (onboardingDone === true && (profileCtx.status === 'not-set' || profileCtx.status === 'skipped')) {
+      setStep('style');
+    }
+  }, [onboardingDone, profileCtx.status]);
+
   const completeOnboarding = async () => {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
     setOnboardingDone(true);
+    trackOnboardingCompleted();
   };
 
-  if (onboardingDone === null) return null;
+  // Wait for both AsyncStorage and profile context to hydrate
+  if (onboardingDone === null || profileCtx.status === 'loading') return null;
 
-  if (!onboardingDone) {
+  // Gate: show onboarding if fresh install OR returning user who previously skipped
+  const needsOnboarding = !onboardingDone
+    || profileCtx.status === 'not-set'
+    || profileCtx.status === 'skipped';
+
+  if (needsOnboarding) {
     if (step === 'welcome') {
       return <WelcomeScreen onContinue={() => setStep('carousel')} />;
     }
@@ -87,10 +102,6 @@ export function AppNavigator() {
       <StyleOnboarding
         onSave={profile => {
           profileCtx.saveProfile({ ...profile, personality: pendingPersonality });
-          completeOnboarding();
-        }}
-        onSkip={() => {
-          profileCtx.skip();
           completeOnboarding();
         }}
       />
