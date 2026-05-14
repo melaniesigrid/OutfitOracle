@@ -43,11 +43,11 @@ Development only (no proxy): set `EXPO_PUBLIC_CLAUDE_API_KEY` in `.env` and leav
 
 ## Architecture
 
-Single-screen Expo bare workflow app. No navigation library — `App.tsx` renders `HomeScreen` directly.
+Expo bare workflow app with React Navigation v6 (3 tabs: Today / Oracle / You). Navigation entry point: `src/navigation/AppNavigator.tsx`. Tab navigator: `src/navigation/TabNavigator.tsx`. `App.tsx` wraps `AppDataProvider` (shared context) → `AppNavigator`. `AppNavigator` shows a mandatory onboarding flow (WelcomeScreen → OnboardingCarousel → PersonalityScreen → StyleOnboarding) on first launch; afterwards it mounts `TabNavigator`.
 
 ### Data flow
 
-`HomeScreen` → `useOracle` hook → two sequential fetches:
+`OracleScreen` → `useOracle` hook → two sequential fetches:
 1. `fetchWeather(city)` — Open-Meteo geocoding + weather (free, no key)
 2. `fetchOracleVerdict(weather, gender, apiKey, styleProfile?)` — Cloudflare Worker proxy → Claude Sonnet 4.6
 
@@ -90,3 +90,21 @@ Do not use emoji in Text components with a custom `fontFamily` set — IBM Plex 
 These console messages are harmless and come from iOS internals, not app code:
 - `hapticpatternlibrary.plist` errors — simulator has no Taptic Engine
 - `appearanceChanged with no listeners` — silenced via no-op listener in `App.tsx`
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+
+Key routing rules:
+- Product ideas/brainstorming → invoke /office-hours
+- Strategy/scope → invoke /plan-ceo-review
+- Architecture → invoke /plan-eng-review
+- Design system/plan review → invoke /design-consultation or /plan-design-review
+- Full review pipeline → invoke /autoplan
+- Bugs/errors → invoke /investigate
+- QA/testing site behavior → invoke /qa or /qa-only
+- Code review/diff check → invoke /review
+- Visual polish → invoke /design-review
+- Ship/deploy/PR → invoke /ship or /land-and-deploy
+- Save progress → invoke /context-save
+- Resume context → invoke /context-restore

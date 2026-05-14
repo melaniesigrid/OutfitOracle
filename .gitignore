@@ -24,3 +24,4 @@ __pycache__/
 
 # Orchestrator results (generated output, not source)
 src/files/results/
+.gstack/

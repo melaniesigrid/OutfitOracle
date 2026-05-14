@@ -1,5 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WeatherData } from './weather';
 import { StyleProfile, OraclePersonality } from '../hooks/useStyleProfile';
+
+const DEVICE_ID_KEY = '@outfit_oracle_device_id';
 
 const CLAUDE_API  = 'https://api.anthropic.com/v1/messages';
 const PROXY_URL   = process.env.EXPO_PUBLIC_PROXY_URL ?? '';
@@ -30,8 +33,11 @@ export interface OracleVerdict {
   outfitsAlt?: OutfitItem[];
   avoid: string[];
   rating: number;
+  foundingMember?: boolean;
 }
 
+// DEV-ONLY: this prompt is used by the viaDirect path (no proxy, local API key).
+// Production uses the Cloudflare Worker's buildPrompt — keep both in sync when editing.
 function buildPrompt(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string): string {
   const voiceInstruction = PERSONALITY_VOICE[profile?.personality ?? 'editorial'];
   const profileSection = profile?.keywords?.length
@@ -86,9 +92,13 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
 }
 
 async function viaProxy(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string): Promise<OracleVerdict> {
+  const deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY).catch(() => null);
   const resp = await fetch(PROXY_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(deviceId ? { 'X-Device-ID': deviceId } : {}),
+    },
     body: JSON.stringify({ weather, gender, styleProfile: profile, occasion }),
   });
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Outfit Oracle",
     "slug": "outfit-oracle",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "scheme": "outfitoracle",
     "userInterfaceStyle": "light",

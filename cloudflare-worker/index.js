@@ -17,11 +17,18 @@
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Device-ID',
 };
 
-const RATE_LIMIT_REQUESTS = 20; // per window
-const RATE_LIMIT_WINDOW_S = 3600; // 1 hour
+const RATE_LIMIT_REQUESTS  = 20;  // per window
+const RATE_LIMIT_WINDOW_S  = 3600; // 1 hour
+const FOUNDING_MEMBER_CAP  = 100;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function parseDeviceId(request) {
+  const id = request.headers.get('X-Device-ID');
+  return id && UUID_RE.test(id) ? id : null;
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -34,8 +41,10 @@ async function checkRateLimit(request, env) {
   // Gracefully skip rate limiting if KV namespace isn't wired up yet
   if (!env.RATE_LIMIT_KV) return { limited: false };
 
-  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-  const key = `rl:${ip}`;
+  // Validated UUID device ID primary; CF-Connecting-IP fallback for web clients.
+  // Caller guarantees at least one is present before this function is called.
+  const rateLimitKey = parseDeviceId(request) ?? request.headers.get('CF-Connecting-IP');
+  const key = `rl:${rateLimitKey}`;
   const now = Date.now();
   const windowMs = RATE_LIMIT_WINDOW_S * 1000;
 
@@ -132,6 +141,14 @@ export default {
       return json({ error: 'Method not allowed' }, 405);
     }
 
+    // S2: require at least one verifiable identifier (CF-Connecting-IP is always
+    // present in production Workers; absence means local wrangler dev without a
+    // device ID, which we reject to avoid the shared 'unknown' rate-limit bucket).
+    const deviceId = parseDeviceId(request);
+    if (!deviceId && !request.headers.get('CF-Connecting-IP')) {
+      return json({ error: 'Missing device identifier' }, 400);
+    }
+
     const rateCheck = await checkRateLimit(request, env);
     if (rateCheck.limited) {
       return json(
@@ -186,6 +203,36 @@ export default {
       verdict = JSON.parse(text);
     } catch {
       return json({ error: 'The Oracle returned an unreadable response. Please try again.' }, 502);
+    }
+
+    // Founding Member counter — first 100 unique devices earn the badge.
+    // Reads are awaited (needed to set the flag before responding).
+    // Writes are fire-and-forget (never delay the verdict).
+    // Clear any foundingMember Claude may have hallucinated in the response JSON.
+    delete verdict.foundingMember;
+    // deviceId is already validated as a UUID (or null) from the early check above
+    if (deviceId && env.RATE_LIMIT_KV) {
+      const fmKey = `fm:${deviceId}`;
+      try {
+        const [existing, count] = await Promise.all([
+          env.RATE_LIMIT_KV.get(fmKey),
+          env.RATE_LIMIT_KV.get('fm:count', { type: 'json' }),
+        ]);
+        if (existing !== null) {
+          // Device already counted — it's a Founding Member
+          verdict.foundingMember = true;
+        } else {
+          const n = (count ?? 0) + 1;
+          if (n <= FOUNDING_MEMBER_CAP) {
+            verdict.foundingMember = true;
+            // Fire-and-forget: writes never delay the verdict
+            env.RATE_LIMIT_KV.put('fm:count', JSON.stringify(n)).catch(() => {});
+            env.RATE_LIMIT_KV.put(fmKey, '1').catch(() => {});
+          }
+        }
+      } catch {
+        // KV errors are non-fatal — verdict returns without the badge
+      }
     }
 
     return json(verdict);

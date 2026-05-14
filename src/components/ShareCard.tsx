@@ -140,7 +140,7 @@ export const ShareCard = forwardRef<View, Props>(({ weather, verdict, occasion }
       {/* ── Footer bar ───────────────────────────────────────────── */}
       <View style={styles.footer}>
         <Text style={styles.footerTagline}>YOUR UNSOLICITED STYLE AUTHORITY</Text>
-        <Text style={styles.footerUrl}>outfitoracle.app</Text>
+        <Text style={styles.footerUrl}>melaniesigrid.github.io/OutfitOracle/</Text>
       </View>
       <View style={styles.scarletBar} />
     </View>

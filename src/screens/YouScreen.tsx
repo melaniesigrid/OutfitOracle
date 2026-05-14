@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, Pressable, ScrollView, StyleSheet, Platform, StatusBar,
 } from 'react-native';
@@ -7,7 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
 import { BUDGET_TIERS, PERSONALITY_OPTIONS } from '../hooks/useStyleProfile';
 import { getRankTitle } from '../hooks/useConsultStreak';
-import { useWeatherBadges } from '../hooks/useWeatherBadges';
+import { useWeatherBadges, BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
 import { colors, fonts, spacing } from '../theme';
 
 const PASSPORT_MILESTONES = [
@@ -45,8 +45,13 @@ export function YouScreen() {
     streak,
     savedCount: savedCtx.saved.length,
   });
-  const earnedBadges   = badges.filter(b => b.earned);
-  const unearnedBadges = badges.filter(b => !b.earned);
+  const earnedBadges     = useMemo(() => badges.filter(b => b.earned), [badges]);
+  const unearnedBadges   = useMemo(() => badges.filter(b => !b.earned), [badges]);
+  const isFoundingMember = useMemo(() => history.some(e => e.verdict.foundingMember === true), [history]);
+  const badgesByCategory = useMemo(
+    () => Object.fromEntries(BADGE_CATEGORY_ORDER.map(cat => [cat, earnedBadges.filter(b => b.category === cat)])),
+    [earnedBadges],
+  );
 
   return (
     <View style={styles.root}>
@@ -77,6 +82,12 @@ export function YouScreen() {
             <View style={styles.streakChip}>
               <MaterialCommunityIcons name="fire" size={12} color={colors.scarlet} />
               <Text style={styles.streakChipText}>{streak}-DAY STREAK</Text>
+            </View>
+          )}
+          {isFoundingMember && (
+            <View style={styles.foundingChip}>
+              <MaterialCommunityIcons name="seal" size={12} color="#FAF9F6" />
+              <Text style={styles.foundingChipText}>FOUNDING MEMBER</Text>
             </View>
           )}
         </View>
@@ -119,43 +130,53 @@ export function YouScreen() {
           )}
         </View>
 
-        {/* ── WEATHER BADGES ── */}
+        {/* ── ACHIEVEMENTS ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>WEATHER BADGES</Text>
+            <Text style={styles.sectionLabel}>ACHIEVEMENTS</Text>
             <Text style={styles.badgeCount}>
               {earnedBadges.length}/{badges.length}
             </Text>
           </View>
 
-          {earnedBadges.length > 0 && (
-            <View style={styles.badgeGrid}>
-              {earnedBadges.map(b => (
-                <View key={b.id} style={styles.badge}>
-                  <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.textPrimary} />
-                  <Text style={styles.badgeTitle}>{b.title}</Text>
-                  <Text style={styles.badgeDesc}>{b.desc}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {unearnedBadges.length > 0 && (
-            <View style={[styles.badgeGrid, earnedBadges.length > 0 && styles.badgeGridDivider]}>
-              {unearnedBadges.map(b => (
-                <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
-                  <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.border} />
-                  <Text style={styles.badgeTitleLocked}>{b.title}</Text>
-                  <Text style={styles.badgeDescLocked}>{b.desc}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
           {earnedBadges.length === 0 && (
             <Text style={styles.badgeEmpty}>
-              Consult the Oracle in unusual weather to unlock your first badge.
+              Consult the Oracle to begin earning achievements.
             </Text>
+          )}
+
+          {earnedBadges.length > 0 && BADGE_CATEGORY_ORDER.map(cat => {
+            const catBadges = badgesByCategory[cat] ?? [];
+            if (catBadges.length === 0) return null;
+            return (
+              <View key={cat} style={styles.badgeCategory}>
+                <Text style={styles.badgeCategoryLabel}>{BADGE_CATEGORY_LABELS[cat]}</Text>
+                <View style={styles.badgeGrid}>
+                  {catBadges.map(b => (
+                    <View key={b.id} style={styles.badge}>
+                      <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.textPrimary} />
+                      <Text style={styles.badgeTitle}>{b.title}</Text>
+                      <Text style={styles.badgeDesc}>{b.desc}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
+
+          {unearnedBadges.length > 0 && (
+            <View style={earnedBadges.length > 0 ? styles.badgeGridDivider : undefined}>
+              <Text style={styles.badgeCategoryLabel}>LOCKED — {unearnedBadges.length} remaining</Text>
+              <View style={styles.badgeGrid}>
+                {unearnedBadges.map(b => (
+                  <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
+                    <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.border} />
+                    <Text style={styles.badgeTitleLocked}>{b.title}</Text>
+                    <Text style={styles.badgeDescLocked}>{b.desc}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
           )}
         </View>
 
@@ -334,6 +355,22 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     color: colors.scarlet,
   },
+  foundingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.scarlet,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  foundingChipText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    color: '#FAF9F6',
+  },
 
   /* Sections */
   section: {
@@ -475,6 +512,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.scarlet,
     letterSpacing: 0.5,
+  },
+
+  /* Achievement categories */
+  badgeCategory: {
+    marginBottom: spacing.md,
+  },
+  badgeCategoryLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    color: colors.scarlet,
+    marginBottom: spacing.sm,
   },
 
   /* Weather badges */

@@ -13,10 +13,9 @@ import { colors, fonts, spacing } from '../theme';
 
 interface Props {
   onSave: (profile: StyleProfile) => void;
-  onSkip: () => void;
 }
 
-export function StyleOnboarding({ onSave, onSkip }: Props) {
+export function StyleOnboarding({ onSave }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [budget, setBudget] = useState<BudgetTier | null>(null);
@@ -148,15 +147,6 @@ export function StyleOnboarding({ onSave, onSkip }: Props) {
           </>
         )}
 
-        <Pressable
-          style={styles.skipBtn}
-          onPress={onSkip}
-          accessibilityRole="button"
-          accessibilityLabel="Skip personalisation"
-          accessibilityHint="You can set your style profile later"
-        >
-          <Text style={styles.skipText}>Skip for now</Text>
-        </Pressable>
       </ScrollView>
     </View>
   );
@@ -351,15 +341,4 @@ const styles = StyleSheet.create({
     color: 'rgba(250,249,246,0.55)',
   },
 
-  skipBtn: {
-    alignSelf: 'center',
-    paddingVertical: spacing.md,
-    marginTop: spacing.xl,
-  },
-  skipText: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: colors.textMuted,
-  },
 });
