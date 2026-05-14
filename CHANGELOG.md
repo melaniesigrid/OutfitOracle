@@ -4,6 +4,22 @@ All notable changes to Outfit Oracle are documented here.
 
 ---
 
+## [1.3.0] — 2026-05-14
+
+### Added
+- **Y2K theme** — Full lavender/hot-pink/lime design system: Y2KCard, Y2KBadge, Y2KSticker, Y2KDecreeCard, Y2KWeatherCard, Y2KOutfitCard, Y2KOracleScreen, Y2KTodayScreen. Two font subthemes: Decree (Syne + Cormorant) and Club (Baloo 2 + Knewave).
+- **Confetti celebration** — 55-particle animated overlay fires on badge unlock, theme-aware colors (lavender/lime for Y2K, hot-pink/white for Electric, warm earth tones for terra-firma themes). Sits below BadgeToast at `zIndex: 998`.
+- **BadgeToast spring animation** — Icon spring-pops with rotation after the card slides up. 4 s auto-dismiss with TAP × hint.
+- **HourlyGraph** — Shared sparkline component renders hourly temperature forecast on Today screens.
+- **Temperature toggle** — Celsius / Fahrenheit switcher via `TemperatureContext`. All temperature displays (Oracle Archives, weather strips, hourly graph) respect the setting.
+
+### Fixed
+- **Founding Member chip (YouScreen)** — Icon and label were using `colors.bg` (lavender on Y2K, vivid blue on Electric) as text color against a scarlet background. Fixed to cream `#FAF9F6` — readable on all theme variants.
+- **Electric consult button text** — Button text used `colors.bg` (#1E2DFF vivid blue) on a hot-pink (#FF1060) background — ~1.88:1 contrast, far below readable. Fixed to cream for all themes (~3.8:1 on hot pink).
+- **Archive temperature format** — Oracle Archives always showed raw Celsius, ignoring the C/F toggle. Now wrapped in `formatTemp()` from `TemperatureContext`.
+
+---
+
 ## [1.2.0] — 2026-05-14
 
 ### Added
