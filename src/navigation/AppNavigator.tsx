@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAppData } from '../contexts/AppContext';
 import { BadgeToast } from '../components/BadgeToast';
+import { Confetti } from '../components/Confetti';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { OnboardingCarousel } from '../screens/OnboardingCarousel';
 import { PersonalityScreen } from '../screens/PersonalityScreen';
@@ -24,7 +25,13 @@ const Stack = createNativeStackNavigator();
 
 function BadgeToastPortal() {
   const { newBadgeQueue, dismissBadgeToast } = useAppData();
-  return <BadgeToast badge={newBadgeQueue[0]} onDismiss={dismissBadgeToast} />;
+  const badge = newBadgeQueue[0];
+  return (
+    <>
+      <Confetti visible={!!badge} />
+      <BadgeToast badge={badge} onDismiss={dismissBadgeToast} />
+    </>
+  );
 }
 
 function MainStack() {
