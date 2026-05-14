@@ -33,7 +33,7 @@ Sentry.init({
 });
 
 function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     CormorantGaramond_700Bold_Italic,
     CormorantGaramond_600SemiBold,
     CormorantGaramond_300Light,
@@ -42,7 +42,12 @@ function App() {
     IBMPlexMono_500Medium,
   });
 
-  if (!fontsLoaded) {
+  // If fonts fail to load, dismiss the splash so the app isn't bricked.
+  useEffect(() => {
+    if (fontError) SplashScreen.hideAsync();
+  }, [fontError]);
+
+  if (!fontsLoaded && !fontError) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
 
