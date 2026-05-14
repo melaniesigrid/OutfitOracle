@@ -35,13 +35,13 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const { savedCtx } = useAppData();
 
-  const accentMap = {
+  const accentMap = useMemo(() => ({
     mint:     { color: colors.mint },
     lavender: { color: colors.lavender },
     coral:    { color: colors.coral },
     lemon:    { color: colors.lemon },
     iris:     { color: colors.iris },
-  };
+  }), [colors]);
 
   const accent = accentMap[item.accentColor as keyof typeof accentMap] ?? accentMap.mint;
   const num = String(index + 1).padStart(2, '0');

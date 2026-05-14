@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useRef, useEffect, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useRef, useEffect, useState, useCallback } from 'react';
 import { useOracle } from '../hooks/useOracle';
 import { useStyleProfile } from '../hooks/useStyleProfile';
 import { useOutfitHistory } from '../hooks/useOutfitHistory';
@@ -34,23 +34,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     { totalConsults: streakCtx.totalConsults, streak: streakCtx.streak, savedCount: savedCtx.saved.length },
   );
 
-  const mountedRef     = useRef(false);
   const prevEarnedRef  = useRef<Set<string>>(new Set());
   const [newBadgeQueue, setNewBadgeQueue] = useState<WeatherBadge[]>([]);
 
   useEffect(() => {
+    if (!historyCtx.historyLoaded) return;
     const currentEarned = new Set(badges.filter(b => b.earned).map(b => b.id));
-    if (!mountedRef.current) {
-      prevEarnedRef.current = currentEarned;
-      mountedRef.current = true;
-      return;
-    }
     const newly = badges.filter(b => b.earned && !prevEarnedRef.current.has(b.id));
     prevEarnedRef.current = currentEarned;
     if (newly.length > 0) setNewBadgeQueue(prev => [...prev, ...newly]);
-  }, [badges]);
+  }, [badges, historyCtx.historyLoaded]);
 
-  const dismissBadgeToast = () => setNewBadgeQueue(prev => prev.slice(1));
+  const dismissBadgeToast = useCallback(() => setNewBadgeQueue(prev => prev.slice(1)), []);
 
   return (
     <AppContext.Provider value={{ oracle, profileCtx, historyCtx, streakCtx, savedCtx, badges, newBadgeQueue, dismissBadgeToast }}>

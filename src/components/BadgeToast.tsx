@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, Pressable, Animated, StyleSheet, Platform,
+  View, Text, Pressable, Animated, Easing, StyleSheet, Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -18,18 +18,21 @@ interface Props {
 }
 
 export function BadgeToast({ badge, onDismiss }: Props) {
-  const { colors, fonts } = useTheme();
-  const translateY = useRef(new Animated.Value(200)).current;
-  const opacity    = useRef(new Animated.Value(0)).current;
-  const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { colors, fonts, themeName } = useTheme();
+  const accentColor = themeName === 'classic' ? colors.scarlet : colors.borderHard;
+  const translateY      = useRef(new Animated.Value(200)).current;
+  const opacity         = useRef(new Animated.Value(0)).current;
+  const timerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDismissingRef = useRef(false);
 
   useEffect(() => {
     if (!badge) return;
 
+    isDismissingRef.current = false;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     Animated.parallel([
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 70, friction: 11 }),
+      Animated.timing(translateY, { toValue: 0, duration: ANIMATE_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(opacity, { toValue: 1, duration: ANIMATE_MS, useNativeDriver: true }),
     ]).start();
 
@@ -40,6 +43,8 @@ export function BadgeToast({ badge, onDismiss }: Props) {
   }, [badge?.id]);
 
   function dismiss() {
+    if (isDismissingRef.current) return;
+    isDismissingRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
     Animated.parallel([
       Animated.timing(translateY, { toValue: 200, duration: ANIMATE_MS, useNativeDriver: true }),
@@ -63,7 +68,7 @@ export function BadgeToast({ badge, onDismiss }: Props) {
         accessibilityRole="button"
         accessibilityLabel={`Achievement unlocked: ${badge.title}. Tap to dismiss.`}
       >
-        <View style={[styles.accent, { backgroundColor: colors.scarlet }]} />
+        <View style={[styles.accent, { backgroundColor: accentColor }]} />
         <MaterialCommunityIcons
           name={badge.icon as any}
           size={26}

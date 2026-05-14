@@ -36,7 +36,7 @@ interface Props {
 }
 
 export function OnboardingCarousel({ onContinue, onSkip }: Props) {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const scrollRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
@@ -51,7 +51,7 @@ export function OnboardingCarousel({ onContinue, onSkip }: Props) {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
 
       {onSkip && (
         <Pressable

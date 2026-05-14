@@ -27,7 +27,7 @@ const RANK_PROGRESS = [
 ];
 
 export function YouScreen() {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation<any>();
   const [lockedExpanded, setLockedExpanded] = useState(false);
@@ -60,7 +60,7 @@ export function YouScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* ── RANK HERO ── */}

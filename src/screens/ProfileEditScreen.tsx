@@ -14,7 +14,7 @@ import { AppColors, AppFonts, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 export function ProfileEditScreen() {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation();
   const { profileCtx } = useAppData();
@@ -43,7 +43,7 @@ export function ProfileEditScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
 
       {/* Header */}
       <View style={styles.header}>

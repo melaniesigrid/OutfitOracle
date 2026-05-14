@@ -24,13 +24,13 @@ export const ShareCard = forwardRef<View, Props>(({ weather, verdict, occasion }
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
 
-  const ACCENT: Record<string, string> = {
+  const ACCENT = useMemo<Record<string, string>>(() => ({
     mint:     colors.mint,
     lavender: colors.lavender,
     coral:    colors.coral,
     lemon:    colors.lemon,
     iris:     colors.iris,
-  };
+  }), [colors]);
 
   const ratingFull  = Math.min(Math.max(verdict.rating ?? 3, 1), 5);
   const ratingEmpty = 5 - ratingFull;

@@ -351,7 +351,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     alignItems: 'center',
   },
   themeChipActive: {
-    borderColor: '#FAF9F6',
+    borderColor: colors.bg,
     backgroundColor: 'rgba(250,249,246,0.08)',
   },
   themeChipText: {
@@ -361,7 +361,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     color: 'rgba(250,249,246,0.40)',
   },
   themeChipTextActive: {
-    color: '#FAF9F6',
+    color: colors.bg,
   },
 
   /* Footer */

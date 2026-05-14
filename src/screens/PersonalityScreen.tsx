@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function PersonalityScreen({ onSelect }: Props) {
-  const { colors, fonts } = useTheme();
+  const { colors, fonts, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const [selected, setSelected] = useState<OraclePersonality>('editorial');
 
@@ -24,7 +24,7 @@ export function PersonalityScreen({ onSelect }: Props) {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         <Text style={styles.kicker}>STEP 1 OF 2</Text>

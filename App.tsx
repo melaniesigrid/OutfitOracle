@@ -61,13 +61,13 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AppDataProvider>
-          <ThemeProvider>
+        <ThemeProvider>
+          <AppDataProvider>
             <NavigationContainer>
               <AppNavigator />
             </NavigationContainer>
-          </ThemeProvider>
-        </AppDataProvider>
+          </AppDataProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

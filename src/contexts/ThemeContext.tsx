@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ThemeName, AppColors, AppFonts, getThemeTokens } from '../theme';
+import { ThemeName, AppColors, AppFonts, THEMES, getThemeTokens } from '../theme';
 
 const THEME_KEY = '@outfit_oracle_theme';
 
@@ -19,21 +19,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then(stored => {
-      if (stored === 'classic' || stored === 'editorial-light' || stored === 'editorial-dark') {
-        setThemeName(stored);
-      }
+      if (stored && stored in THEMES) setThemeName(stored as ThemeName);
     });
   }, []);
 
   const setTheme = useCallback((name: ThemeName) => {
     setThemeName(name);
-    AsyncStorage.setItem(THEME_KEY, name);
+    AsyncStorage.setItem(THEME_KEY, name).catch(() => {});
   }, []);
 
   const { colors, fonts, isDark } = getThemeTokens(themeName);
 
+  const value = useMemo(
+    () => ({ themeName, colors, fonts, isDark, setTheme }),
+    [themeName, colors, fonts, isDark, setTheme],
+  );
+
   return (
-    <ThemeContext.Provider value={{ themeName, colors, fonts, isDark, setTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
