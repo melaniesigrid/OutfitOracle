@@ -33,6 +33,7 @@ export interface OracleVerdict {
   outfitsAlt?: OutfitItem[];
   avoid: string[];
   rating: number;
+  foundingMember?: boolean;
 }
 
 // DEV-ONLY: this prompt is used by the viaDirect path (no proxy, local API key).

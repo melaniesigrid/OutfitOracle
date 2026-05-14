@@ -31,4 +31,27 @@ describe('OracleVerdict type shape', () => {
     };
     expect(verdict.outfitsAlt).toBeUndefined();
   });
+
+  it('accepts foundingMember flag from Worker', () => {
+    const verdict: OracleVerdict = {
+      verdict: 'You made it.',
+      vibe: 'Founding Energy',
+      outfits: [],
+      avoid: [],
+      rating: 5,
+      foundingMember: true,
+    };
+    expect(verdict.foundingMember).toBe(true);
+  });
+
+  it('foundingMember is optional (undefined by default)', () => {
+    const verdict: OracleVerdict = {
+      verdict: 'Ordinary day.',
+      vibe: 'Quiet Confidence',
+      outfits: [],
+      avoid: [],
+      rating: 3,
+    };
+    expect(verdict.foundingMember).toBeUndefined();
+  });
 });

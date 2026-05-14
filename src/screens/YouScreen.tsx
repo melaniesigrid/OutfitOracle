@@ -47,6 +47,7 @@ export function YouScreen() {
   });
   const earnedBadges   = badges.filter(b => b.earned);
   const unearnedBadges = badges.filter(b => !b.earned);
+  const isFoundingMember = history.some(e => e.verdict.foundingMember === true);
 
   return (
     <View style={styles.root}>
@@ -77,6 +78,12 @@ export function YouScreen() {
             <View style={styles.streakChip}>
               <MaterialCommunityIcons name="fire" size={12} color={colors.scarlet} />
               <Text style={styles.streakChipText}>{streak}-DAY STREAK</Text>
+            </View>
+          )}
+          {isFoundingMember && (
+            <View style={styles.foundingChip}>
+              <MaterialCommunityIcons name="seal" size={12} color="#FAF9F6" />
+              <Text style={styles.foundingChipText}>FOUNDING MEMBER</Text>
             </View>
           )}
         </View>
@@ -343,6 +350,22 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 1.5,
     color: colors.scarlet,
+  },
+  foundingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.scarlet,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  foundingChipText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    color: '#FAF9F6',
   },
 
   /* Sections */
