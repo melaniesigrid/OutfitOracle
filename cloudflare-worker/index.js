@@ -17,7 +17,7 @@
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Device-ID',
 };
 
 const RATE_LIMIT_REQUESTS = 20; // per window
@@ -34,8 +34,11 @@ async function checkRateLimit(request, env) {
   // Gracefully skip rate limiting if KV namespace isn't wired up yet
   if (!env.RATE_LIMIT_KV) return { limited: false };
 
-  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-  const key = `rl:${ip}`;
+  // Device ID primary (survives shared IPs/VPNs); IP fallback for web clients
+  const rateLimitKey = request.headers.get('X-Device-ID')
+    ?? request.headers.get('CF-Connecting-IP')
+    ?? 'unknown';
+  const key = `rl:${rateLimitKey}`;
   const now = Date.now();
   const windowMs = RATE_LIMIT_WINDOW_S * 1000;
 
@@ -186,6 +189,32 @@ export default {
       verdict = JSON.parse(text);
     } catch {
       return json({ error: 'The Oracle returned an unreadable response. Please try again.' }, 502);
+    }
+
+    // Founding Member counter — first 100 unique devices earn the badge.
+    // Reads are awaited (needed to set the flag before responding).
+    // Writes are fire-and-forget (never delay the verdict).
+    const deviceId = request.headers.get('X-Device-ID');
+    if (deviceId && env.RATE_LIMIT_KV) {
+      const fmKey = `fm:${deviceId}`;
+      try {
+        const existing = await env.RATE_LIMIT_KV.get(fmKey);
+        if (existing !== null) {
+          // Device already counted — it's a Founding Member
+          verdict.foundingMember = true;
+        } else {
+          const count = (await env.RATE_LIMIT_KV.get('fm:count', { type: 'json' })) ?? 0;
+          const n = count + 1;
+          if (n <= 100) {
+            verdict.foundingMember = true;
+            // Fire-and-forget: write never delays the response
+            env.RATE_LIMIT_KV.put('fm:count', JSON.stringify(n)).catch(() => {});
+            env.RATE_LIMIT_KV.put(fmKey, '1').catch(() => {});
+          }
+        }
+      } catch {
+        // KV errors are non-fatal — verdict returns without the badge
+      }
     }
 
     return json(verdict);
