@@ -55,6 +55,8 @@ npx expo run:android
 
 TypeScript check: `npx tsc --noEmit`
 
+Run tests: `npm test` (Jest + ts-jest, 61 tests across 6 suites)
+
 After changing `.env`, fully restart the bundler — `EXPO_PUBLIC_*` vars are baked in at build time.
 
 ---
@@ -173,3 +175,13 @@ Before archiving in Xcode:
 ## Privacy policy
 
 Hosted at `https://melaniesigrid.github.io/OutfitOracle/` (GitHub Pages from `/docs/index.html`). Covers: Open-Meteo, Anthropic, Cloudflare, Google Shopping, Sentry. Contact: melaniesigridab@gmail.com.
+
+---
+
+## More docs
+
+- [Roadmap.md](Roadmap.md) — feature backlog and launch checklist
+- [CHANGELOG.md](CHANGELOG.md) — release history
+- [TODOS.md](TODOS.md) — open design/engineering debt
+- [BEST_PRACTICES.md](BEST_PRACTICES.md) — coding conventions
+- [CLAUDE.md](CLAUDE.md) — AI assistant guidance
