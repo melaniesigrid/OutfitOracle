@@ -4,13 +4,30 @@ All notable changes to Outfit Oracle are documented here.
 
 ---
 
+## [1.1.1] — 2026-05-14
+
+### Fixed
+- **Founding Member badge persistence** — badge now stored in a dedicated `@outfit_oracle_founding_member` AsyncStorage key rather than derived from history; survives the 20-entry history cap and soft clears
+- **Splash screen hang on storage failure** — `.catch()` fallbacks added to AsyncStorage reads in `AppNavigator` and `useStyleProfile` so a storage rejection no longer leaves the splash screen visible forever
+- **Splash screen hang on font load failure** — `useFonts` error is now handled; `SplashScreen.hideAsync()` fires even when font loading fails so the app is never bricked on the launch screen
+- **APP_VERSION stale value** — Settings screen now reads version from `Constants.expoConfig?.version` (expo-constants) instead of the hardcoded `'1.0.0'`
+- **Locked achievements UI** — badge grid now collapses behind a pressable header; chip order corrected (Founding Member before Streak); `badgeDescLocked` style consolidated into `badgeDesc`
+
+### For contributors
+- **Test suite expanded to 61 tests** — two new suites (`foundingMember.test.ts`, `appNavigator.test.ts`) cover FM badge key isolation, onboarding gate logic, hydration contract, and the D6 storage-rejection fallback
+- **TODOS.md** — three open debt items captured with full context: achievements empty-state copy, analytics toggle wiring, and `earnedAt` timestamp accuracy for streak/count badges
+
+---
+
 ## [1.1.0] — 2026-05-13
 
 ### Added
 - **Founding Member badge** — first 100 unique devices earn a scarlet chip in YouScreen; server-controlled via Cloudflare KV; LLM trust boundary enforced before KV logic
-- **Test suite** — 43 tests across 4 suites (oracle types, analytics, weather badges, proxy routing) using ts-jest; compatible with Node 23
-- **Mandatory onboarding gate** — skip button removed; AppNavigator gates the tab navigator on profile status; returning skipped users are redirected to the style step on next launch
+- **Mandatory onboarding gate** — style profile is now required before entering the app; skip button removed; returning users who previously skipped are prompted on next launch
 - **Hybrid rate limiting** — X-Device-ID UUID v4 validation; requests with no identifier are rejected with 400; CF-Connecting-IP fallback preserved
+
+### For contributors
+- **Test suite** — 43 tests across 4 suites (oracle types, analytics, weather badges, proxy routing) using ts-jest; compatible with Node 23
 
 ### Changed
 - Worker Founding Member KV reads parallelized with `Promise.all` (was sequential)

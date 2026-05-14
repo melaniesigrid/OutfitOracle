@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, Pressable, ScrollView, StyleSheet, Platform, StatusBar,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
@@ -26,6 +27,8 @@ const RANK_PROGRESS = [
 
 export function YouScreen() {
   const navigation = useNavigation<any>();
+  const [lockedExpanded, setLockedExpanded] = useState(false);
+  const [isFoundingMember, setIsFoundingMember] = useState(false);
   const { profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
   const profile   = profileCtx.profile;
   const { history, firstConsultAt } = historyCtx;
@@ -45,9 +48,14 @@ export function YouScreen() {
     streak,
     savedCount: savedCtx.saved.length,
   });
+  useEffect(() => {
+    AsyncStorage.getItem('@outfit_oracle_founding_member')
+      .then(val => setIsFoundingMember(val === '1'))
+      .catch(() => {});
+  }, []);
+
   const earnedBadges     = useMemo(() => badges.filter(b => b.earned), [badges]);
   const unearnedBadges   = useMemo(() => badges.filter(b => !b.earned), [badges]);
-  const isFoundingMember = useMemo(() => history.some(e => e.verdict.foundingMember === true), [history]);
   const badgesByCategory = useMemo(
     () => Object.fromEntries(BADGE_CATEGORY_ORDER.map(cat => [cat, earnedBadges.filter(b => b.category === cat)])),
     [earnedBadges],
@@ -78,16 +86,16 @@ export function YouScreen() {
               </Text>
             )}
           </View>
+          {isFoundingMember && (
+            <View style={styles.foundingChip}>
+              <MaterialCommunityIcons name="seal" size={12} color={colors.bg} />
+              <Text style={styles.foundingChipText}>FOUNDING MEMBER</Text>
+            </View>
+          )}
           {streak > 0 && (
             <View style={styles.streakChip}>
               <MaterialCommunityIcons name="fire" size={12} color={colors.scarlet} />
               <Text style={styles.streakChipText}>{streak}-DAY STREAK</Text>
-            </View>
-          )}
-          {isFoundingMember && (
-            <View style={styles.foundingChip}>
-              <MaterialCommunityIcons name="seal" size={12} color="#FAF9F6" />
-              <Text style={styles.foundingChipText}>FOUNDING MEMBER</Text>
             </View>
           )}
         </View>
@@ -166,16 +174,30 @@ export function YouScreen() {
 
           {unearnedBadges.length > 0 && (
             <View style={earnedBadges.length > 0 ? styles.badgeGridDivider : undefined}>
-              <Text style={styles.badgeCategoryLabel}>LOCKED — {unearnedBadges.length} remaining</Text>
-              <View style={styles.badgeGrid}>
-                {unearnedBadges.map(b => (
-                  <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
-                    <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.border} />
-                    <Text style={styles.badgeTitleLocked}>{b.title}</Text>
-                    <Text style={styles.badgeDescLocked}>{b.desc}</Text>
-                  </View>
-                ))}
-              </View>
+              <Pressable
+                style={styles.lockedHeader}
+                onPress={() => setLockedExpanded(e => !e)}
+                accessibilityRole="button"
+                accessibilityLabel={lockedExpanded ? 'Collapse locked achievements' : 'Expand locked achievements'}
+              >
+                <Text style={styles.badgeCategoryLabel}>LOCKED — {unearnedBadges.length} remaining</Text>
+                <MaterialCommunityIcons
+                  name={lockedExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={12}
+                  color={colors.textMuted}
+                />
+              </Pressable>
+              {lockedExpanded && (
+                <View style={styles.badgeGrid}>
+                  {unearnedBadges.map(b => (
+                    <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
+                      <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.border} />
+                      <Text style={styles.badgeTitleLocked}>{b.title}</Text>
+                      <Text style={styles.badgeDesc}>{b.desc}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -369,7 +391,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.mono,
     fontSize: 9,
     letterSpacing: 1.5,
-    color: '#FAF9F6',
+    color: colors.bg,
   },
 
   /* Sections */
@@ -544,6 +566,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  lockedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    marginBottom: spacing.sm,
+  },
   badge: {
     width: '47%',
     borderWidth: 1,
@@ -568,13 +597,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   badgeDesc: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    color: colors.textMuted,
-    letterSpacing: 0.3,
-    lineHeight: 14,
-  },
-  badgeDescLocked: {
     fontFamily: fonts.mono,
     fontSize: 9,
     color: colors.textMuted,

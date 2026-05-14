@@ -108,7 +108,7 @@ export function useStyleProfile() {
       } catch {
         setState({ status: 'not-set' });
       }
-    });
+    }).catch(() => setState({ status: 'not-set' }));
   }, []);
 
   const saveProfile = (profile: StyleProfile) => {

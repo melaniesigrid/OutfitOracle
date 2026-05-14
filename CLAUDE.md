@@ -3,9 +3,17 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 
+## Project docs
+
+- `Roadmap.md` — feature backlog, launch checklist, completed work
+- `CHANGELOG.md` — release history
+- `TODOS.md` — design/engineering debt with context
+- `BEST_PRACTICES.md` — commit conventions, TypeScript rules, RN constraints
+- `PRIVACY_POLICY.md` — privacy policy (also hosted at GitHub Pages)
+
 ## Roadmap Management
 
-- Always check ROADMAP.md first
+- Always check Roadmap.md first
 - Use checkbox progression: [ ] → [-] → [x]
 - Add 🏗️ timestamp when starting, ✅ timestamp when completing
 - Ask before updating personal content
@@ -26,7 +34,7 @@ npx expo run:android
 npx expo start
 ```
 
-There are no lint or test scripts. TypeScript checking is the only static analysis available (`tsc --noEmit`).
+Run tests: `npm test` (Jest + ts-jest, 61 tests across 6 suites). TypeScript checking: `npx tsc --noEmit`.
 
 After changing `.env`, you must fully restart the bundler — `EXPO_PUBLIC_*` vars are baked in at build time, not hot-reloaded.
 
@@ -61,7 +69,7 @@ Expo bare workflow app with React Navigation v6 (3 tabs: Today / Oracle / You). 
 
 ### Style profile (`src/hooks/useStyleProfile.ts`)
 
-`useStyleProfile` loads the user's aesthetic preferences (keywords + budget tier) from AsyncStorage. Status can be `loading | not-set | skipped | set`. HomeScreen shows `StyleOnboarding` when status is `not-set`. Profile is passed to Claude's prompt on every consult. `skip()` persists a marker so onboarding doesn't reappear.
+`useStyleProfile` loads the user's aesthetic preferences (keywords + budget tier) from AsyncStorage. Status can be `loading | not-set | skipped | set`. `AppNavigator` gates the tab navigator on `status === 'set'` — both `not-set` and `skipped` users are routed through the mandatory onboarding flow. Profile is passed to Claude's prompt on every consult.
 
 ### Claude integration (`src/services/oracle.ts`)
 

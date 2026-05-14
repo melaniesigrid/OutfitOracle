@@ -4,6 +4,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, StatusBar,
   Dimensions, Share, Animated,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
@@ -72,11 +73,14 @@ export function OracleScreen() {
     }
   }, [status]);
 
-  // Record consult in history + streak
+  // Record consult in history + streak; persist founding member badge to dedicated key
   useEffect(() => {
     if (status === 'done' && !isFromCache && weather && verdict) {
       historyCtx.addEntry(city, gender, weather, verdict, occasion);
       streakCtx.recordConsult();
+      if (verdict.foundingMember) {
+        AsyncStorage.setItem('@outfit_oracle_founding_member', '1').catch(() => {});
+      }
     }
   }, [status, isFromCache]);
 
