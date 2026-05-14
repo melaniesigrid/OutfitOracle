@@ -43,11 +43,11 @@ Development only (no proxy): set `EXPO_PUBLIC_CLAUDE_API_KEY` in `.env` and leav
 
 ## Architecture
 
-Single-screen Expo bare workflow app. No navigation library — `App.tsx` renders `HomeScreen` directly.
+Expo bare workflow app with React Navigation v6 (3 tabs: Today / Oracle / You). Navigation entry point: `src/navigation/AppNavigator.tsx`. Tab navigator: `src/navigation/TabNavigator.tsx`. `App.tsx` wraps `AppDataProvider` (shared context) → `AppNavigator`. `AppNavigator` shows a mandatory onboarding flow (WelcomeScreen → OnboardingCarousel → PersonalityScreen → StyleOnboarding) on first launch; afterwards it mounts `TabNavigator`.
 
 ### Data flow
 
-`HomeScreen` → `useOracle` hook → two sequential fetches:
+`OracleScreen` → `useOracle` hook → two sequential fetches:
 1. `fetchWeather(city)` — Open-Meteo geocoding + weather (free, no key)
 2. `fetchOracleVerdict(weather, gender, apiKey, styleProfile?)` — Cloudflare Worker proxy → Claude Sonnet 4.6
 
