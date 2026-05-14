@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SplashScreen from 'expo-splash-screen';
 import { useAppData } from '../contexts/AppContext';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { OnboardingCarousel } from '../screens/OnboardingCarousel';
@@ -67,8 +68,15 @@ export function AppNavigator() {
     trackOnboardingCompleted();
   };
 
-  // Wait for both AsyncStorage and profile context to hydrate
-  if (onboardingDone === null || profileCtx.profileState.status === 'loading') return null;
+  const hydrated = onboardingDone !== null && profileCtx.profileState.status !== 'loading';
+
+  // Hide splash only after both AsyncStorage and profile context have hydrated,
+  // so the user never sees a blank frame between splash dismiss and first screen.
+  useEffect(() => {
+    if (hydrated) SplashScreen.hideAsync();
+  }, [hydrated]);
+
+  if (!hydrated) return null;
 
   // Gate: show onboarding if fresh install OR returning user who previously skipped
   const needsOnboarding = !onboardingDone
@@ -83,7 +91,6 @@ export function AppNavigator() {
       return (
         <OnboardingCarousel
           onContinue={() => setStep('personality')}
-          onSkip={() => setStep('personality')}
         />
       );
     }

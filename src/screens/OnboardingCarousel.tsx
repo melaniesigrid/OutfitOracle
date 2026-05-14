@@ -31,7 +31,7 @@ const SLIDES = [
 
 interface Props {
   onContinue: () => void;
-  onSkip: () => void;
+  onSkip?: () => void;
 }
 
 export function OnboardingCarousel({ onContinue, onSkip }: Props) {
@@ -50,14 +50,16 @@ export function OnboardingCarousel({ onContinue, onSkip }: Props) {
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
-      <Pressable
-        style={styles.skipBtn}
-        onPress={onSkip}
-        accessibilityRole="button"
-        accessibilityLabel="Skip intro"
-      >
-        <Text style={styles.skipText}>Skip</Text>
-      </Pressable>
+      {onSkip && (
+        <Pressable
+          style={styles.skipBtn}
+          onPress={onSkip}
+          accessibilityRole="button"
+          accessibilityLabel="Skip intro"
+        >
+          <Text style={styles.skipText}>Skip</Text>
+        </Pressable>
+      )}
 
       <ScrollView
         ref={scrollRef}
