@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, Pressable, ScrollView, StyleSheet, Platform, StatusBar,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
@@ -27,6 +28,7 @@ const RANK_PROGRESS = [
 export function YouScreen() {
   const navigation = useNavigation<any>();
   const [lockedExpanded, setLockedExpanded] = useState(false);
+  const [isFoundingMember, setIsFoundingMember] = useState(false);
   const { profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
   const profile   = profileCtx.profile;
   const { history, firstConsultAt } = historyCtx;
@@ -46,9 +48,14 @@ export function YouScreen() {
     streak,
     savedCount: savedCtx.saved.length,
   });
+  useEffect(() => {
+    AsyncStorage.getItem('@outfit_oracle_founding_member')
+      .then(val => setIsFoundingMember(val === '1'))
+      .catch(() => {});
+  }, []);
+
   const earnedBadges     = useMemo(() => badges.filter(b => b.earned), [badges]);
   const unearnedBadges   = useMemo(() => badges.filter(b => !b.earned), [badges]);
-  const isFoundingMember = useMemo(() => history.some(e => e.verdict.foundingMember === true), [history]);
   const badgesByCategory = useMemo(
     () => Object.fromEntries(BADGE_CATEGORY_ORDER.map(cat => [cat, earnedBadges.filter(b => b.category === cat)])),
     [earnedBadges],

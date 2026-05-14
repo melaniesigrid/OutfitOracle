@@ -52,7 +52,7 @@ export function AppNavigator() {
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY).then(val => {
       setOnboardingDone(val === 'true');
-    });
+    }).catch(() => setOnboardingDone(false));
   }, []);
 
   // Returning skipped users: once both sources have loaded, jump straight to the style step

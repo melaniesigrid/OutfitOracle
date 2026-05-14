@@ -4,6 +4,7 @@ import {
   Platform, StatusBar, Alert, Linking, Switch,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
@@ -18,6 +19,7 @@ const ALL_KEYS = [
   '@outfit_oracle_style_profile',
   '@outfit_oracle_saved',
   '@onboarding_complete',
+  '@outfit_oracle_founding_member',
 ];
 
 const SOFT_KEYS = [
@@ -28,7 +30,7 @@ const SOFT_KEYS = [
   '@outfit_oracle_saved',
 ];
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = Constants.expoConfig?.version ?? '1.1.0';
 const PRIVACY_POLICY_URL = 'https://melaniesigrid.github.io/OutfitOracle/';
 
 export function SettingsScreen() {
