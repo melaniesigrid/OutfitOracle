@@ -7,7 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
 import { BUDGET_TIERS, PERSONALITY_OPTIONS } from '../hooks/useStyleProfile';
 import { getRankTitle } from '../hooks/useConsultStreak';
-import { useWeatherBadges } from '../hooks/useWeatherBadges';
+import { useWeatherBadges, BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
 import { colors, fonts, spacing } from '../theme';
 
 const PASSPORT_MILESTONES = [
@@ -119,43 +119,53 @@ export function YouScreen() {
           )}
         </View>
 
-        {/* ── WEATHER BADGES ── */}
+        {/* ── ACHIEVEMENTS ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>WEATHER BADGES</Text>
+            <Text style={styles.sectionLabel}>ACHIEVEMENTS</Text>
             <Text style={styles.badgeCount}>
               {earnedBadges.length}/{badges.length}
             </Text>
           </View>
 
-          {earnedBadges.length > 0 && (
-            <View style={styles.badgeGrid}>
-              {earnedBadges.map(b => (
-                <View key={b.id} style={styles.badge}>
-                  <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.textPrimary} />
-                  <Text style={styles.badgeTitle}>{b.title}</Text>
-                  <Text style={styles.badgeDesc}>{b.desc}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {unearnedBadges.length > 0 && (
-            <View style={[styles.badgeGrid, earnedBadges.length > 0 && styles.badgeGridDivider]}>
-              {unearnedBadges.map(b => (
-                <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
-                  <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.border} />
-                  <Text style={styles.badgeTitleLocked}>{b.title}</Text>
-                  <Text style={styles.badgeDescLocked}>{b.desc}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
           {earnedBadges.length === 0 && (
             <Text style={styles.badgeEmpty}>
-              Consult the Oracle in unusual weather to unlock your first badge.
+              Consult the Oracle to begin earning achievements.
             </Text>
+          )}
+
+          {earnedBadges.length > 0 && BADGE_CATEGORY_ORDER.map(cat => {
+            const catBadges = badges.filter(b => b.earned && b.category === cat);
+            if (catBadges.length === 0) return null;
+            return (
+              <View key={cat} style={styles.badgeCategory}>
+                <Text style={styles.badgeCategoryLabel}>{BADGE_CATEGORY_LABELS[cat]}</Text>
+                <View style={styles.badgeGrid}>
+                  {catBadges.map(b => (
+                    <View key={b.id} style={styles.badge}>
+                      <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.textPrimary} />
+                      <Text style={styles.badgeTitle}>{b.title}</Text>
+                      <Text style={styles.badgeDesc}>{b.desc}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
+
+          {unearnedBadges.length > 0 && (
+            <View style={earnedBadges.length > 0 ? styles.badgeGridDivider : undefined}>
+              <Text style={styles.badgeCategoryLabel}>LOCKED — {unearnedBadges.length} remaining</Text>
+              <View style={styles.badgeGrid}>
+                {unearnedBadges.map(b => (
+                  <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
+                    <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.border} />
+                    <Text style={styles.badgeTitleLocked}>{b.title}</Text>
+                    <Text style={styles.badgeDescLocked}>{b.desc}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
           )}
         </View>
 
@@ -475,6 +485,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.scarlet,
     letterSpacing: 0.5,
+  },
+
+  /* Achievement categories */
+  badgeCategory: {
+    marginBottom: spacing.md,
+  },
+  badgeCategoryLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    color: colors.scarlet,
+    marginBottom: spacing.sm,
   },
 
   /* Weather badges */
