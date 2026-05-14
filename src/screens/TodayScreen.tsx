@@ -420,7 +420,7 @@ export function TodayScreen() {
         ) : (
           /* ── EMPTY STATE ── */
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="eye-outline" size={40} color="rgba(250,249,246,0.20)" />
+            <MaterialCommunityIcons name="eye-outline" size={40} color={colors.textMuted} />
             <Text style={styles.emptyTitle}>The Oracle awaits.</Text>
             <Text style={styles.emptySub}>
               Head to the Oracle tab to receive{'\n'}today's verdict.
@@ -487,7 +487,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     letterSpacing: 1,
   },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: 48 },
 
   /* ── Widget shell ── */
@@ -875,13 +875,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   refreshMeta: {
     fontFamily: fonts.mono,
     fontSize: 9,
-    color: 'rgba(250,249,246,0.30)',
+    color: colors.textMuted,
     letterSpacing: 0.5,
   },
   refreshBtn: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.50)',
+    color: colors.textSecondary,
     letterSpacing: 0.5,
   },
 
@@ -894,13 +894,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   emptyTitle: {
     fontFamily: fonts.display,
     fontSize: 32,
-    color: 'rgba(250,249,246,0.45)',
+    color: colors.textSecondary,
     letterSpacing: -0.5,
   },
   emptySub: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: 'rgba(250,249,246,0.25)',
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 18,
     letterSpacing: 0.3,
@@ -912,12 +912,12 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     marginTop: spacing.xl,
     paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(250,249,246,0.06)',
+    borderTopColor: colors.border,
   },
   greetingSub: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: 'rgba(250,249,246,0.20)',
+    color: colors.textMuted,
     letterSpacing: 0.3,
   },
 }); }
