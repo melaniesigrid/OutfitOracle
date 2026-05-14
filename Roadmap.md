@@ -42,7 +42,7 @@
 - [-] **Host the privacy policy** — `docs/index.html` created, ready for GitHub Pages. **Action required: go to github.com → repo Settings → Pages → Source → Deploy from branch → main → /docs → Save.** URL will be `https://melaniesigrid.github.io/OutfitOracle/`. 🏗️ 2026/05/12
 - [-] **Configure Sentry DSN** — Sentry is initialized in `App.tsx` (`Sentry.init` + `Sentry.wrap`). **Action required: create a project at sentry.io → copy the DSN → paste into `EXPO_PUBLIC_SENTRY_DSN` in `.env` → rebuild.** 🏗️ 2026/05/12
 - [x] **Add PrivacyInfo.xcprivacy** — file created at `ios/OutfitOracle/PrivacyInfo.xcprivacy` with all four standard RN Required Reasons API entries. **Must be dragged into Xcode project navigator** (File → Add Files) before archiving — the file exists on disk but is not yet referenced in the `.xcodeproj`. ✅ 2026/05/11
-- [ ] **Mandatory profile onboarding gate** — the current onboarding is skippable and inline in OracleScreen; users who skip get generic Oracle responses indefinitely, which is the worst possible first impression. **Implement a full-screen gate in `App.tsx`**: if `profileCtx.status === 'not-set'`, render `<WelcomeOnboarding />` instead of the tab navigator. Remove the skip button. The flow should be 3 steps max: (1) welcome / brand moment, (2) aesthetic keywords (pick 3+), (3) Oracle voice + budget. On completion the user lands in the Oracle tab ready to consult. This is a launch blocker — a generic first response teaches users the app is not for them.
+- [x] **Mandatory profile onboarding gate** — `AppNavigator` now gates on `profileCtx.profileState.status`; skippable inline flow replaced with mandatory full-screen onboarding; returning users who previously skipped are redirected to the style step. ✅ 2026/05/13
 
 ### Nice-to-have before archive
 
@@ -143,7 +143,7 @@
 - [x] **ProfileEditScreen** — name, keywords, budget, voice; accessible from YouScreen ✅ 2026/05/11
 - [x] **Temperature sensitivity** — Runs Cold / Normal / Runs Hot 3-way toggle in ProfileEditScreen; shifts layering recommendations in both app and Worker `buildPrompt` ✅ 2026/05/11
 - [x] **Colour preferences** — 16-colour swatch grid in ProfileEditScreen; tap-cycle (love → avoid → clear); up to 3 loves + 2 avoids; injected into Claude prompt in both app and Worker ✅ 2026/05/12
-- [ ] **Mandatory onboarding gate** *(moved to Launch Checklist — this is a pre-launch blocker)* — replace skippable inline onboarding with a required full-screen welcome flow before the tab navigator renders. Existing `StyleOnboarding` component to be redesigned as a 3-step full-screen experience: (1) brand welcome with editorial copywriting, (2) keyword grid (pick at least 3), (3) Oracle voice selector + budget tier. `App.tsx` renders this when `profileCtx.status === 'not-set'`. After completion, transitions directly to Oracle tab.
+- [x] **Mandatory onboarding gate** — `AppNavigator` gates on `profileState.status`; skip button removed; returning skipped users redirected to style step. ✅ 2026/05/13
 - [ ] **Name collection in onboarding** — add an optional name field ("What shall the Oracle call you?") as a final step before entering the app; renders a personalised greeting in YouScreen rank hero ("Welcome back, Melanie.")
 - [ ] **Settings sheet** — toggle notifications, clear data, export history
 
@@ -238,6 +238,9 @@
 
 ## Recently Completed
 
+- [x] **Founding Member badge** — first 100 unique devices earn a scarlet "FOUNDING MEMBER" chip in YouScreen; server-controlled via KV; LLM trust boundary enforced (`delete verdict.foundingMember` before KV logic); X-Device-ID UUID validation + identifier requirement added to Worker; KV reads parallelized ✅ 2026/05/13
+- [x] **Test suite (ts-jest)** — 43 tests across 4 suites covering oracle type shapes, analytics events, weather badge exports, and proxy routing; compatible with Node 23 via ts-jest (jest-expo incompatible with Node 23) ✅ 2026/05/13
+- [x] **Mandatory onboarding gate** — skip button removed from StyleOnboarding; AppNavigator gates tab navigator on profileState.status; returning skipped users redirected to style step on next launch ✅ 2026/05/13
 - [x] **Achievement categories + Fashion Mythology** — 127 achievements across 15 named categories; 27 new pop culture badges (Carrie Bradshaw, Miranda Priestly, Euphoria, Succession, Bridgerton, etc.); YouScreen now groups earned achievements by category with scarlet headers; locked badges shown as a collapsed count at the bottom ✅ 2026/05/13
 - [x] **Colour preferences** — 16-colour swatch grid in ProfileEditScreen; tap-cycle (love → avoid → clear); injected into Claude prompt in both app and Worker ✅ 2026/05/12
 - [x] **Saved outfits** — `useSavedOutfits` hook; heart icon on OutfitCard; SAVED LOOKS in YouScreen; settings clear flow ✅ 2026/05/12
