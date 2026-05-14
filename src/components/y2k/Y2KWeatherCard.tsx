@@ -32,15 +32,18 @@ export function Y2KWeatherCard({ weather, formatTemp }: Props) {
 
   return (
     <Animated.View style={[{ opacity, transform: [{ translateY }] }, styles.wrapper]}>
-      <Y2KCard shadow>
-        {/* Cream header — file info + location */}
-        <View style={styles.header}>
+      {/* Full-purple card — override Y2KCard's cream bg */}
+      <Y2KCard shadow style={styles.cardOuter} innerStyle={styles.cardInner}>
+        <View style={styles.content}>
+
+          {/* File header */}
           <View style={styles.fileHeader}>
             <Text style={styles.fileLabelLeft}>FOR THE RECORD ♡</Text>
             <Text style={styles.fileLabelRight}>// ON FILE</Text>
           </View>
           <View style={styles.rule} />
 
+          {/* Location row */}
           <View style={styles.locationRow}>
             <View style={styles.locationLeft}>
               <Text style={styles.cityName}>{weather.city}, {weather.country}</Text>
@@ -54,14 +57,13 @@ export function Y2KWeatherCard({ weather, formatTemp }: Props) {
               />
             </View>
           </View>
-        </View>
 
-        {/* Deep purple temperature block */}
-        <View style={styles.tempBlock}>
+          {/* Large temperature */}
           <Text style={styles.tempHero}>{displayTemp}°</Text>
           <Text style={styles.metaLine}>
             {'feels ' + displayFeels + '°  ·  ' + weather.humidity + '% humidity  ·  ' + weather.windSpeed + ' km/h'}
           </Text>
+
         </View>
       </Y2KCard>
     </Animated.View>
@@ -72,8 +74,15 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   wrapper: {
     marginBottom: spacing.lg,
   },
-  header: {
+  cardOuter: {
+    backgroundColor: y2kTokens.deepPurple,
+  },
+  cardInner: {
+    backgroundColor: y2kTokens.deepPurple,
+  },
+  content: {
     padding: spacing.md,
+    paddingBottom: spacing.lg,
   },
   fileHeader: {
     flexDirection: 'row',
@@ -85,24 +94,26 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontFamily: typo.monoData.fontFamily,
     fontSize: 10,
     letterSpacing: 1.5,
-    color: y2kTokens.hotPink,
+    color: y2kTokens.cream,
+    opacity: 0.7,
   },
   fileLabelRight: {
     fontFamily: typo.monoLabel.fontFamily,
     fontSize: 10,
     letterSpacing: 2,
-    color: y2kTokens.mutedPurple,
+    color: y2kTokens.hotPink,
   },
   rule: {
     height: 1,
-    backgroundColor: y2kTokens.deepPurple,
+    backgroundColor: y2kTokens.cream,
     marginBottom: spacing.md,
-    opacity: 0.4,
+    opacity: 0.2,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
   locationLeft: {
     flex: 1,
@@ -110,30 +121,24 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   cityName: {
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 18,
-    color: y2kTokens.ink,
+    color: y2kTokens.cream,
     letterSpacing: typo.displaySmall.letterSpacing,
   },
   condition: {
     fontFamily: typo.monoMicro.fontFamily,
     fontSize: 9,
-    color: y2kTokens.mutedPurple,
+    color: y2kTokens.cream,
     letterSpacing: 2,
     marginTop: 3,
+    opacity: 0.5,
   },
   iconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: y2kTokens.deepPurple,
+    backgroundColor: 'rgba(250,249,246,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // Deep purple temperature panel — the color-block moment
-  tempBlock: {
-    backgroundColor: y2kTokens.deepPurple,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
   },
   tempHero: {
     fontFamily: typo.displayHero.fontFamily,
@@ -148,6 +153,6 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     color: y2kTokens.cream,
     letterSpacing: 1,
     marginTop: 4,
-    opacity: 0.7,
+    opacity: 0.6,
   },
 }); }

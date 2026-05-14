@@ -3,7 +3,7 @@ import {
   View, Text, Pressable, StyleSheet, ScrollView,
   Platform, StatusBar, Animated, LayoutChangeEvent,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
@@ -172,6 +172,7 @@ export function TodayScreen() {
 }
 
 function StandardTodayScreen() {
+  const navigation = useNavigation<any>();
   const { colors, fonts, themeName } = useTheme();
   const { formatTemp, unit } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
@@ -490,7 +491,15 @@ function StandardTodayScreen() {
             <Text style={styles.emptyGlyph}>—</Text>
             <View style={styles.emptyRule} />
             <Text style={styles.emptyTitle}>The Oracle awaits.</Text>
-            <Text style={styles.emptySub}>Head to Oracle to{'\n'}receive today's verdict.</Text>
+            <Text style={styles.emptySub}>Enter your city in the Oracle tab{'\n'}to receive today's verdict.</Text>
+            <Pressable
+              style={styles.emptyBtn}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate('Oracle'); }}
+              accessibilityRole="button"
+              accessibilityLabel="Go to Oracle tab"
+            >
+              <Text style={styles.emptyBtnText}>CONSULT THE ORACLE →</Text>
+            </Pressable>
           </View>
         )}
 
@@ -1106,6 +1115,20 @@ return StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase' as const,
     marginTop: spacing.xs,
+  },
+  emptyBtn: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.scarlet,
+  },
+  emptyBtnText: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: colors.scarlet,
+    letterSpacing: 2,
+    textAlign: 'center',
   },
 
   /* ── Greeting ── */

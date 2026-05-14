@@ -431,7 +431,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
     fontSize: 52,
     color: colors.textPrimary,
     letterSpacing: -1,
-    lineHeight: 56,
+    lineHeight: 68,
   },
   passportLabel: {
     fontFamily: fonts.mono,

@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable, StyleSheet,
   Platform, StatusBar, Animated,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../../contexts/AppContext';
@@ -97,6 +97,7 @@ const sLabel = {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function Y2KTodayScreen() {
+  const navigation = useNavigation<any>();
   const { oracle, profileCtx, streakCtx } = useAppData();
   const { weather, verdict, cachedAt, cachedCity, status } = oracle;
   const profile  = profileCtx.profile;
@@ -463,8 +464,16 @@ export function Y2KTodayScreen() {
                 <Y2KSticker type="sparkle" size={28} color={y2kTokens.hotPink} style={styles.emptyIcon} />
                 <View style={styles.emptyRule} />
                 <Text style={styles.emptyTitle}>The Oracle awaits.</Text>
-                <Text style={styles.emptySub}>Head to the Oracle tab{'\n'}to receive today's verdict.</Text>
+                <Text style={styles.emptySub}>Enter your city in the Oracle tab{'\n'}to receive today's verdict.</Text>
                 <View style={styles.emptyRule} />
+                <Pressable
+                  style={styles.emptyBtn}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate('Oracle'); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go to Oracle tab"
+                >
+                  <Text style={styles.emptyBtnText}>CONSULT THE ORACLE ♡</Text>
+                </Pressable>
                 <Y2KSignature text="ready when you are ♡" color={y2kTokens.mutedPurple} style={styles.emptySig} />
               </View>
             </Y2KCard>
@@ -897,7 +906,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontFamily: typo.displayMedium.fontFamily,
     fontSize: 36,
     color: y2kTokens.deepPurple,
-    lineHeight: 40,
+    lineHeight: 48,
     letterSpacing: typo.displayMedium.letterSpacing,
   },
   aqiLabel: {
@@ -999,6 +1008,20 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   emptySig: {
     fontSize: 17,
+  },
+  emptyBtn: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: y2kTokens.deepPurple,
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  emptyBtnText: {
+    fontFamily: typo.monoLabel.fontFamily,
+    fontSize: 10,
+    color: y2kTokens.lime,
+    letterSpacing: 2,
   },
 
   // Graph
