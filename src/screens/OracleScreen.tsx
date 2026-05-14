@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView, RefreshControl,
   StyleSheet, KeyboardAvoidingView, Platform, StatusBar,
-  Dimensions, Share, Animated,
+  Dimensions, Share, Animated, Easing,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -26,12 +26,12 @@ import { searchCities, CitySuggestion } from '../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../services/analytics';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isEditorialTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 export function OracleScreen() {
-  const { colors, fonts, isDark } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, isDark, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const { oracle, profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
   const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache } = oracle;
   const profile = profileCtx.profile;
@@ -48,6 +48,7 @@ export function OracleScreen() {
   const scrollRef          = useRef<ScrollView>(null);
   const shareCardRef       = useRef<View>(null);
   const btnScale           = useRef(new Animated.Value(1)).current;
+  const resultTranslateX   = useRef(new Animated.Value(Dimensions.get('window').width)).current;
 
   const isLoading = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && !!weather && !!verdict;
@@ -86,6 +87,19 @@ export function OracleScreen() {
       }
     }
   }, [status, isFromCache]);
+
+  // Verdict arrival: horizontal wipe from right edge, 600ms ease-in-out per motion spec
+  useEffect(() => {
+    if (status === 'done') {
+      resultTranslateX.setValue(Dimensions.get('window').width);
+      Animated.timing(resultTranslateX, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [status]);
 
   // City autocomplete debounce
   useEffect(() => {
@@ -239,8 +253,8 @@ export function OracleScreen() {
             <Pressable
               style={({ pressed }) => [styles.btn, pressed && styles.btnPressed, isLoading && styles.btnDisabled]}
               onPress={() => handleConsult()}
-              onPressIn={() => Animated.spring(btnScale, { toValue: 0.97, tension: 150, friction: 8, useNativeDriver: true }).start()}
-              onPressOut={() => Animated.spring(btnScale, { toValue: 1, tension: 60, friction: 6, useNativeDriver: true }).start()}
+              onPressIn={() => Animated.timing(btnScale, { toValue: 0.97, duration: 100, easing: Easing.out(Easing.ease), useNativeDriver: true }).start()}
+              onPressOut={() => Animated.timing(btnScale, { toValue: 1, duration: 150, easing: Easing.out(Easing.ease), useNativeDriver: true }).start()}
               disabled={isLoading}
               accessibilityRole="button"
               accessibilityLabel="Consult the Oracle"
@@ -267,7 +281,7 @@ export function OracleScreen() {
 
           {/* ── RESULTS ── */}
           {showResult ? (
-            <View style={styles.results}>
+            <Animated.View style={[styles.results, { transform: [{ translateX: resultTranslateX }] }]}>
               {isFromCache && cachedAt ? (
                 <View style={styles.cacheBadge}>
                   <Text style={styles.cacheBadgeText}>
@@ -335,7 +349,7 @@ export function OracleScreen() {
               >
                 <Text style={styles.resetText}>Ask Again →</Text>
               </Pressable>
-            </View>
+            </Animated.View>
           ) : null}
 
           {/* Off-screen share card */}
@@ -351,7 +365,15 @@ export function OracleScreen() {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isElectric = themeName === 'electric';
+  const isEditorial = isEditorialTheme(themeName);
+  // Electric CTA: hot-pink button on cobalt — the one scarlet moment on the input screen
+  const btnBg       = isElectric ? colors.scarlet : colors.bgDark;
+  const btnTextColor = isElectric ? colors.bg : '#FAF9F6';
+  const btnArrowColor = isElectric ? `${colors.bg}99` : 'rgba(250,249,246,0.55)';
+
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   content: { paddingBottom: 60 },
@@ -367,7 +389,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.mono,
     fontSize: 9,
     letterSpacing: 3,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   inputSection: { paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
@@ -383,14 +405,14 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   recentChipPressed: { backgroundColor: colors.bgSurface },
   recentChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.textSecondary, letterSpacing: 0.3 },
   btn: {
-    backgroundColor: colors.bgDark, paddingVertical: 18, paddingHorizontal: spacing.lg,
+    backgroundColor: btnBg, paddingVertical: 18, paddingHorizontal: spacing.lg,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginHorizontal: spacing.lg, marginBottom: spacing.xl,
   },
   btnPressed: { opacity: 0.75 },
   btnDisabled: { opacity: 0.45 },
-  btnText: { fontFamily: fonts.serif, fontSize: 18, color: '#FAF9F6', letterSpacing: 0.3 },
-  btnArrow: { fontFamily: fonts.mono, fontSize: 14, color: 'rgba(250,249,246,0.55)' },
+  btnText: { fontFamily: fonts.serif, fontSize: 18, color: btnTextColor, letterSpacing: 0.3 },
+  btnArrow: { fontFamily: fonts.mono, fontSize: 14, color: btnArrowColor },
   errorBox: {
     borderLeftWidth: 2, borderLeftColor: colors.scarlet,
     paddingLeft: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.lg,

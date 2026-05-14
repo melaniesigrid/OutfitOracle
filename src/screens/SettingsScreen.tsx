@@ -8,7 +8,7 @@ import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, ThemeName, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, THEMES, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 const ALL_KEYS = [
@@ -116,6 +116,7 @@ export function SettingsScreen() {
           <View style={styles.themeRow}>
             {THEME_OPTIONS.map(opt => {
               const active = themeName === opt.id;
+              const accentColor = THEMES[opt.id].colors.scarlet;
               return (
                 <Pressable
                   key={opt.id}
@@ -125,6 +126,7 @@ export function SettingsScreen() {
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={opt.label}
                 >
+                  <View style={[styles.themeChipSwatch, { backgroundColor: accentColor }]} />
                   <Text style={[styles.themeChipText, active && styles.themeChipTextActive]}>
                     {opt.label}
                   </Text>
@@ -350,14 +352,22 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   themeChip: {
     width: '47%',
-    paddingVertical: 10,
+    paddingVertical: 11,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(250,249,246,0.18)',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
+  },
+  themeChipSwatch: {
+    width: 8,
+    height: 8,
+    flexShrink: 0,
   },
   themeChipActive: {
-    borderColor: colors.bg,
-    backgroundColor: 'rgba(250,249,246,0.08)',
+    borderColor: colors.scarlet,
+    backgroundColor: `${colors.scarlet}18`,
   },
   themeChipText: {
     fontFamily: fonts.mono,
@@ -366,7 +376,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     color: 'rgba(250,249,246,0.40)',
   },
   themeChipTextActive: {
-    color: colors.bg,
+    color: '#FAF9F6',
   },
 
   /* Footer */

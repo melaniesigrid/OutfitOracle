@@ -347,6 +347,10 @@ export function TodayScreen() {
   const isWarmTheme   = themeName === 'terra-firma' || themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
   const isBannerTheme = themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
   const heroIconColor = isWarmTheme ? colors.scarlet : 'rgba(250,249,246,0.60)';
+  // Precipitation color: Electric has vivid-blue bg — light-blue #4FA3D4 blends in; use periwinkle textSecondary instead
+  const precipAccentColor = themeName === 'electric' ? colors.textSecondary : '#4FA3D4';
+  // Condition widget icons: warm themes render on light bg, dark-surface rgba is invisible there
+  const condIconColor = isWarmTheme ? colors.textMuted : 'rgba(250,249,246,0.50)';
 
   return (
     <View style={styles.root}>
@@ -438,7 +442,7 @@ export function TodayScreen() {
                 <View style={styles.graphPad}>
                   <HourlyGraph
                     hours={weather.hourly}
-                    accentColor='#4FA3D4'
+                    accentColor={precipAccentColor}
                     textHigh={styles.hourlyTemp.color as string}
                     textFaint={styles.hourlyTime.color as string}
                     lineColor={isWarmTheme ? colors.scarlet + 'A0' : 'rgba(250,249,246,0.30)'}
@@ -471,14 +475,14 @@ export function TodayScreen() {
                   )}
                   {weather.sunrise && (
                     <View style={styles.condCard}>
-                      <MaterialCommunityIcons name="weather-sunset-up" size={20} color="rgba(250,249,246,0.50)" />
+                      <MaterialCommunityIcons name="weather-sunset-up" size={20} color={condIconColor} />
                       <Text style={styles.condCardVal}>{weather.sunrise}</Text>
                       <Text style={styles.condCardLabel}>SUNRISE</Text>
                     </View>
                   )}
                   {weather.sunset && (
                     <View style={styles.condCard}>
-                      <MaterialCommunityIcons name="weather-sunset-down" size={20} color="rgba(250,249,246,0.50)" />
+                      <MaterialCommunityIcons name="weather-sunset-down" size={20} color={condIconColor} />
                       <Text style={styles.condCardVal}>{weather.sunset}</Text>
                       <Text style={styles.condCardLabel}>SUNSET</Text>
                     </View>
@@ -488,7 +492,7 @@ export function TodayScreen() {
                       <MaterialCommunityIcons
                         name={(weather.moonPhaseIcon ?? 'moon-full') as any}
                         size={20}
-                        color="rgba(250,249,246,0.50)"
+                        color={condIconColor}
                       />
                       <Text style={styles.condCardLabel}>{weather.moonPhaseName.toUpperCase()}</Text>
                     </View>
@@ -626,11 +630,10 @@ export function TodayScreen() {
         ) : (
           /* ── EMPTY STATE ── */
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="eye-outline" size={40} color={colors.textMuted} />
+            <Text style={styles.emptyGlyph}>—</Text>
+            <View style={styles.emptyRule} />
             <Text style={styles.emptyTitle}>The Oracle awaits.</Text>
-            <Text style={styles.emptySub}>
-              Head to the Oracle tab to receive{'\n'}today's verdict.
-            </Text>
+            <Text style={styles.emptySub}>Head to Oracle to{'\n'}receive today's verdict.</Text>
           </View>
         )}
 
@@ -656,6 +659,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   const isWarm       = themeName === 'terra-firma' || themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
   const isBanner     = themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
   const isTerraFirma = themeName === 'terra-firma';
+  const precipColor  = themeName === 'electric' ? colors.textSecondary : '#4FA3D4';
 
   // ── Surface token set ───────────────────────────────────────────────────────
   // Warm themes use a light scrollable surface; Classic/Editorial use dark cards.
@@ -1001,7 +1005,7 @@ return StyleSheet.create({
   dailyPrecip: {
     fontFamily: fonts.mono,
     fontSize: 10,
-    color: '#4FA3D4',
+    color: precipColor,
     width: 32,
     textAlign: 'right',
     letterSpacing: 0.3,
@@ -1212,22 +1216,39 @@ return StyleSheet.create({
   /* ── Empty state ── */
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 64,
-    gap: spacing.md,
+    paddingVertical: 72,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  emptyGlyph: {
+    fontFamily: fonts.displayLight,
+    fontSize: 80,
+    lineHeight: 72,
+    color: S.faint,
+    letterSpacing: -2,
+  },
+  emptyRule: {
+    width: 28,
+    height: 1,
+    backgroundColor: S.ghost,
+    marginVertical: spacing.md,
   },
   emptyTitle: {
     fontFamily: fonts.display,
-    fontSize: 32,
-    color: colors.textSecondary,
+    fontSize: 28,
+    color: S.med,
     letterSpacing: -0.5,
+    textAlign: 'center',
   },
   emptySub: {
     fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textMuted,
+    fontSize: 9,
+    color: S.label,
     textAlign: 'center',
-    lineHeight: 18,
-    letterSpacing: 0.3,
+    lineHeight: 16,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+    marginTop: spacing.xs,
   },
 
   /* ── Greeting ── */
