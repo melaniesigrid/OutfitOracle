@@ -74,4 +74,5 @@ function App() {
   );
 }
 
-export default Sentry.wrap(App);
+const _sentryActive = !__DEV__ && !!process.env.EXPO_PUBLIC_SENTRY_DSN;
+export default _sentryActive ? Sentry.wrap(App) : App;
