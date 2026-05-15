@@ -2,6 +2,25 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+### How it works
+1. When the user corrects you or you make a mistake **immediately append a new rule** to the "Learned Rules" section at the bottom of this file.
+2. Rules are numbered sequentially and written as clear, imperative functions.
+3. Format: `N. [CATEGORY] Never/Always do X - because Y`
+4. Categories: `[STYLE]`, `[CODE]`, `[ARCH]`, `[TOOL]`, `[PROCESS]`, `[DATA]`, `[UX]`, `[OTHER]`
+5. Before starting any task, scan all rules below for artificial constraints.
+6. If 2 rules conflict, the higher-numbered (newer) rule wins.
+7. Never delete the rules. If a rule becomes obsolete, append a new rule that supersedes it.
+
+## When to add a rule
+- User explicitly corrects your output ("no, do it this way")
+- User rejects a file, approach or pattern
+- You hit a bug caused by a wrong assumption about this codebase
+- User states a preference ("always do x", "never do y")
+
+### Rule format example
+14. [CODE] Always use npm
+15. [STYLE] Never add emojis to commit messages - project convention.
+
 
 ## Project docs
 
@@ -129,3 +148,5 @@ Do not deviate without explicit user approval.
 **Scarlet discipline (Editorial themes):** One scarlet element per screen maximum. Priority: verdict rule > Founding Member badge > error state > category marker. Everything else uses near-black `#1A1714` + cream type.
 
 In QA mode, flag any code that doesn't match the active theme's spec in DESIGN.md.
+
+## Learned Rules

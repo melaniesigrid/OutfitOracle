@@ -75,7 +75,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     condition: {
       fontFamily: fonts.mono,
-      fontSize: 9,
+      fontSize: 11,
       color: colors.textMuted,
       letterSpacing: 2,
       marginTop: 3,
@@ -90,7 +90,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     metaLine: {
       fontFamily: fonts.mono,
-      fontSize: 9,
+      fontSize: 11,
       color: colors.textMuted,
       letterSpacing: 1.5,
       marginBottom: spacing.md,

@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useAppData } from '../contexts/AppContext';
 import { useRecentCities } from '../hooks/useRecentCities';
+import { useMagicMoment } from '../hooks/useMagicMoment';
 import { GenderToggle, Gender } from '../components/GenderToggle';
 import { OccasionPicker, Occasion } from '../components/OccasionPicker';
 import { WeatherStrip } from '../components/WeatherStrip';
@@ -26,13 +27,15 @@ import { searchCities, CitySuggestion } from '../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../services/analytics';
-import { AppColors, AppFonts, ThemeName, isEditorialTheme, isY2KTheme, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { Y2KOracleScreen } from './y2k/Y2KOracleScreen';
+import { MondrianOracleScreen } from './mondrian/MondrianOracleScreen';
 
 export function OracleScreen() {
   const { themeName } = useTheme();
   if (isY2KTheme(themeName)) return <Y2KOracleScreen />;
+  if (isMondrianTheme(themeName)) return <MondrianOracleScreen />;
   return <EditorialOracleScreen />;
 }
 
@@ -58,21 +61,7 @@ function EditorialOracleScreen() {
   const resultTranslateX   = useRef(new Animated.Value(Dimensions.get('window').width)).current;
   const toggleFade         = useRef(new Animated.Value(1)).current;
   const isFirstToggle      = useRef(true);
-  const magicOpacity       = useRef(new Animated.Value(0)).current;
-
-  const [showMagicMoment, setShowMagicMoment] = useState(false);
-
-  const dismissMagicMoment = React.useCallback(() => {
-    Animated.timing(magicOpacity, { toValue: 0, duration: 500, easing: Easing.in(Easing.ease), useNativeDriver: true })
-      .start(() => setShowMagicMoment(false));
-  }, []);
-
-  const triggerMagicMoment = React.useCallback(() => {
-    magicOpacity.setValue(0);
-    setShowMagicMoment(true);
-    Animated.timing(magicOpacity, { toValue: 1, duration: 700, easing: Easing.out(Easing.ease), useNativeDriver: true })
-      .start(() => { setTimeout(dismissMagicMoment, 2800); });
-  }, [dismissMagicMoment]);
+  const { magicOpacity, showMagicMoment, dismissMagicMoment, tryTriggerFirstConsult } = useMagicMoment();
 
   const isLoading = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && !!weather && !!verdict;
@@ -104,12 +93,7 @@ function EditorialOracleScreen() {
   // Record consult in history + streak; persist founding member badge to dedicated key
   useEffect(() => {
     if (status === 'done' && !isFromCache && weather && verdict) {
-      // First-consult magic moment — one-time only, fires before addEntry so history is still empty
-      if (historyCtx.history.length === 0) {
-        AsyncStorage.getItem('@outfit_oracle_magic_shown')
-          .then(val => { if (!val) { AsyncStorage.setItem('@outfit_oracle_magic_shown', '1').catch(() => {}); triggerMagicMoment(); } })
-          .catch(() => {});
-      }
+      tryTriggerFirstConsult(historyCtx.history.length);
       historyCtx.addEntry(city, gender, weather, verdict, occasion);
       streakCtx.recordConsult();
       if (verdict.foundingMember) {
@@ -464,7 +448,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   },
   headerDate: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
     color: colors.textMuted,
   },
@@ -473,13 +457,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
     backgroundColor: colors.border,
   },
   inputSection: { paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
-  inputLabel: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
+  inputLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
   input: { fontFamily: fonts.display, fontSize: 30, color: colors.textPrimary, paddingVertical: spacing.sm, letterSpacing: -0.5 },
   inputRule: { height: 1, backgroundColor: colors.borderHard, marginTop: 4 },
   locationBtn: { paddingVertical: spacing.sm, marginTop: spacing.xs, alignSelf: 'flex-start' },
-  locationBtnText: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.5, color: colors.textMuted },
+  locationBtnText: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 1.5, color: colors.textMuted },
   recentsRow: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
-  recentsLabel: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
+  recentsLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
   recentChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   recentChip: { paddingHorizontal: spacing.md, paddingVertical: 7, borderWidth: 1, borderColor: colors.border },
   recentChipPressed: { backgroundColor: colors.bgSurface },
@@ -494,12 +478,12 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   btnText: { fontFamily: fonts.display, fontSize: 22, color: btnTextColor, letterSpacing: -0.3 },
   btnArrow: { fontFamily: fonts.mono, fontSize: 14, color: btnArrowColor },
   errorBox: {
-    borderLeftWidth: 2, borderLeftColor: colors.scarlet,
+    borderLeftWidth: 2, borderLeftColor: colors.scarletFg,
     paddingLeft: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.lg,
   },
-  errorLabel: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2, color: colors.scarlet, marginBottom: spacing.sm },
+  errorLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2, color: colors.scarletFg, marginBottom: spacing.sm },
   errorText: { fontFamily: fonts.mono, fontSize: 12, color: colors.textSecondary, lineHeight: 19, marginBottom: spacing.md },
-  retryText: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.scarlet, letterSpacing: 0.5 },
+  retryText: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.scarletFg, letterSpacing: 0.5 },
   results: { marginTop: spacing.sm, paddingHorizontal: spacing.lg },
   lookToggle: {
     flexDirection: 'row',
@@ -517,7 +501,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   },
   lookToggleText: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: colors.textMuted,
   },
@@ -529,18 +513,18 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
     paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
     backgroundColor: colors.bgSurface, marginBottom: spacing.md,
   },
-  cacheBadgeText: { fontFamily: fonts.mono, fontSize: 9, letterSpacing: 1.5, color: colors.textMuted },
-  cacheRefresh: { fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary, letterSpacing: 0.5 },
+  cacheBadgeText: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.5, color: colors.textMuted },
+  cacheRefresh: { fontFamily: fonts.mono, fontSize: 12, color: colors.textSecondary, letterSpacing: 0.5 },
   shareBtn: {
     alignSelf: 'stretch', paddingVertical: 14, borderWidth: 1, borderColor: colors.borderHard,
     alignItems: 'center', marginBottom: spacing.md,
   },
-  shareBtnText: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2.5, color: colors.textPrimary },
+  shareBtnText: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textPrimary },
   resetBtn: { alignSelf: 'center', paddingVertical: spacing.md, marginBottom: spacing.lg },
   resetText: { fontFamily: fonts.serif, fontSize: 18, color: colors.textSecondary, letterSpacing: 0.3 },
   wearAgainBanner: {
     borderLeftWidth: 2,
-    borderLeftColor: colors.scarlet,
+    borderLeftColor: colors.scarletFg,
     paddingLeft: spacing.md,
     paddingVertical: spacing.sm,
     marginBottom: spacing.lg,
@@ -548,9 +532,9 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   },
   wearAgainLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
-    color: colors.scarlet,
+    color: colors.scarletFg,
     marginBottom: 4,
   },
   wearAgainText: {
@@ -589,7 +573,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   },
   magicVibe: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.40)',
     letterSpacing: 3,
     textAlign: 'center',

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ThemeName, AppColors, AppFonts, THEMES, getThemeTokens, isY2KTheme } from '../theme';
+import { ThemeName, AppColors, AppFonts, AppMetrics, AppFlags, THEMES, getThemeTokens, isY2KTheme } from '../theme';
 import { Y2KFontSubtheme, getY2KFontSet } from '../theme/y2kTypography';
 
 const THEME_KEY         = '@outfit_oracle_theme';
@@ -10,6 +10,8 @@ interface ThemeContextValue {
   themeName: ThemeName;
   colors: AppColors;
   fonts: AppFonts;
+  metrics: AppMetrics;
+  flags: AppFlags;
   isDark: boolean;
   setTheme: (name: ThemeName) => void;
   /** Only meaningful when themeName === 'y2k' */
@@ -45,7 +47,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(Y2K_SUBTHEME_KEY, s).catch(() => {});
   }, []);
 
-  const { colors, fonts: baseFont, isDark } = getThemeTokens(themeName);
+  const { colors, fonts: baseFont, metrics, flags, isDark } = getThemeTokens(themeName);
 
   // For Y2K theme, substitute font families from the active subtheme
   const fonts: AppFonts = useMemo(() => {
@@ -63,8 +65,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [themeName, baseFont, y2kFontSubtheme]);
 
   const value = useMemo(
-    () => ({ themeName, colors, fonts, isDark, setTheme, y2kFontSubtheme, setY2KFontSubtheme }),
-    [themeName, colors, fonts, isDark, setTheme, y2kFontSubtheme, setY2KFontSubtheme],
+    () => ({ themeName, colors, fonts, metrics, flags, isDark, setTheme, y2kFontSubtheme, setY2KFontSubtheme }),
+    [themeName, colors, fonts, metrics, flags, isDark, setTheme, y2kFontSubtheme, setY2KFontSubtheme],
   );
 
   return (

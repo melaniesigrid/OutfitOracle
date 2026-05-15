@@ -45,13 +45,13 @@ const styles = StyleSheet.create({
   },
   stamp: {
     fontFamily: 'IBMPlexMono_500Medium',
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: y2kTokens.hotPink,
   },
   sub: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: y2kTokens.mutedPurple,
   },
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   },
   bullet: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.hotPink,
     marginTop: 2,
   },

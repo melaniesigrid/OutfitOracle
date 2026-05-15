@@ -25,6 +25,12 @@ __pycache__/
 # Orchestrator results (generated output, not source)
 src/files/results/
 .gstack/
+active/
+
+# Multi-agent browser run artifacts
+multi-chrome-agent-workspace/*.log
+multi-chrome-agent-workspace/chrome-agent-*/snapshot*.txt
+multi-chrome-agent-workspace/chrome-agent-*/*.txt
 
 # Sentry auth tokens — contain secrets, never commit
 android/sentry.properties

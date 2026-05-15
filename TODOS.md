@@ -16,12 +16,12 @@ Design and UX debt tracked here. Each item has a what, why, and context for anyo
 
 ---
 
-### Analytics toggle non-functional + try-before-profile funnel events needed
-**What:** (1) The "Usage analytics" Switch in SettingsScreen looks real but does nothing. `analyticsEnabled` state is never read by `analytics.ts` — PostHog events fire regardless of toggle position. The setting also resets to `true` on every app open. (2) Once try-before-profile ships, add 4 new events: `first_consult_unprofiled`, `profile_modal_shown`, `profile_modal_tapped`, `profile_completed`. Decision gate: if modal-to-completion < 30% at 4 weeks post-launch, revert to mandatory gate.
-**Why:** (1) Users who opt out are still tracked — App Store review risk. (2) Without funnel analytics, try-before-profile has no measurable outcome. Shipping a large UX bet without measurement is irresponsible.
-**Pros:** Enforces user intent on analytics; unlocks real data on whether the try-before-profile bet is working; removes App Store risk.
-**Cons:** Requires threading a preference through `analytics.ts` (read from AsyncStorage, gate all `track()` calls) plus showing the correct state on Settings mount.
-**Context:** Toggle added 2026-05-14 during /plan-eng-review. Funnel events added 2026-05-14 during /plan-devex-review (DX EXPANSION for try-before-profile, v1.2). Fix toggle: (1) persist to `@outfit_oracle_analytics_enabled` on toggle, (2) read the key in `analytics.ts` and gate `track()`, (3) load persisted value in SettingsScreen `useEffect`. Add `@outfit_oracle_analytics_enabled` to `ALL_KEYS` for full reset.
+### Try-before-profile funnel events needed
+**What:** Once try-before-profile ships, add 4 new events: `first_consult_unprofiled`, `profile_modal_shown`, `profile_modal_tapped`, `profile_completed`. Decision gate: if modal-to-completion < 30% at 4 weeks post-launch, revert to mandatory gate.
+**Why:** Without funnel analytics, try-before-profile has no measurable outcome. Shipping a large UX bet without measurement is irresponsible.
+**Pros:** Unlocks real data on whether the try-before-profile bet is working.
+**Cons:** Depends on the try-before-profile surfaces existing before the events can be placed cleanly.
+**Context:** Funnel events added 2026-05-14 during /plan-devex-review (DX EXPANSION for try-before-profile, v1.2). The original non-functional Settings analytics toggle was fixed 2026-05-14: `@outfit_oracle_analytics_enabled` persists opt-out state, `analytics.ts` gates PostHog calls, Settings loads the stored preference, and full reset clears the key.
 **Depends on:** Try-before-profile implementation (for funnel events); toggle fix is self-contained.
 
 ---
@@ -113,3 +113,15 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 **Cons:** Requires separate milestone tracking (e.g., a small AsyncStorage key per badge or a timestamp Map in history). Non-trivial and low urgency while dates aren't shown.
 **Context:** Added 2026-05-14 during /plan-eng-review of feat/launch-week1. Pre-existing issue, not introduced by this branch. `earnedAt` is not currently displayed anywhere in the UI.
 **Depends on:** Future "Earned on date" UI feature in YouScreen achievements section.
+
+---
+
+## Test Debt (v1.3.0 — Y2K branch)
+
+### Test coverage for getSeason, formatTemp, and offline cache fallback
+**What:** Three new code paths added in feat/y2k-system-and-bug-fixes have zero test coverage: (1) `getSeason()` hemisphere-aware season detection in `src/services/oracle.ts`, (2) `formatTemp()` Celsius/Fahrenheit conversion in `src/contexts/TemperatureContext.tsx`, (3) the network-error-to-cache fallback in `src/hooks/useOracle.ts`.
+**Why:** getSeason() and formatTemp() are pure functions — bugs would silently produce wrong Claude prompt context (wrong season) and wrong temperatures in every UI element. The offline fallback is the most user-visible: breaking it means a network blip surfaces an error instead of showing cached data.
+**Pros:** Catches regressions in hemisphere logic (Southern Hemisphere users get inverted seasons), C/F conversion (32°F edge case, negative temps), and offline UX (most important for launch).
+**Cons:** The offline fallback test requires mocking AsyncStorage + fetch — uses the same pattern as `oracleProxy.test.ts`, so setup is straightforward. ~30 min total with CC.
+**Context:** Added 2026-05-14 during /plan-eng-review of feat/y2k-system-and-bug-fixes. Tests were deferred to keep the ship timeline. formatTemp is in TemperatureContext, getSeason is a module-private function in oracle.ts (export it for testing or test via buildPrompt output). oracleProxy.test.ts already shows the mock pattern for fetch + AsyncStorage.
+**Depends on:** Nothing — all three are self-contained.

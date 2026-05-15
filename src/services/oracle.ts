@@ -36,6 +36,7 @@ export interface OracleVerdict {
   foundingMember?: boolean;
 }
 
+// Keep in sync with getSeason() in cloudflare-worker/index.js — both copies must match.
 function getSeason(month: number, lat?: number): string {
   const isNorthern = (lat ?? 45) >= 0;
   const m = isNorthern ? month : (month + 6) % 12;
@@ -103,7 +104,7 @@ Respond ONLY with a valid JSON object — no markdown, no backticks, no preamble
 }`;
 }
 
-async function viaProxy(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string): Promise<OracleVerdict> {
+async function viaProxy(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string, attempt = 0): Promise<OracleVerdict> {
   const deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY).catch(() => null);
 
   let resp: Response;
@@ -125,6 +126,14 @@ async function viaProxy(weather: WeatherData, gender: string, profile?: StylePro
       const retrySeconds = Number(resp.headers.get('Retry-After') ?? 86400);
       const hours = Math.ceil(retrySeconds / 3600);
       throw new Error(`The Oracle has spoken enough today. Available again in ${hours === 1 ? '1 hour' : `${hours} hours`}.`);
+    }
+    // 529 = Cloudflare site overloaded, 503/502 = transient upstream failure — auto-retry
+    if ((resp.status === 529 || resp.status === 503 || resp.status === 502) && attempt < 2) {
+      await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+      return viaProxy(weather, gender, profile, occasion, attempt + 1);
+    }
+    if (resp.status === 529 || resp.status === 503 || resp.status === 502) {
+      throw new Error('The Oracle is momentarily overwhelmed. Please try again in a moment.');
     }
     if (resp.status >= 500) {
       throw new Error('The Oracle is momentarily unavailable. The fashion world waits.');

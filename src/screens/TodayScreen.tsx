@@ -7,11 +7,12 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, ThemeName, isEditorialTheme, isY2KTheme, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, AppFlags, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, isDarkColor, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTempUnit } from '../contexts/TemperatureContext';
 import { HourlyGraph } from '../components/HourlyGraph';
 import { Y2KTodayScreen } from './y2k/Y2KTodayScreen';
+import { MondrianTodayScreen } from './mondrian/MondrianTodayScreen';
 
 // ─── Theme icon mapping ───────────────────────────────────────────────────────
 // Each warm theme substitutes a curated set of MCIcons for the base weather icons.
@@ -168,16 +169,17 @@ function Widget({ label, children, noPad, styles }: { label: string; children: R
 export function TodayScreen() {
   const { themeName } = useTheme();
   if (isY2KTheme(themeName)) return <Y2KTodayScreen />;
+  if (isMondrianTheme(themeName)) return <MondrianTodayScreen />;
   return <StandardTodayScreen />;
 }
 
 function StandardTodayScreen() {
   const navigation = useNavigation<any>();
-  const { colors, fonts, themeName } = useTheme();
+  const { colors, fonts, metrics, flags, themeName } = useTheme();
   const { formatTemp, unit } = useTempUnit();
-  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
+  const styles = useMemo(() => makeStyles(colors, fonts, metrics, flags, themeName), [colors, fonts, metrics, flags, themeName]);
   const { oracle, profileCtx, streakCtx } = useAppData();
-  const { weather, verdict, cachedAt, cachedCity, isFromCache, status } = oracle;
+  const { weather, verdict, cachedAt, cachedCity, isFromCache, isOffline, status } = oracle;
   const profile = profileCtx.profile;
   const { streak, rankTitle } = streakCtx;
 
@@ -201,13 +203,17 @@ function StandardTodayScreen() {
   const word       = getWord();
 
   const isY2K         = themeName === 'y2k';
-  const isWarmTheme   = themeName === 'terra-firma' || themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric' || isY2K;
-  const isBannerTheme = themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric' || isY2K;
+  const isWarmTheme   = flags.isWarmTheme;
+  const isBannerTheme = flags.isBannerTheme;
+  // Widget surface direction: computed from the actual widget background, not flags.
+  // This works for every theme automatically — no per-theme checks needed.
+  const widgetIsDark  = isDarkColor(colors.widgetBg);
   const heroIconColor = isWarmTheme ? colors.scarlet : 'rgba(250,249,246,0.60)';
+  // Graph and condition icons render inside the widget — use surface-relative colour.
+  const graphIconColor  = widgetIsDark ? heroIconColor : colors.textMuted;
+  const condIconColor   = widgetIsDark ? 'rgba(250,249,246,0.50)' : colors.textMuted;
   // Precipitation color: Electric has vivid-blue bg — light-blue #4FA3D4 blends in; use periwinkle textSecondary instead
   const precipAccentColor = (themeName === 'electric' || isY2K) ? colors.textSecondary : '#4FA3D4';
-  // Condition widget icons: warm themes render on light bg, dark-surface rgba is invisible there
-  const condIconColor = isWarmTheme ? colors.textMuted : 'rgba(250,249,246,0.50)';
 
   return (
     <View style={styles.root}>
@@ -302,8 +308,8 @@ function StandardTodayScreen() {
                     accentColor={precipAccentColor}
                     textHigh={styles.hourlyTemp.color as string}
                     textFaint={styles.hourlyTime.color as string}
-                    lineColor={isWarmTheme ? colors.scarlet + 'A0' : 'rgba(250,249,246,0.30)'}
-                    iconColor={heroIconColor}
+                    lineColor={isWarmTheme ? colors.scarlet + 'A0' : widgetIsDark ? 'rgba(250,249,246,0.30)' : colors.borderMid}
+                    iconColor={graphIconColor}
                     monoFont={fonts.mono}
                     formatTemp={formatTemp}
                     themeIconFn={(base) => themeIcon(base, themeName)}
@@ -374,7 +380,7 @@ function StandardTodayScreen() {
                     <MaterialCommunityIcons
                       name={themeIcon(d.conditionIcon, themeName) as any}
                       size={18}
-                      color={isWarmTheme ? colors.scarlet + '80' : 'rgba(250,249,246,0.55)'}
+                      color={isWarmTheme ? colors.scarlet + '80' : widgetIsDark ? 'rgba(250,249,246,0.55)' : colors.textMuted}
                     />
                     <Text style={styles.dailyCondLabel} numberOfLines={1}>{d.conditionLabel}</Text>
                     {d.precipProb > 0 ? (
@@ -424,7 +430,7 @@ function StandardTodayScreen() {
                 "{verdict.verdict}"
               </Text>
               <View style={styles.verdictMeta}>
-                <View>
+                <View style={styles.verdictVibeBlock}>
                   <Text style={styles.verdictMetaLabel}>TODAY'S VIBE</Text>
                   <Text style={styles.verdictVibe}>{verdict.vibe}</Text>
                 </View>
@@ -464,7 +470,10 @@ function StandardTodayScreen() {
 
             {/* ── REFRESH ROW ── */}
             <View style={styles.refreshRow}>
-              {hoursAgo !== null && (
+              {isOffline && (
+                <Text style={styles.offlineChip}>OFFLINE · LAST KNOWN</Text>
+              )}
+              {!isOffline && hoursAgo !== null && (
                 <Text style={styles.refreshMeta}>
                   {hoursAgo === 0 ? 'Just now' : `${hoursAgo}h ago`} · {cachedCity}
                 </Text>
@@ -488,10 +497,12 @@ function StandardTodayScreen() {
         ) : (
           /* ── EMPTY STATE ── */
           <View style={styles.emptyState}>
-            <Text style={styles.emptyGlyph}>—</Text>
+            <View style={styles.emptyEyeWrap}>
+              <MaterialCommunityIcons name="eye-outline" size={48} color={styles.emptyIcon.color as string} />
+            </View>
             <View style={styles.emptyRule} />
             <Text style={styles.emptyTitle}>The Oracle awaits.</Text>
-            <Text style={styles.emptySub}>Enter your city in the Oracle tab{'\n'}to receive today's verdict.</Text>
+            <Text style={styles.emptySub}>The eye is open.{'\n'}Enter your city to receive today's verdict.</Text>
             <Pressable
               style={styles.emptyBtn}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate('Oracle'); }}
@@ -521,24 +532,26 @@ function StandardTodayScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
-  const isWarm       = themeName === 'terra-firma' || themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
-  const isBanner     = themeName === 'morning-paper' || themeName === 'golden-hour' || themeName === 'electric';
-  const isTerraFirma = themeName === 'terra-firma';
+function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, flags: AppFlags, themeName: ThemeName) {
+  const isWarm       = flags.isWarmTheme;
+  const isBanner     = flags.isBannerTheme;
+  const isElectric   = themeName === 'electric';
   const precipColor  = themeName === 'electric' ? colors.textSecondary : '#4FA3D4';
 
   // ── Surface token set ───────────────────────────────────────────────────────
-  // Warm themes use a light scrollable surface; Classic/Editorial use dark cards.
+  // Derived from the actual widget background — no flags needed.
+  // Dark widget bg → light rgba foreground; light widget bg → theme text tokens.
+  const widgetIsDark = isDarkColor(colors.widgetBg);
   const S = {
-    widgetBg:   isWarm ? colors.bg      : colors.bgDark,
-    label:      isWarm ? colors.textMuted       : 'rgba(250,249,246,0.30)',
-    high:       isWarm ? colors.textPrimary     : '#FAF9F6',
-    med:        isWarm ? colors.textSecondary   : 'rgba(250,249,246,0.80)',
-    low:        isWarm ? colors.textMuted       : 'rgba(250,249,246,0.55)',
-    faint:      isWarm ? colors.borderMid       : 'rgba(250,249,246,0.40)',
-    ghost:      isWarm ? colors.border          : 'rgba(250,249,246,0.15)',
-    divider:    isWarm ? colors.border          : 'rgba(250,249,246,0.07)',
-    divMed:     isWarm ? colors.borderMid       : 'rgba(250,249,246,0.10)',
+    widgetBg: colors.widgetBg,
+    label:    isElectric ? colors.textMuted : widgetIsDark ? 'rgba(250,249,246,0.30)' : colors.textMuted,
+    high:     widgetIsDark ? '#FAF9F6'                : colors.textPrimary,
+    med:      isElectric ? colors.textSecondary : widgetIsDark ? 'rgba(250,249,246,0.80)' : colors.textSecondary,
+    low:      isElectric ? colors.textMuted : widgetIsDark ? 'rgba(250,249,246,0.55)' : colors.textMuted,
+    faint:    isElectric ? colors.borderMid : widgetIsDark ? 'rgba(250,249,246,0.40)' : colors.borderMid,
+    ghost:    isElectric ? colors.border : widgetIsDark ? 'rgba(250,249,246,0.15)' : colors.border,
+    divider:  isElectric ? colors.border : widgetIsDark ? 'rgba(250,249,246,0.07)' : colors.border,
+    divMed:   isElectric ? colors.borderMid : widgetIsDark ? 'rgba(250,249,246,0.10)' : colors.borderMid,
   };
 
   // ── Hero temperature (always dark panel) ────────────────────────────────────
@@ -562,7 +575,10 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   // ── Hero accent colors ──────────────────────────────────────────────────────
   const heroCityColor      = themeName === 'golden-hour' ? '#C4A87A' : '#FAF9F6';
   const heroStatValColor   = themeName === 'golden-hour' ? '#C4A87A' : '#FAF9F6';
-  const heroStatLabelColor = themeName === 'golden-hour' ? 'rgba(196,168,122,0.50)' : 'rgba(250,249,246,0.40)';
+  const heroStatLabelColor =
+    themeName === 'golden-hour' ? 'rgba(196,168,122,0.50)' :
+    isElectric ? colors.textMuted :
+    'rgba(250,249,246,0.40)';
   const heroStatValFamily  = isWarm ? fonts.mono : fonts.displayBold;
   const heroStatValSize    = isWarm ? 14 : 20;
   const heroStatValLine    = isWarm ? 18 : 24;
@@ -573,9 +589,9 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
     themeName === 'golden-hour'   ? 'rgba(200,128,64,0.25)'  :
     'rgba(250,249,246,0.10)';
 
-  const heroConditionColor  = isWarm ? colors.scarlet : 'rgba(250,249,246,0.55)';
-  const cityChipBorderColor = isWarm ? colors.scarlet : 'rgba(250,249,246,0.20)';
-  const cityChipTextColor   = isWarm ? colors.scarlet : 'rgba(250,249,246,0.50)';
+  const heroConditionColor  = isElectric ? colors.scarletFg : isWarm ? colors.scarlet : 'rgba(250,249,246,0.55)';
+  const cityChipBorderColor = isElectric ? colors.scarletFg : isWarm ? colors.scarlet : 'rgba(250,249,246,0.20)';
+  const cityChipTextColor   = isElectric ? colors.scarletFg : isWarm ? colors.scarlet : 'rgba(250,249,246,0.50)';
   const wotdDefFont         = isWarm ? fonts.serif    : fonts.mono;
 
 return StyleSheet.create({
@@ -601,7 +617,7 @@ return StyleSheet.create({
   },
   streakLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.45)',
     marginTop: 2,
@@ -614,7 +630,7 @@ return StyleSheet.create({
   },
   cityChipText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: cityChipTextColor,
     letterSpacing: 1,
   },
@@ -623,30 +639,36 @@ return StyleSheet.create({
   content: { paddingBottom: 48 },
 
   /* ── Widget shell ── */
-  // Terra Firma: white card, heavy 2px terracotta border, side margins (architectural)
-  // Banner (Morning Paper / Golden Hour): full-width section, no border, bottom divider only
-  // Classic/Editorial: dark card, 1px subtle border, side margins
+  /* ── Widget shell ── */
   widget: {
-    marginHorizontal: isBanner ? 0 : spacing.lg,
-    marginTop: isBanner ? 0 : spacing.sm,
-    backgroundColor: isTerraFirma ? colors.bgCard : S.widgetBg,
-    borderWidth: isTerraFirma ? 2 : isBanner ? 0 : 1,
-    borderColor: isTerraFirma ? colors.scarlet + '50' : 'rgba(250,249,246,0.07)',
-    borderBottomWidth: isBanner ? 1 : 0,
-    borderBottomColor: S.divider,
+    marginHorizontal: isBanner && metrics.borderWidth === 0 ? 0 : spacing.lg,
+    marginTop: isBanner && metrics.borderWidth === 0 ? 0 : spacing.sm,
+    backgroundColor: S.widgetBg,
+    borderWidth: metrics.borderWidth,
+    borderColor: metrics.borderWidth > 1 ? colors.borderHard : colors.borderMid,
+    borderBottomWidth: isBanner && metrics.borderWidth === 0 ? 1 : metrics.borderWidth,
+    borderBottomColor: isBanner && metrics.borderWidth === 0 ? S.divider : (metrics.borderWidth > 1 ? colors.borderHard : colors.borderMid),
+    borderRadius: metrics.radius,
+    marginBottom: metrics.cardGap === 32 ? spacing.md : 0, // extra spacing
+    ...(metrics.shadowOpacity > 0 ? {
+      shadowColor: metrics.shadowColor,
+      shadowOffset: { width: metrics.shadowOffset, height: metrics.shadowOffset },
+      shadowOpacity: metrics.shadowOpacity,
+      shadowRadius: 0,
+    } : {}),
   },
   widgetLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2.5,
-    color: S.label,
+    color: metrics.borderWidth >= 3 ? colors.textPrimary : S.label,
+    fontWeight: metrics.borderWidth >= 3 ? '700' : 'normal',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: S.divider,
-    // Terra Firma: left terracotta rule as an architectural detail
-    borderLeftWidth: isTerraFirma ? 3 : 0,
+    borderBottomWidth: metrics.borderWidth >= 3 ? metrics.borderWidth : 1,
+    borderBottomColor: metrics.borderWidth >= 3 ? colors.borderHard : S.divider,
+    borderLeftWidth: metrics.widgetLeftBorderWidth,
     borderLeftColor: colors.scarlet,
   },
   widgetBody: {
@@ -674,8 +696,8 @@ return StyleSheet.create({
   },
   wotdOrigin: {
     fontFamily: fonts.mono,
-    fontSize: 10,
-    color: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.40)',
+    fontSize: 12,
+    color: widgetIsDark ? 'rgba(250,249,246,0.40)' : !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.40)',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -692,12 +714,20 @@ return StyleSheet.create({
 
   /* ── Weather hero ── */
   weatherHero: {
-    backgroundColor: colors.bgDark,
-    marginHorizontal: isBanner ? 0 : spacing.lg,
-    marginTop: isBanner ? 0 : spacing.sm,
+    backgroundColor: metrics.cardGap === 32 ? '#000000' : colors.bgDark,
+    marginHorizontal: isBanner && metrics.borderWidth === 0 ? 0 : spacing.lg,
+    marginTop: isBanner && metrics.borderWidth === 0 ? 0 : spacing.sm,
+    marginBottom: metrics.cardGap === 32 ? spacing.xl : 0,
     padding: spacing.lg,
-    borderWidth: isTerraFirma ? 2 : isBanner ? 0 : 1,
-    borderColor: isTerraFirma ? colors.scarlet + '30' : 'rgba(250,249,246,0.07)',
+    borderWidth: metrics.cardGap === 32 ? metrics.borderWidth : (metrics.borderWidth === 2 ? 2 : (isBanner && metrics.borderWidth === 0 ? 0 : 1)),
+    borderColor: metrics.cardGap === 32 ? colors.borderHard : (metrics.borderWidth === 2 ? colors.scarlet + '30' : 'rgba(250,249,246,0.07)'),
+    borderRadius: metrics.radius,
+    ...(metrics.cardGap === 32 ? {
+      shadowColor: metrics.shadowColor,
+      shadowOffset: { width: metrics.shadowOffset, height: metrics.shadowOffset },
+      shadowOpacity: metrics.shadowOpacity,
+      shadowRadius: 0,
+    } : {}),
   },
   heroTop: {
     flexDirection: 'row',
@@ -716,14 +746,14 @@ return StyleSheet.create({
   },
   heroCountry: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: 'rgba(250,249,246,0.45)',
     letterSpacing: 1,
     marginTop: 2,
   },
   heroCondition: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: heroConditionColor,
     letterSpacing: 2,
     marginTop: 6,
@@ -752,7 +782,7 @@ return StyleSheet.create({
   },
   heroStatLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: heroStatLabelColor,
     marginBottom: 4,
@@ -765,7 +795,7 @@ return StyleSheet.create({
   },
   heroStatUnit: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.35)',
     marginTop: 2,
   },
@@ -786,7 +816,7 @@ return StyleSheet.create({
   },
   hourlyTime: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: S.faint,
     letterSpacing: 0.5,
   },
@@ -797,7 +827,7 @@ return StyleSheet.create({
   },
   hourlyPrecip: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: '#4FA3D4',
     letterSpacing: 0.3,
   },
@@ -808,7 +838,7 @@ return StyleSheet.create({
   },
   hourlyUVText: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 0.5,
   },
 
@@ -836,7 +866,7 @@ return StyleSheet.create({
   },
   condCardLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1,
     color: S.label,
     textAlign: 'center',
@@ -855,21 +885,21 @@ return StyleSheet.create({
   },
   dailyDay: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: S.med,
     letterSpacing: 0.5,
     width: 38,
   },
   dailyCondLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: S.low,
     flex: 1,
     letterSpacing: 0.3,
   },
   dailyPrecip: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: precipColor,
     width: 32,
     textAlign: 'right',
@@ -877,7 +907,7 @@ return StyleSheet.create({
   },
   dailyPrecipEmpty: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: S.ghost,
     width: 32,
     textAlign: 'right',
@@ -920,7 +950,7 @@ return StyleSheet.create({
   },
   aqiLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: S.label,
     letterSpacing: 1.5,
     marginTop: 2,
@@ -945,13 +975,13 @@ return StyleSheet.create({
   },
   pollenSubLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     color: S.low,
     letterSpacing: 0.5,
   },
   pollenTypeLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     color: S.ghost,
     letterSpacing: 1,
   },
@@ -967,15 +997,18 @@ return StyleSheet.create({
   },
   verdictMeta: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     borderTopWidth: 1,
     borderTopColor: S.divMed,
     paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  verdictVibeBlock: {
+    flex: 1,
   },
   verdictMetaLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
     color: S.label,
     marginBottom: 4,
@@ -1002,7 +1035,7 @@ return StyleSheet.create({
   },
   chipCategory: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: S.label,
     width: 72,
@@ -1047,7 +1080,7 @@ return StyleSheet.create({
   },
   chipTagText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 0.15,
     color: colors.scarlet,
     textTransform: 'uppercase' as const,
@@ -1067,13 +1100,19 @@ return StyleSheet.create({
   },
   refreshMeta: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 0.5,
   },
+  offlineChip: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.scarlet,
+    letterSpacing: 1.5,
+  },
   refreshBtn: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.5,
   },
@@ -1085,11 +1124,14 @@ return StyleSheet.create({
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
   },
-  emptyGlyph: {
-    fontFamily: fonts.displayLight,
-    fontSize: 80,
+  emptyEyeWrap: {
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIcon: {
     color: S.faint,
-    letterSpacing: -2,
   },
   emptyRule: {
     width: 28,
@@ -1106,7 +1148,7 @@ return StyleSheet.create({
   },
   emptySub: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: S.label,
     textAlign: 'center',
     lineHeight: 16,
@@ -1123,7 +1165,7 @@ return StyleSheet.create({
   },
   emptyBtnText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.scarlet,
     letterSpacing: 2,
     textAlign: 'center',
@@ -1139,7 +1181,7 @@ return StyleSheet.create({
   },
   greetingSub: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.3,
   },

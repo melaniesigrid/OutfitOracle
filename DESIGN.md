@@ -210,23 +210,25 @@ Luxury warmth. Amber-gold accent, tobacco-dark header, Cormorant display.
 
 ### Electric
 
-TREVO-inspired. Vivid cobalt throughout, hot-pink accent, maximum-weight Syne display. The most distinct theme — violates every warm-editorial convention deliberately.
+Nightclub editorial. Electric keeps the hot-pink/Syne attitude, but the reading plane is now deep electric navy rather than full-screen bright cobalt. Bright cobalt survives as edges, dividers, and energy; small text sits on dark surfaces where it can pass contrast.
 
 | Token | Value |
 |---|---|
-| `bg` | `#1E2DFF` vivid electric blue — scrollable content surface |
-| `bgDark` | `#0A15CC` deeper blue — header and hero panels |
-| `bgSurface` | `#2538FF` section surfaces |
-| `bgCard` | `#3040FF` card surfaces |
-| `bgCardAlt` | `#2538FF` |
+| `bg` | `#050B46` deep electric navy — primary reading surface |
+| `bgDark` | `#02031F` near-black indigo — header and hero panels |
+| `bgSurface` | `#060D5A` raised navy section surface |
+| `bgCard` | `#07106B` cobalt-tinted card surface |
+| `bgCardAlt` | `#060D5A` |
 | `textPrimary` | `#FFFFFF` |
-| `textSecondary` | `#C8D0FF` light periwinkle |
-| `textMuted` | `#8090CC` muted blue-white |
-| `border` | `#3248FF` subtle same-palette divider |
+| `textSecondary` | `#EEF2FF` crisp periwinkle-white |
+| `textMuted` | `#BFCBFF` readable small-label colour |
+| `border` | `#2636A8` cobalt divider on navy |
 | `borderHard` | `#FFFFFF` |
-| `borderMid` | `#4858FF` |
+| `borderMid` | `#7185FF` |
 | `scarlet` | `#FF1060` TREVO hot-pink/magenta — the accent |
-| `scarletDim` | `#33001A` dark tint for on-blue overlays |
+| `scarletFg` | `#FF9FC8` readable pink for text/icons on navy surfaces |
+| `scarletDim` | `#360019` dark tint for on-navy overlays |
+| `widgetBg` | `#030629` near-black widget surface |
 | `display font` | Syne (`Syne_800ExtraBold` for display + displayBold, `Syne_600SemiBold` for displayLight, `Syne_700Bold` for serif) |
 | `mono font` | IBM Plex Mono |
 | `isDark` | `true` |
@@ -235,11 +237,13 @@ TREVO-inspired. Vivid cobalt throughout, hot-pink accent, maximum-weight Syne di
 
 **How Electric differs from Morning Paper's Syne use:** Both use Syne for display. Morning Paper: `Syne_700Bold` display (editorial warmth). Electric: `Syne_800ExtraBold` display (maximum-weight, graphic impact). Morning Paper mono: Space Mono. Electric mono: IBM Plex Mono. Visually and typographically distinct.
 
-**TodayScreen treatment:** `isWarmTheme = true`, `isBannerTheme = true`. Hero temperature displays in `scarlet` (hot-pink `#FF1060`) against the deep cobalt header. The `isWarm = true` classification means the surface token S-object resolves text/bg using the theme's token values rather than hardcoded light-surface values.
+**TodayScreen treatment:** `isWarmTheme = false`, `isBannerTheme = true`. Hero temperature displays in `scarlet` (hot-pink `#FF1060`) against the near-black indigo header. Widget labels use Electric's semantic text tokens instead of low-opacity white, so 9–10px mono labels remain legible.
 
 **Scarlet discipline:** Electric uses the accent freely (Classic-style), not the one-per-screen restriction. Hot pink on cobalt blue is graphic, not decorative.
 
-**Mood:** TREVO-inspired. High energy, graphic, fashion-forward. The oracle as nightclub flyer.
+**Contrast contract:** `textMuted` on `bg`, `bgSurface`, `bgCard`, and `widgetBg` must stay above WCAG AA for normal text. Current ratios are 11.55:1, 10.88:1, 10.19:1, and 12.43:1 respectively.
+
+**Mood:** TREVO after midnight. High energy, graphic, fashion-forward, but readable. The oracle as nightclub flyer printed on black stock.
 
 ---
 
@@ -497,6 +501,7 @@ Every token must exist in every theme, even if its value matches Classic. Compon
 | 2026-05-14 | Terra Firma, Morning Paper, Golden Hour added | Three warm-organic themes. Terracotta, sage, amber-gold replace scarlet as the accent. Warm-theme flag pattern introduced in TodayScreen. |
 | 2026-05-14 | Syne for Morning Paper display | Geometric sans replaces Cormorant in Morning Paper. Botanical-clean editorial voice; different font identity from Editorial themes without losing authority. |
 | 2026-05-14 | Electric theme (TREVO-inspired) added | 7th theme. Vivid cobalt `#1E2DFF` throughout (both content surface and header), hot-pink `#FF1060` accent, `Syne_800ExtraBold` display — maximum-weight, graphic-design register. Chosen over lighter electric-blue approach because the vivid full-screen blue is the TREVO identity. |
+| 2026-05-14 | Electric readability revamp | Full-screen cobalt made small periwinkle labels hard to read. Electric moved to deep navy `#050B46` / near-black widget surfaces with readable periwinkle tokens while retaining hot pink and cobalt as accent energy. |
 | 2026-05-14 | Electric uses `Syne_800ExtraBold` not `Syne_700Bold` | Morning Paper already uses `Syne_700Bold`. Distinct weight ensures the two Syne themes read differently — Electric is heavier, more graphic; Morning Paper is editorial. Both use IBM Plex for mono (not Space Mono) to pair precision data labels with vivid blue. |
-| 2026-05-14 | Electric classified as `isWarmTheme = true` | Even though Electric is dark/blue, the warm-theme flag means "use theme tokens for surface values" not "light cream surface." The S-object resolves correctly because `textPrimary = #FFFFFF` and the bg is the vivid blue. |
+| 2026-05-14 | Electric classified as `isWarmTheme = false`, `isBannerTheme = true` | Electric is structurally a dark theme with full-width banner rhythm. Surface readability comes from `widgetBg` + semantic text tokens, not from the warm-theme light-surface resolver. |
 | 2026-05-14 | useFocusEffect wrapped in useCallback | Without it, the focus animation re-fires on every parent re-render (e.g., achievement badge toast), resetting hero opacity to 0 — a visible flicker under the achievements section. `heroOpacity` and `heroY` are stable `useRef` values; the deps array is effectively stable. |

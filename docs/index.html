@@ -1,101 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="theme-light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy Policy — Outfit Oracle</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: Georgia, 'Times New Roman', serif;
-      background: #FAF9F6;
-      color: #1A1714;
-      line-height: 1.7;
-      padding: 48px 24px 80px;
-    }
-
-    .wrap {
-      max-width: 680px;
-      margin: 0 auto;
-    }
-
-    header {
-      border-bottom: 1px solid #DDD7CE;
-      padding-bottom: 32px;
-      margin-bottom: 40px;
-    }
-
-    .wordmark {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 11px;
-      letter-spacing: 4px;
-      color: #9A958E;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-
-    h1 {
-      font-size: 32px;
-      font-weight: normal;
-      letter-spacing: -0.5px;
-      line-height: 1.2;
-      margin-bottom: 8px;
-    }
-
-    .updated {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 12px;
-      color: #9A958E;
-      letter-spacing: 1px;
-    }
-
-    h2 {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 11px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: #C41230;
-      margin: 40px 0 12px;
-    }
-
-    h3 {
-      font-size: 16px;
-      font-weight: normal;
-      margin: 24px 0 8px;
-    }
-
-    p { margin-bottom: 16px; }
-
-    ul {
-      margin: 0 0 16px 24px;
-    }
-
-    ul li { margin-bottom: 6px; }
-
-    a { color: #C41230; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    hr {
-      border: none;
-      border-top: 1px solid #DDD7CE;
-      margin: 40px 0;
-    }
-
-    footer {
-      margin-top: 60px;
-      padding-top: 24px;
-      border-top: 1px solid #DDD7CE;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 11px;
-      color: #9A958E;
-      letter-spacing: 0.5px;
-    }
-  </style>
+  <link rel="stylesheet" href="./theme.css" />
 </head>
 <body>
   <div class="wrap">
-    <header>
+    <header class="page-header">
       <p class="wordmark">Outfit Oracle</p>
       <h1>Privacy Policy</h1>
       <p class="updated">Last updated: 11 May 2026</p>
@@ -103,9 +16,9 @@
 
     <p>Outfit Oracle is a weather-powered fashion advisor that generates outfit recommendations using live weather data and artificial intelligence. This policy explains what data the app handles, how it is used, and your rights.</p>
 
-    <h2>1. Data We Collect</h2>
+    <h2 class="section-title">1. Data We Collect</h2>
 
-    <h3>1.1 City name</h3>
+    <h3 class="subsection-title">1.1 City name</h3>
     <p>When you enter a city or tap a recent city chip, that city name is:</p>
     <ul>
       <li>Sent to Open-Meteo (geocoding + weather, see §3)</li>
@@ -114,7 +27,7 @@
     </ul>
     <p>We do not store city searches on any server we operate.</p>
 
-    <h3>1.2 Device storage</h3>
+    <h3 class="subsection-title">1.2 Device storage</h3>
     <p>The app stores the following data on-device using AsyncStorage. This data never leaves your device except as described in §2:</p>
     <ul>
       <li>Recent cities (last 5 searches)</li>
@@ -124,7 +37,7 @@
       <li>Consult streak and gamification progress</li>
     </ul>
 
-    <h3>1.3 Data we do not collect</h3>
+    <h3 class="subsection-title">1.3 Data we do not collect</h3>
     <ul>
       <li>We do not collect your name, email, phone number, or account credentials</li>
       <li>We do not collect precise location data (GPS coordinates) — only the city name you type or confirm</li>
@@ -132,7 +45,7 @@
       <li>We do not track behaviour across other apps or websites</li>
     </ul>
 
-    <h2>2. How Data Is Used</h2>
+    <h2 class="section-title">2. How Data Is Used</h2>
 
     <p>City name and current weather conditions are combined into a single request sent to our backend proxy (§3) to generate your outfit recommendation. The request includes:</p>
     <ul>
@@ -143,29 +56,29 @@
     </ul>
     <p>This data is used solely to generate your outfit recommendation and is not retained after the response is returned.</p>
 
-    <h2>3. Third-Party Services</h2>
+    <h2 class="section-title">3. Third-Party Services</h2>
 
-    <h3>Open-Meteo</h3>
+    <h3 class="subsection-title">Open-Meteo</h3>
     <p>We use Open-Meteo to geocode your city and fetch current weather conditions. Open-Meteo is a free, open-source weather API that does not require an account or personal data.<br>
     Privacy policy: <a href="https://open-meteo.com" target="_blank">open-meteo.com</a></p>
 
-    <h3>Anthropic (Claude)</h3>
+    <h3 class="subsection-title">Anthropic (Claude)</h3>
     <p>Your weather data and gender preference are sent to Anthropic's Claude API via our backend proxy to generate outfit recommendations. Anthropic processes this data in accordance with their usage policies. No personally identifiable information is included in these requests.<br>
     Privacy policy: <a href="https://anthropic.com/privacy" target="_blank">anthropic.com/privacy</a></p>
 
-    <h3>Cloudflare</h3>
+    <h3 class="subsection-title">Cloudflare</h3>
     <p>Our backend proxy runs on Cloudflare Workers. Cloudflare may log anonymous request metadata (IP address, timestamp) as part of standard infrastructure operation. No request body content is logged by us.<br>
     Privacy policy: <a href="https://www.cloudflare.com/privacypolicy/" target="_blank">cloudflare.com/privacypolicy</a></p>
 
-    <h3>Google Shopping</h3>
+    <h3 class="subsection-title">Google Shopping</h3>
     <p>If you tap "Shop This Piece", the app opens a Google Shopping search in your browser. Google's own privacy policy governs that interaction. No data is sent to Google by the app itself.<br>
     Privacy policy: <a href="https://policies.google.com" target="_blank">policies.google.com</a></p>
 
-    <h3>Sentry</h3>
+    <h3 class="subsection-title">Sentry</h3>
     <p>The app uses Sentry for crash reporting. If a crash occurs, Sentry collects the error stack trace and device type. No personal data or outfit content is included in crash reports.<br>
     Privacy policy: <a href="https://sentry.io/privacy/" target="_blank">sentry.io/privacy</a></p>
 
-    <h2>4. Data Retention</h2>
+    <h2 class="section-title">4. Data Retention</h2>
 
     <ul>
       <li><strong>On-device storage:</strong> All data remains on your device until you clear it in Settings or uninstall the app. No server-side retention.</li>
@@ -173,11 +86,11 @@
       <li><strong>Sentry:</strong> Crash reports are retained for 90 days on Sentry's servers.</li>
     </ul>
 
-    <h2>5. Children's Privacy</h2>
+    <h2 class="section-title">5. Children's Privacy</h2>
 
     <p>Outfit Oracle is not directed at children under 13 (US) or under 16 (EU/UK). We do not knowingly collect data from children. If you believe a child has used the app, contact us and we will ensure any relevant on-device data can be cleared.</p>
 
-    <h2>6. Your Rights</h2>
+    <h2 class="section-title">6. Your Rights</h2>
 
     <p>You may:</p>
     <ul>
@@ -186,18 +99,18 @@
     </ul>
     <p>Depending on your jurisdiction (EU/UK GDPR, CCPA), you may have additional rights including access, portability, and erasure. Because we do not store personal data on our servers, most such requests are fulfilled by clearing your device storage.</p>
 
-    <h2>7. Changes to This Policy</h2>
+    <h2 class="section-title">7. Changes to This Policy</h2>
 
     <p>We may update this policy as the app evolves. Material changes will be noted with a revised "Last updated" date at the top of this page. Continued use of the app after changes constitutes acceptance.</p>
 
-    <h2>8. Contact</h2>
+    <h2 class="section-title">8. Contact</h2>
 
     <p>Questions or concerns about this policy:</p>
     <p><strong>Email:</strong> <a href="mailto:melaniesigridab@gmail.com">melaniesigridab@gmail.com</a></p>
     <p>We will respond within 30 days.</p>
 
-    <footer>
-      &copy; 2026 Outfit Oracle &nbsp;·&nbsp; All rights reserved
+    <footer class="page-footer">
+      &copy; 2026 Outfit Oracle &nbsp;&middot;&nbsp; <a href="./release-notes.html">Release Notes</a> &nbsp;&middot;&nbsp; All rights reserved
     </footer>
   </div>
 </body>

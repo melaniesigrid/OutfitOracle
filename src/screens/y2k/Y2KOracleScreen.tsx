@@ -2,17 +2,20 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   View, Text, TextInput, Pressable, ScrollView, RefreshControl,
   StyleSheet, KeyboardAvoidingView, Platform, StatusBar,
-  Dimensions, Animated, Easing,
+  Dimensions, Animated, Easing, Image, Share,
 } from 'react-native';
+import { captureRef } from 'react-native-view-shot';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useAppData } from '../../contexts/AppContext';
 import { useRecentCities } from '../../hooks/useRecentCities';
+import { useMagicMoment } from '../../hooks/useMagicMoment';
 import { GenderToggle, Gender } from '../../components/GenderToggle';
 import { OccasionPicker, Occasion } from '../../components/OccasionPicker';
 import { CitySuggestions } from '../../components/CitySuggestions';
 import { LoadingOracle } from '../../components/LoadingOracle';
 import { SkeletonResults } from '../../components/SkeletonResults';
+import { ShareCard } from '../../components/ShareCard';
 import { searchCities, CitySuggestion } from '../../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
@@ -32,6 +35,7 @@ export function Y2KOracleScreen() {
   const { y2kFontSubtheme } = useTheme();
   const typo = useMemo(() => getY2KTypography(y2kFontSubtheme), [y2kFontSubtheme]);
   const { formatTemp } = useTempUnit();
+  const { magicOpacity, showMagicMoment, dismissMagicMoment, tryTriggerFirstConsult } = useMagicMoment();
 
   const { oracle, profileCtx, historyCtx, streakCtx } = useAppData();
   const {
@@ -50,6 +54,7 @@ export function Y2KOracleScreen() {
   const debounceRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressSuggestRef = useRef(false);
   const scrollRef          = useRef<ScrollView>(null);
+  const shareCardRef       = useRef<View>(null);
   const btnScale           = useRef(new Animated.Value(1)).current;
   const resultTranslateX   = useRef(new Animated.Value(Dimensions.get('window').width)).current;
   const toggleFade         = useRef(new Animated.Value(1)).current;
@@ -72,9 +77,10 @@ export function Y2KOracleScreen() {
     }
   }, [status]);
 
-  // Record history
+  // Record history + first-consult magic moment
   useEffect(() => {
     if (status === 'done' && !isFromCache && weather && verdict) {
+      tryTriggerFirstConsult(historyCtx.history.length);
       historyCtx.addEntry(city, gender, weather, verdict, occasion);
       streakCtx.recordConsult();
     }
@@ -156,6 +162,15 @@ export function Y2KOracleScreen() {
       setTimeout(() => scrollRef.current?.scrollTo({ y: 280, animated: true }), 400);
     } catch { /* GPS silent fallback */ }
     finally { setLocationLoading(false); }
+  };
+
+  const handleShare = async () => {
+    if (!shareCardRef.current || !verdict) return;
+    trackShareTapped(city, verdict.vibe);
+    try {
+      const uri = await captureRef(shareCardRef, { format: 'png', quality: 1 });
+      await Share.share({ url: uri });
+    } catch { /* cancelled */ }
   };
 
   return (
@@ -359,6 +374,14 @@ export function Y2KOracleScreen() {
 
               {/* Bottom actions */}
               <Pressable
+                onPress={handleShare}
+                style={styles.shareBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Share the Oracle's verdict"
+              >
+                <Text style={styles.shareBtnText}>✦ SHARE THE LOOK ✦</Text>
+              </Pressable>
+              <Pressable
                 style={styles.resetBtn}
                 onPress={() => { suppressSuggestRef.current = false; reset(); setCity(''); }}
                 accessibilityRole="button"
@@ -369,8 +392,27 @@ export function Y2KOracleScreen() {
             </Animated.View>
           ) : null}
 
+          {/* Off-screen share card */}
+          {showResult && (
+            <View style={{ position: 'absolute', left: Dimensions.get('window').width + 10, top: 0 }}>
+              <ShareCard ref={shareCardRef} weather={weather!} verdict={verdict!} occasion={occasion} />
+            </View>
+          )}
+
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {showMagicMoment && verdict && (
+        <Animated.View style={[styles.magicOverlay, { opacity: magicOpacity }]} pointerEvents="box-none">
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismissMagicMoment} accessibilityRole="button" accessibilityLabel="Continue">
+            <View style={styles.magicContent}>
+              <Image source={require('../../logo-dark.png')} style={styles.magicLogo} resizeMode="contain" />
+              <Text style={[styles.magicCity, { fontFamily: typo.displaySmall.fontFamily }]}>{city}</Text>
+              <Text style={[styles.magicVibe, { fontFamily: typo.monoMicro.fontFamily }]}>{verdict.vibe.toUpperCase()}</Text>
+            </View>
+          </Pressable>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -418,13 +460,13 @@ const styles = StyleSheet.create({
   },
   headerSub: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1.5,
     color: y2kTokens.mutedPurple,
   },
   headerDate: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
     color: y2kTokens.mutedPurple,
   },
@@ -461,7 +503,7 @@ const styles = StyleSheet.create({
   },
   inputQ: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1.5,
     color: y2kTokens.hotPink,
     marginBottom: spacing.sm,
@@ -484,7 +526,7 @@ const styles = StyleSheet.create({
   },
   locationBtnText: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1,
     color: y2kTokens.mutedPurple,
   },
@@ -496,7 +538,7 @@ const styles = StyleSheet.create({
   },
   recentsLabel: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: y2kTokens.mutedPurple,
     marginBottom: spacing.sm,
@@ -519,7 +561,7 @@ const styles = StyleSheet.create({
   },
   recentChipText: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.deepPurple,
     letterSpacing: 0.5,
   },
@@ -563,7 +605,7 @@ const styles = StyleSheet.create({
   },
   errorLabel: {
     fontFamily: 'IBMPlexMono_500Medium',
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: y2kTokens.hotPink,
     marginBottom: spacing.sm,
@@ -600,13 +642,13 @@ const styles = StyleSheet.create({
   },
   cacheBadgeText: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: y2kTokens.mutedPurple,
   },
   cacheRefresh: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.hotPink,
     letterSpacing: 0.5,
   },
@@ -629,7 +671,7 @@ const styles = StyleSheet.create({
   },
   lookToggleText: {
     fontFamily: 'IBMPlexMono_400Regular',
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: y2kTokens.deepPurple,
   },
@@ -638,6 +680,26 @@ const styles = StyleSheet.create({
   },
 
   // Bottom actions
+  shareBtn: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    paddingVertical: 16,
+    backgroundColor: y2kTokens.hotPink,
+    alignItems: 'center',
+    borderRadius: 0,
+    borderWidth: 2,
+    borderColor: '#000000',
+    shadowColor: '#000000',
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+  },
+  shareBtnText: {
+    fontFamily: 'Knewave_400Regular',
+    fontSize: 16,
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
   resetBtn: {
     alignSelf: 'center',
     paddingVertical: spacing.md,
@@ -647,5 +709,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Knewave_400Regular',
     fontSize: 22,
     color: y2kTokens.mutedPurple,
+  },
+  magicOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: y2kTokens.deepPurple,
+    zIndex: 100,
+  },
+  magicContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  magicLogo: {
+    width: '72%',
+    height: 100,
+    marginBottom: spacing.xxl,
+    tintColor: y2kTokens.lime,
+  },
+  magicCity: {
+    fontSize: 48,
+    color: y2kTokens.cream,
+    letterSpacing: -0.5,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  magicVibe: {
+    fontSize: 11,
+    color: y2kTokens.hotPink,
+    letterSpacing: 3,
+    textAlign: 'center',
   },
 });

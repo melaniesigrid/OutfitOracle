@@ -62,7 +62,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     tabLabel: {
       fontFamily: fonts.mono,
-      fontSize: 9,
+      fontSize: 11,
       letterSpacing: 1.5,
       textTransform: 'uppercase',
     },

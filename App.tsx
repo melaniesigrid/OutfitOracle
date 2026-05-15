@@ -25,6 +25,17 @@ import {
   Baloo2_800ExtraBold,
 } from '@expo-google-fonts/baloo-2';
 import { Knewave_400Regular } from '@expo-google-fonts/knewave';
+import {
+  Montserrat_500Medium,
+  Montserrat_700Bold,
+  Montserrat_900Black,
+} from '@expo-google-fonts/montserrat';
+import {
+  Syne_400Regular,
+  Syne_600SemiBold,
+  Syne_700Bold,
+  Syne_800ExtraBold,
+} from '@expo-google-fonts/syne';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Sentry from '@sentry/react-native';
 import { AppDataProvider } from './src/contexts/AppContext';
@@ -57,6 +68,13 @@ function App() {
     Baloo2_700Bold,
     Baloo2_800ExtraBold,
     Knewave_400Regular,
+    Montserrat_500Medium,
+    Montserrat_700Bold,
+    Montserrat_900Black,
+    Syne_400Regular,
+    Syne_600SemiBold,
+    Syne_700Bold,
+    Syne_800ExtraBold,
   });
 
   // If fonts fail to load, dismiss the splash so the app isn't bricked.

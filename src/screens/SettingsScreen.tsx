@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
   Platform, StatusBar, Alert, Linking, Switch,
@@ -8,10 +8,16 @@ import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, ThemeName, THEMES, spacing, isY2KTheme } from '../theme';
+import { AppColors, AppFonts, ThemeName, THEMES, spacing, isY2KTheme, isMondrianTheme } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { MondrianSettingsScreen } from './mondrian/MondrianSettingsScreen';
 import { useTempUnit, TempUnit } from '../contexts/TemperatureContext';
 import { Y2KFontSubtheme, Y2K_SUBTHEME_LABELS } from '../theme/y2kTypography';
+import {
+  ANALYTICS_ENABLED_KEY,
+  getAnalyticsEnabledPreference,
+  setAnalyticsEnabledPreference,
+} from '../services/analytics';
 
 const ALL_KEYS = [
   '@outfit_oracle_history',
@@ -27,6 +33,7 @@ const ALL_KEYS = [
   '@outfit_oracle_temp_unit',
   '@outfit_oracle_y2k_font_subtheme',
   '@outfit_oracle_magic_shown',
+  ANALYTICS_ENABLED_KEY,
 ];
 
 const SOFT_KEYS = [
@@ -50,6 +57,9 @@ const THEME_OPTIONS: { id: ThemeName; label: string }[] = [
   { id: 'golden-hour',      label: 'Golden Hour' },
   { id: 'electric',         label: 'Electric' },
   { id: 'y2k',              label: 'Y2K ♡' },
+  { id: 'neo-brutal-light', label: 'Neo-Brutal Light' },
+  { id: 'neo-brutal-dark',  label: 'Neo-Brutal Dark' },
+  { id: 'mondrian',         label: 'Mondrian' },
 ];
 
 const Y2K_FONT_OPTIONS: { id: Y2KFontSubtheme; label: string; sub: string }[] = [
@@ -63,6 +73,12 @@ const TEMP_OPTIONS: { id: TempUnit; label: string }[] = [
 ];
 
 export function SettingsScreen() {
+  const { themeName } = useTheme();
+  if (isMondrianTheme(themeName)) return <MondrianSettingsScreen />;
+  return <EditorialSettingsScreen />;
+}
+
+function EditorialSettingsScreen() {
   const { colors, fonts, themeName, setTheme, y2kFontSubtheme, setY2KFontSubtheme } = useTheme();
   const { unit: tempUnit, setUnit: setTempUnit } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
@@ -70,6 +86,26 @@ export function SettingsScreen() {
   const { historyCtx } = useAppData();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const showY2KFonts = isY2KTheme(themeName);
+
+  useEffect(() => {
+    let mounted = true;
+    getAnalyticsEnabledPreference()
+      .then(enabled => {
+        if (mounted) setAnalyticsEnabled(enabled);
+      })
+      .catch(() => {
+        if (mounted) setAnalyticsEnabled(true);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  function updateAnalyticsEnabled(enabled: boolean) {
+    setAnalyticsEnabled(enabled);
+    setAnalyticsEnabledPreference(enabled).catch(() => {
+      setAnalyticsEnabled(!enabled);
+      Alert.alert('Setting not saved', 'The analytics preference could not be updated. Please try again.');
+    });
+  }
 
   async function clearHistory() {
     Alert.alert(
@@ -135,7 +171,7 @@ export function SettingsScreen() {
           <View style={styles.themeRow}>
             {THEME_OPTIONS.map(opt => {
               const active = themeName === opt.id;
-              const accentColor = THEMES[opt.id].colors.scarlet;
+              const t = THEMES[opt.id];
               return (
                 <Pressable
                   key={opt.id}
@@ -145,8 +181,12 @@ export function SettingsScreen() {
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={opt.label}
                 >
-                  <View style={[styles.themeChipSwatch, { backgroundColor: accentColor }]} />
-                  <Text style={[styles.themeChipText, active && styles.themeChipTextActive]}>
+                  <View style={styles.themeChipPalette}>
+                    <View style={[styles.paletteBlock, { backgroundColor: t.colors.bg }]} />
+                    <View style={[styles.paletteBlock, { backgroundColor: t.colors.scarlet }]} />
+                    <View style={[styles.paletteBlock, { backgroundColor: t.colors.bgDark }]} />
+                  </View>
+                  <Text style={[styles.themeChipText, active && styles.themeChipTextActive]} numberOfLines={1}>
                     {opt.label}
                   </Text>
                 </Pressable>
@@ -158,19 +198,19 @@ export function SettingsScreen() {
         {/* ── TEMPERATURE ── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>TEMPERATURE</Text>
-          <View style={styles.themeRow}>
+          <View style={styles.toggleRow}>
             {TEMP_OPTIONS.map(opt => {
               const active = tempUnit === opt.id;
               return (
                 <Pressable
                   key={opt.id}
-                  style={[styles.themeChip, active && styles.themeChipActive, { width: '47%' }]}
+                  style={[styles.toggleChip, active && styles.toggleChipActive]}
                   onPress={() => setTempUnit(opt.id)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={opt.label}
                 >
-                  <Text style={[styles.themeChipText, active && styles.themeChipTextActive, { fontSize: 13 }]}>
+                  <Text style={[styles.toggleChipText, active && styles.toggleChipTextActive]}>
                     {opt.label}
                   </Text>
                 </Pressable>
@@ -183,26 +223,24 @@ export function SettingsScreen() {
         {showY2KFonts && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Y2K FONT STYLE</Text>
-            <View style={styles.themeRow}>
+            <View style={styles.toggleRow}>
               {Y2K_FONT_OPTIONS.map(opt => {
                 const active = y2kFontSubtheme === opt.id;
                 return (
                   <Pressable
                     key={opt.id}
-                    style={[styles.themeChip, active && styles.themeChipActive]}
+                    style={[styles.y2kChip, active && styles.y2kChipActive]}
                     onPress={() => setY2KFontSubtheme(opt.id)}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: active }}
                     accessibilityLabel={opt.label}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.themeChipText, active && styles.themeChipTextActive]}>
-                        {opt.label}
-                      </Text>
-                      <Text style={[styles.themeChipText, { fontSize: 8, opacity: 0.6 }]}>
-                        {opt.sub}
-                      </Text>
-                    </View>
+                    <Text style={[styles.themeChipText, active && styles.themeChipTextActive]}>
+                      {opt.label}
+                    </Text>
+                    <Text style={[styles.themeChipText, { fontSize: 11, opacity: 0.6, marginTop: 2 }]}>
+                      {opt.sub}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -221,8 +259,11 @@ export function SettingsScreen() {
             accessibilityLabel="Clear outfit history"
           >
             <View style={styles.rowLeft}>
-              <MaterialCommunityIcons name="history" size={16} color="rgba(250,249,246,0.55)" />
-              <Text style={styles.rowText}>Clear outfit history</Text>
+              <MaterialCommunityIcons name="history" size={16} color="rgba(250,249,246,0.50)" />
+              <View>
+                <Text style={styles.rowText}>Clear outfit history</Text>
+                <Text style={styles.rowSub}>Keeps streak and style profile</Text>
+              </View>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={16} color="rgba(250,249,246,0.25)" />
           </Pressable>
@@ -237,7 +278,10 @@ export function SettingsScreen() {
           >
             <View style={styles.rowLeft}>
               <MaterialCommunityIcons name="delete-outline" size={16} color={colors.scarlet} />
-              <Text style={[styles.rowText, styles.rowTextDanger]}>Reset all data</Text>
+              <View>
+                <Text style={[styles.rowText, styles.rowTextDanger]}>Reset all data</Text>
+                <Text style={styles.rowSub}>Removes everything, including profile</Text>
+              </View>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={16} color="rgba(196,18,48,0.40)" />
           </Pressable>
@@ -249,7 +293,7 @@ export function SettingsScreen() {
 
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <MaterialCommunityIcons name="chart-line" size={16} color="rgba(250,249,246,0.55)" />
+              <MaterialCommunityIcons name="chart-line" size={16} color="rgba(250,249,246,0.50)" />
               <View>
                 <Text style={styles.rowText}>Usage analytics</Text>
                 <Text style={styles.rowSub}>Helps improve the Oracle. No personal data.</Text>
@@ -257,7 +301,7 @@ export function SettingsScreen() {
             </View>
             <Switch
               value={analyticsEnabled}
-              onValueChange={setAnalyticsEnabled}
+              onValueChange={updateAnalyticsEnabled}
               trackColor={{ false: 'rgba(250,249,246,0.15)', true: colors.scarlet }}
               thumbColor="#FAF9F6"
             />
@@ -270,7 +314,7 @@ export function SettingsScreen() {
 
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <MaterialCommunityIcons name="information-outline" size={16} color="rgba(250,249,246,0.55)" />
+              <MaterialCommunityIcons name="information-outline" size={16} color="rgba(250,249,246,0.50)" />
               <Text style={styles.rowText}>Version</Text>
             </View>
             <Text style={styles.rowValue}>{APP_VERSION}</Text>
@@ -285,7 +329,7 @@ export function SettingsScreen() {
             accessibilityLabel="Open privacy policy"
           >
             <View style={styles.rowLeft}>
-              <MaterialCommunityIcons name="shield-outline" size={16} color="rgba(250,249,246,0.55)" />
+              <MaterialCommunityIcons name="shield-outline" size={16} color="rgba(250,249,246,0.50)" />
               <Text style={styles.rowText}>Privacy policy</Text>
             </View>
             <MaterialCommunityIcons name="open-in-new" size={14} color="rgba(250,249,246,0.25)" />
@@ -295,7 +339,7 @@ export function SettingsScreen() {
 
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <MaterialCommunityIcons name="weather-partly-cloudy" size={16} color="rgba(250,249,246,0.55)" />
+              <MaterialCommunityIcons name="weather-partly-cloudy" size={16} color="rgba(250,249,246,0.50)" />
               <Text style={styles.rowText}>Weather data</Text>
             </View>
             <Text style={styles.rowValue}>Open-Meteo</Text>
@@ -305,7 +349,7 @@ export function SettingsScreen() {
 
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <MaterialCommunityIcons name="brain" size={16} color="rgba(250,249,246,0.55)" />
+              <MaterialCommunityIcons name="brain" size={16} color="rgba(250,249,246,0.50)" />
               <Text style={styles.rowText}>AI model</Text>
             </View>
             <Text style={styles.rowValue}>Claude Sonnet 4.6</Text>
@@ -324,7 +368,16 @@ export function SettingsScreen() {
 
 const HEADER_TOP = Platform.OS === 'ios' ? 56 : 32;
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts) {
+  // Settings always renders on a dark surface for contrast against the main UI
+  const onDark = 'rgba(250,249,246,';
+  const text    = `${onDark}0.85)`;
+  const textSub = `${onDark}0.35)`;
+  const border  = `${onDark}0.09)`;
+  const divider = `${onDark}0.06)`;
+  const icon    = `${onDark}0.50)`;
+
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -337,19 +390,17 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(250,249,246,0.08)',
+    borderBottomColor: divider,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36,
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
     fontFamily: fonts.mono,
     fontSize: 11,
     letterSpacing: 3,
-    color: 'rgba(250,249,246,0.60)',
+    color: textSub,
   },
   content: {
     paddingVertical: spacing.lg,
@@ -361,17 +412,17 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     marginHorizontal: spacing.lg,
     marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.09)',
+    borderColor: border,
   },
   sectionLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2.5,
-    color: 'rgba(250,249,246,0.30)',
+    color: textSub,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(250,249,246,0.06)',
+    borderBottomColor: divider,
   },
 
   /* Rows */
@@ -381,7 +432,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
-    minHeight: 52,
+    minHeight: 56,
   },
   rowLeft: {
     flexDirection: 'row',
@@ -392,72 +443,110 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   rowText: {
     fontFamily: fonts.mono,
     fontSize: 13,
-    color: 'rgba(250,249,246,0.80)',
+    color: text,
     letterSpacing: 0.3,
   },
   rowTextDanger: {
-    color: colors.scarlet,
+    color: colors.scarletFg ?? colors.scarlet,
   },
   rowSub: {
     fontFamily: fonts.mono,
-    fontSize: 10,
-    color: 'rgba(250,249,246,0.30)',
+    fontSize: 12,
+    color: textSub,
     letterSpacing: 0.3,
     marginTop: 2,
   },
   rowValue: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: 'rgba(250,249,246,0.35)',
+    color: textSub,
     letterSpacing: 0.5,
   },
   rowDivider: {
     height: 1,
-    backgroundColor: 'rgba(250,249,246,0.06)',
+    backgroundColor: divider,
     marginHorizontal: spacing.md,
   },
 
-  /* Theme picker */
+  /* Theme picker — 2-col grid with palette preview */
   themeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    padding: spacing.sm,
+    gap: spacing.sm,
+  },
+  themeChip: {
+    width: '47%',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: border,
+    gap: 6,
+  },
+  themeChipPalette: {
+    flexDirection: 'row',
+    height: 12,
+    overflow: 'hidden',
+    borderRadius: 1,
+  },
+  paletteBlock: { flex: 1 },
+  themeChipActive: {
+    borderColor: colors.scarlet,
+    backgroundColor: `${colors.scarlet}14`,
+  },
+  themeChipText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: textSub,
+  },
+  themeChipTextActive: {
+    color: text,
+  },
+
+  /* Temperature / Y2K font toggle */
+  toggleRow: {
+    flexDirection: 'row',
     gap: spacing.sm,
     padding: spacing.md,
   },
-  themeChip: {
+  toggleChip: {
+    flex: 1,
+    paddingVertical: 11,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: border,
+  },
+  toggleChipActive: {
+    borderColor: colors.scarlet,
+    backgroundColor: `${colors.scarlet}18`,
+  },
+  toggleChipText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: textSub,
+    letterSpacing: 0.5,
+  },
+  toggleChipTextActive: { color: text },
+
+  /* Y2K font picker (2-col with subtitle) */
+  y2kChip: {
     width: '47%',
     paddingVertical: 11,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.18)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    borderColor: border,
   },
-  themeChipSwatch: {
-    width: 8,
-    height: 8,
-    flexShrink: 0,
-  },
-  themeChipActive: {
+  y2kChipActive: {
     borderColor: colors.scarlet,
     backgroundColor: `${colors.scarlet}18`,
-  },
-  themeChipText: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    letterSpacing: 0.8,
-    color: 'rgba(250,249,246,0.40)',
-  },
-  themeChipTextActive: {
-    color: '#FAF9F6',
   },
 
   /* Footer */
   footer: {
     fontFamily: fonts.mono,
-    fontSize: 10,
-    color: 'rgba(250,249,246,0.20)',
+    fontSize: 12,
+    color: `${onDark}0.18)`,
     letterSpacing: 0.3,
     lineHeight: 16,
     textAlign: 'center',

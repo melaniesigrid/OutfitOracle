@@ -6,6 +6,75 @@
 
 ---
 
+## CEO Launch Command Center
+
+> Working assumption as of 2026/05/15: the next business outcome is not another feature. It is getting Outfit Oracle onto a real iPhone through TestFlight, then using real-device feedback to decide what earns a public-launch slot.
+
+### Launch Goal
+
+**Get the app downloadable on Melanie's phone via internal TestFlight as fast as possible.**
+
+Internal TestFlight is the shortest path because it does **not** require App Review for internal testers. Public App Store release and external TestFlight can follow after the first real-device pass.
+
+### CEO Priority Stack
+
+1. **Ship an internal TestFlight build**
+   - Finish the two archive blockers: Sentry DSN and `PrivacyInfo.xcprivacy` Xcode reference.
+   - Create the App Store Connect record.
+   - Archive from Xcode and upload.
+   - Add Melanie as an internal tester and install from the TestFlight app.
+
+2. **Verify the product on-device**
+   - Complete one full first-run path: install -> onboarding -> first consult -> save -> share -> settings.
+   - Run the 15-minute VoiceOver pass.
+   - Confirm Cloudflare Worker, rate limiting, Sentry, analytics opt-out, and privacy policy links behave correctly in the build.
+
+3. **Fix only launch-blocking issues**
+   - Blocker = crash, Apple rejection risk, broken first consult, unreadable UI, privacy/compliance gap, or trust-breaking data behavior.
+   - Anything else moves to post-TestFlight unless it directly improves first-session conversion.
+
+4. **Prepare public launch assets**
+   - Screenshots, app subtitle/keywords, beta feedback email, support/privacy URLs, and public release notes.
+
+### Tentative Launch Calendar
+
+| Date | Goal | Owner | Exit Criteria |
+|---|---|---|---|
+| 2026/05/15 | **Internal TestFlight readiness sprint** | Engineering | `npm run typecheck`, `npm test -- --runInBand`, Sentry DSN set, `PrivacyInfo.xcprivacy` added to Xcode, App Store Connect record created |
+| 2026/05/15 | **Archive + upload build** | Engineering | Xcode archive succeeds, build appears in App Store Connect, internal testing enabled |
+| 2026/05/15 | **Download on phone** | CEO / QA | TestFlight install succeeds on Melanie's iPhone and one first consult completes |
+| 2026/05/16 | **Device QA day** | CEO / QA | First-run, settings, share, saved looks, map, themes, VoiceOver, offline cache, and analytics opt-out checked on a real device |
+| 2026/05/17 | **Launch-blocker fix window** | Engineering | Only P0/P1 issues from device QA fixed; new build uploaded if needed |
+| 2026/05/18 | **External beta prep** | CEO | App Store screenshots captured, subtitle/keywords finalized, beta feedback email set |
+| 2026/05/19 | **External TestFlight submission** | CEO / Engineering | Build submitted for beta review if internal QA is clean |
+| 2026/05/20-2026/05/23 | **External beta observation** | CEO | 5-20 trusted testers invited; Sentry checked daily; feedback triaged into blocker / later |
+| 2026/05/24 | **Public launch decision** | CEO | Go / no-go decision based on crash-free sessions, first-consult reliability, and feedback severity |
+| 2026/05/25-2026/05/29 | **Public release window** | CEO / Engineering | Public App Store submission or one final beta build, depending on the launch decision |
+
+### Calendar Import
+
+An importable phone calendar lives at `docs/launch-calendar.ics`. After this repo is pushed and GitHub Pages refreshes, open:
+
+`https://melaniesigrid.github.io/OutfitOracle/launch-calendar.ics`
+
+Use that file for reminders. Use this `Roadmap.md` section as the source of truth when dates change.
+
+### Update Directives
+
+- **Daily launch check-in:** update this section once per day until internal TestFlight is installed on a phone.
+- **Date format:** use `YYYY/MM/DD` in markdown tables and ISO dates inside `.ics`.
+- **Status discipline:** every calendar line must have one owner and one measurable exit criterion.
+- **Scope rule:** no new Phase 2+ feature enters the launch calendar unless it removes a launch blocker or materially improves first-session conversion.
+- **Triage rule:** classify device feedback as:
+  - `P0 Launch Blocker`: crash, broken install, broken first consult, Apple rejection risk.
+  - `P1 Fix Before External Beta`: visible trust, privacy, accessibility, or core UX issue.
+  - `P2 Post-TestFlight`: polish or delight that does not block learning.
+  - `P3 Later`: monetisation, identity, widgets, leaderboard, or platform expansion.
+- **Calendar maintenance:** when this table changes, update `docs/launch-calendar.ics` in the same commit so phone reminders stay aligned.
+- **CEO rule:** the fastest path to learning is a build on a real phone. Prefer shipping a controlled internal beta over perfecting the backlog.
+
+---
+
 ## Bugs
 
 > Active bugs only. Move to **Fixed Bugs** once resolved with a date and one-line summary of the fix.
@@ -29,6 +98,7 @@
 | 9 | 2026/05/11 | All remaining 8–9px informational labels | Bumped to 10px across all components |
 | 10 | 2026/05/11 | City suggestions appeared flush left | Added `marginHorizontal: spacing.lg` to `CitySuggestions` container |
 | 11 | 2026/05/12 | Accessories Google Shopping searched all items as one query | `splitItems()` splits on `,` and `and`; renders one Pressable per piece |
+| 12 | 2026/05/14 | Settings analytics toggle looked real but did not control tracking | Added persisted `@outfit_oracle_analytics_enabled` preference, gated PostHog calls in `analytics.ts`, loaded the stored switch state in Settings, and covered opt-out behavior with tests |
 
 ---
 
@@ -249,6 +319,7 @@
 - [x] **useFocusEffect flicker fix** — TodayScreen hero opacity animation wrapped in `useCallback([heroOpacity, heroY])`; prevents re-fire on parent re-render (e.g., badge toast); fixes flash under achievements section ✅ 2026/05/14
 - [x] **Three-theme system** — Classic (IBM Plex Mono, broad scarlet), Editorial Light (Space Mono, strict one-scarlet-per-screen, cream bg), Editorial Dark (Space Mono, warm near-black palette); `ThemeContext` + `useTheme`; persisted at `@outfit_oracle_theme`; ORACLE THEME picker in SettingsScreen; makeStyles pattern across all 26 theme-importing files; TodayScreen scroll background themes to cream (light) or warm near-black (dark) ✅ 2026/05/14
 - [x] **Founding Member badge** — first 100 unique devices earn a scarlet "FOUNDING MEMBER" chip in YouScreen; server-controlled via KV; LLM trust boundary enforced (`delete verdict.foundingMember` before KV logic); X-Device-ID UUID validation + identifier requirement added to Worker; KV reads parallelized ✅ 2026/05/13
+- [x] **Analytics opt-out enforcement** — Settings "Usage analytics" now persists to `@outfit_oracle_analytics_enabled`; `analytics.ts` reads the preference before generating a device ID or sending PostHog events; full reset clears the key; analytics tests cover default enabled, explicit opt-out, persistence, and no-network-call behavior ✅ 2026/05/14
 - [x] **Test suite (ts-jest)** — 43 tests across 4 suites covering oracle type shapes, analytics events, weather badge exports, and proxy routing; compatible with Node 23 via ts-jest (jest-expo incompatible with Node 23) ✅ 2026/05/13
 - [x] **Mandatory onboarding gate** — skip button removed from StyleOnboarding; AppNavigator gates tab navigator on profileState.status; returning skipped users redirected to style step on next launch ✅ 2026/05/13
 - [x] **Achievement categories + Fashion Mythology** — 127 achievements across 15 named categories; 27 new pop culture badges (Carrie Bradshaw, Miranda Priestly, Euphoria, Succession, Bridgerton, etc.); YouScreen now groups earned achievements by category with scarlet headers; locked badges shown as a collapsed count at the bottom ✅ 2026/05/13

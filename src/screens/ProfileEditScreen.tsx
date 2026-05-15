@@ -249,8 +249,8 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     borderBottomColor: colors.border,
   },
   backBtn: { fontFamily: fonts.mono, fontSize: 11, color: colors.textSecondary, letterSpacing: 0.5 },
-  headerTitle: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2.5, color: colors.textMuted },
-  saveBtn: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.scarlet, letterSpacing: 0.5 },
+  headerTitle: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textMuted },
+  saveBtn: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.scarletFg, letterSpacing: 0.5 },
   content: { paddingBottom: 60 },
 
   field: {
@@ -261,7 +261,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   fieldLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: colors.textMuted,
     marginBottom: spacing.md,
@@ -274,7 +274,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     paddingVertical: spacing.sm,
   },
   fieldRule: { height: 1, backgroundColor: colors.borderHard, marginBottom: spacing.sm },
-  fieldHint: { fontFamily: fonts.mono, fontSize: 9, color: colors.textMuted, letterSpacing: 0.3, lineHeight: 15 },
+  fieldHint: { fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted, letterSpacing: 0.3, lineHeight: 15 },
 
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
@@ -295,7 +295,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   budgetLeft: { flex: 1 },
   budgetLabel: { fontFamily: fonts.displayBold, fontSize: 18, color: colors.textSecondary, letterSpacing: -0.2 },
   budgetLabelActive: { color: colors.textPrimary },
-  budgetNote: { fontFamily: fonts.mono, fontSize: 9, color: colors.textMuted, letterSpacing: 0.3, marginTop: 2 },
+  budgetNote: { fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted, letterSpacing: 0.3, marginTop: 2 },
   budgetDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.scarlet },
 
   personalityRow: {
@@ -307,7 +307,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   personalityLeft: { flex: 1 },
   personalityTitle: { fontFamily: fonts.displayBold, fontSize: 18, color: colors.textSecondary, letterSpacing: -0.2 },
   personalityTitleActive: { color: colors.textPrimary },
-  personalityQuote: { fontFamily: fonts.serif, fontSize: 13, color: colors.scarlet, marginTop: 2, letterSpacing: -0.1 },
+  personalityQuote: { fontFamily: fonts.serif, fontSize: 13, color: colors.scarletFg, marginTop: 2, letterSpacing: -0.1 },
 
   tempRow: {
     flexDirection: 'row',
@@ -337,7 +337,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   tempBtnNote: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 0.2,
     textAlign: 'center',
@@ -374,7 +374,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     borderWidth: 2,
   },
   colorSwatchAvoided: {
-    borderColor: colors.scarlet,
+    borderColor: colors.scarletFg,
     borderWidth: 2,
     opacity: 0.6,
   },
@@ -386,11 +386,11 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   colorLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 0.5,
     textAlign: 'center',
   },
   colorLabelLoved:   { color: colors.textPrimary },
-  colorLabelAvoided: { color: colors.scarlet },
+  colorLabelAvoided: { color: colors.scarletFg },
 }); }

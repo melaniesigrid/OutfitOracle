@@ -115,7 +115,7 @@ export function HourlyGraph({
                 width: GRAPH_COL_W,
                 textAlign: 'center',
                 fontFamily: monoFont,
-                fontSize: 9,
+                fontSize: 11,
                 color: textFaint,
                 letterSpacing: 0.3,
               }}>{h.time}</Text>
@@ -150,7 +150,7 @@ export function HourlyGraph({
                   width: GRAPH_COL_W,
                   textAlign: 'center',
                   fontFamily: monoFont,
-                  fontSize: 9,
+                  fontSize: 11,
                   color: accentColor,
                   letterSpacing: 0.2,
                 }}>{h.precipProb}%</Text>

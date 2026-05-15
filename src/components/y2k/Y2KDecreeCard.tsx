@@ -111,13 +111,13 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   fileLabel: {
     fontFamily: typo.monoLabel.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: y2kTokens.mutedPurple,
   },
   fileRight: {
     fontFamily: typo.monoData.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1.5,
     color: y2kTokens.hotPink,
   },
@@ -148,7 +148,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   ratingLabel: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
     color: y2kTokens.mutedPurple,
   },
@@ -172,7 +172,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   ratingNum: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.mutedPurple,
     letterSpacing: 1,
   },

@@ -51,7 +51,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     label: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       letterSpacing: 2.5,
       color: colors.scarlet,
     },
@@ -65,7 +65,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     bullet: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       color: colors.scarlet,
       lineHeight: 22,
     },

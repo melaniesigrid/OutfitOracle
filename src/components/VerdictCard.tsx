@@ -78,7 +78,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     eyebrowText: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       letterSpacing: 2.5,
       color: colors.textMuted,
     },
@@ -115,7 +115,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     ratingLabel: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       letterSpacing: 2,
       color: colors.textMuted,
     },
@@ -136,7 +136,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     ratingNum: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       color: colors.textMuted,
       letterSpacing: 1,
     },

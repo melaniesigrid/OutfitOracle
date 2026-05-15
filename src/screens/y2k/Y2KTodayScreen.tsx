@@ -90,8 +90,8 @@ const sLabel = {
   wrap: { marginBottom: spacing.md, paddingHorizontal: spacing.lg },
   rule: { height: 1, backgroundColor: y2kTokens.deepPurple, opacity: 0.35 },
   row:  { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, paddingVertical: 5 },
-  left: { fontSize: 10, letterSpacing: 2, color: y2kTokens.mutedPurple },
-  right: { fontSize: 10, letterSpacing: 1.5, color: y2kTokens.hotPink },
+  left: { fontSize: 12, letterSpacing: 2, color: y2kTokens.mutedPurple },
+  right: { fontSize: 12, letterSpacing: 1.5, color: y2kTokens.hotPink },
 };
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -184,9 +184,8 @@ export function Y2KTodayScreen() {
             {/* ── WEATHER HERO ── */}
             <SectionLabel left="FOR THE RECORD ♡" right="// ON FILE" typo={typo} />
             <View style={styles.section}>
-              <Y2KCard shadow>
-                {/* Cream header: city + condition */}
-                <View style={styles.cardPad}>
+              <Y2KCard shadow innerStyle={styles.weatherCardInner}>
+                <View style={styles.weatherCardContent}>
                   <View style={styles.weatherTop}>
                     <View style={styles.weatherLeft}>
                       <Text style={styles.heroCity}>{weather.city}, {weather.country}</Text>
@@ -200,29 +199,23 @@ export function Y2KTodayScreen() {
                       />
                     </View>
                   </View>
-                </View>
-
-                {/* Deep purple temperature block */}
-                <View style={styles.tempBlock}>
                   <Text style={styles.heroTemp}>{formatTemp(weather.temp)}°</Text>
                   <Text style={styles.heroMeta}>
                     {'feels ' + formatTemp(weather.feelsLike) + '°  ·  ' + weather.humidity + '% humidity  ·  ' + weather.windSpeed + ' km/h'}
                   </Text>
-                </View>
-
-                {/* Stat chips — cream section below */}
-                <View style={styles.statChips}>
-                  <View style={styles.statChip}>
-                    <Text style={styles.statChipLabel}>FEELS</Text>
-                    <Text style={styles.statChipVal}>{formatTemp(weather.feelsLike)}°</Text>
-                  </View>
-                  <View style={styles.statChip}>
-                    <Text style={styles.statChipLabel}>HUMIDITY</Text>
-                    <Text style={styles.statChipVal}>{weather.humidity}%</Text>
-                  </View>
-                  <View style={styles.statChip}>
-                    <Text style={styles.statChipLabel}>WIND</Text>
-                    <Text style={styles.statChipVal}>{weather.windSpeed}<Text style={styles.statChipUnit}> km/h</Text></Text>
+                  <View style={styles.statChips}>
+                    <View style={styles.statChip}>
+                      <Text style={styles.statChipLabel}>FEELS</Text>
+                      <Text style={styles.statChipVal}>{formatTemp(weather.feelsLike)}°</Text>
+                    </View>
+                    <View style={styles.statChip}>
+                      <Text style={styles.statChipLabel}>HUMIDITY</Text>
+                      <Text style={styles.statChipVal}>{weather.humidity}%</Text>
+                    </View>
+                    <View style={styles.statChip}>
+                      <Text style={styles.statChipLabel}>WIND</Text>
+                      <Text style={styles.statChipVal}>{weather.windSpeed}<Text style={styles.statChipUnit}> km/h</Text></Text>
+                    </View>
                   </View>
                 </View>
               </Y2KCard>
@@ -490,7 +483,7 @@ export function Y2KTodayScreen() {
 function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: y2kTokens.lavenderBg,
+    backgroundColor: y2kTokens.deepPurple,
   },
 
   // Header — deep purple block
@@ -514,7 +507,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   streakLabel: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: y2kTokens.hotPink,
     marginTop: 2,
@@ -535,13 +528,13 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   cityChipText: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.lavenderBg,
     letterSpacing: 1,
   },
   headerDate: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
     color: y2kTokens.lavenderBg,
     opacity: 0.6,
@@ -577,13 +570,13 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   fileLeft: {
     fontFamily: typo.monoLabel.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: y2kTokens.mutedPurple,
   },
   fileRight: {
     fontFamily: typo.monoData.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1,
     color: y2kTokens.hotPink,
   },
@@ -605,13 +598,12 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontSize: 32,
     color: y2kTokens.deepPurple,
     letterSpacing: typo.displayMedium.letterSpacing,
-    lineHeight: 36,
     marginTop: spacing.sm,
     marginBottom: 4,
   },
   wotdOrigin: {
     fontFamily: typo.monoLabel.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.hotPink,
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
@@ -623,25 +615,32 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Weather hero
+  // Weather hero — cream outer frame, deep purple interior, tangerine accents
+  weatherCardInner: {
+    backgroundColor: y2kTokens.deepPurple,
+  },
+  weatherCardContent: {
+    padding: spacing.md,
+    paddingBottom: spacing.lg,
+  },
   weatherTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: spacing.sm,
   },
   weatherLeft: { flex: 1 },
   heroCity: {
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 20,
-    color: y2kTokens.ink,
+    color: y2kTokens.cream,
     letterSpacing: typo.displaySmall.letterSpacing,
     lineHeight: 24,
   },
   heroCondition: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
-    color: y2kTokens.mutedPurple,
+    fontSize: 11,
+    color: y2kTokens.tangerine,
     letterSpacing: 2,
     marginTop: 3,
   },
@@ -649,16 +648,9 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: y2kTokens.deepPurple,
+    backgroundColor: 'rgba(250,249,246,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // Deep purple temperature block
-  tempBlock: {
-    backgroundColor: y2kTokens.deepPurple,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
   },
   heroTemp: {
     fontFamily: typo.displayHero.fontFamily,
@@ -668,7 +660,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   heroMeta: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.cream,
     letterSpacing: 1,
     marginTop: 6,
@@ -677,35 +669,35 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   statChips: {
     flexDirection: 'row',
     gap: spacing.sm,
-    padding: spacing.md,
-    paddingTop: spacing.sm,
+    marginTop: spacing.md,
   },
   statChip: {
     flex: 1,
-    backgroundColor: y2kTokens.blush,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: y2kTokens.hotPink + '40',
+    borderColor: y2kTokens.tangerine + '50',
     padding: spacing.sm,
     alignItems: 'center',
   },
   statChipLabel: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 8,
-    color: y2kTokens.hotPink,
+    fontSize: 11,
+    color: y2kTokens.tangerine,
     letterSpacing: 1.5,
     marginBottom: 2,
   },
   statChipVal: {
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 16,
-    color: y2kTokens.deepPurple,
+    color: y2kTokens.cream,
     letterSpacing: typo.displaySmall.letterSpacing,
   },
   statChipUnit: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
-    color: y2kTokens.mutedPurple,
+    fontSize: 11,
+    color: y2kTokens.cream,
+    opacity: 0.6,
   },
 
 
@@ -722,7 +714,6 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontFamily: typo.displayLarge.fontFamily,
     fontSize: 40,
     color: y2kTokens.hotPink,
-    lineHeight: 44,
     letterSpacing: typo.displayLarge.letterSpacing,
     marginBottom: 4,
   },
@@ -744,7 +735,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   ratingLabel: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
     color: y2kTokens.mutedPurple,
   },
@@ -762,7 +753,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   pipEmpty:  { backgroundColor: y2kTokens.blush, borderWidth: 1, borderColor: y2kTokens.hotPink },
   ratingNum: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.mutedPurple,
   },
   sig: {
@@ -783,7 +774,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   outfitPiece: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: y2kTokens.hotPink,
     width: 54,
@@ -792,7 +783,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   outfitRight: { flex: 1 },
   outfitCat: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: y2kTokens.mutedPurple,
     marginBottom: 2,
@@ -818,7 +809,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   dailyDay: {
     fontFamily: typo.monoData.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.deepPurple,
     letterSpacing: 0.5,
     width: 36,
@@ -826,20 +817,20 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   dailyIcon: { marginHorizontal: 2 },
   dailyCond: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.mutedPurple,
     flex: 1,
   },
   dailyPrecip: {
     fontFamily: typo.monoData.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.hotPink,
     width: 30,
     textAlign: 'right',
   },
   dailyPrecipEmpty: {
     fontFamily: typo.monoData.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.mutedPurple + '60',
     width: 30,
     textAlign: 'right',
@@ -888,7 +879,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   condLabel: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 8,
+    fontSize: 11,
     color: y2kTokens.mutedPurple,
     letterSpacing: 1,
     textAlign: 'center',
@@ -909,7 +900,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   aqiLabel: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.mutedPurple,
     letterSpacing: 1.5,
     flex: 1,
@@ -937,13 +928,13 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   pollenSub: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 8,
+    fontSize: 11,
     color: y2kTokens.hotPink,
     letterSpacing: 0.5,
   },
   pollenType: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 8,
+    fontSize: 11,
     color: y2kTokens.mutedPurple,
     letterSpacing: 1,
   },
@@ -959,13 +950,13 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   refreshMeta: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.mutedPurple,
     letterSpacing: 0.5,
   },
   refreshBtn: {
     fontFamily: typo.monoData.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.hotPink,
     letterSpacing: 0.5,
   },
@@ -1017,7 +1008,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   emptyBtnText: {
     fontFamily: typo.monoLabel.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     color: y2kTokens.lime,
     letterSpacing: 2,
   },

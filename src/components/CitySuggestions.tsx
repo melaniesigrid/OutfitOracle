@@ -69,7 +69,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     meta: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       color: colors.textMuted,
       marginTop: 2,
       letterSpacing: 0.3,

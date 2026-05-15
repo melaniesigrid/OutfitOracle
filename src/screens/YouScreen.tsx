@@ -9,8 +9,9 @@ import { useAppData } from '../contexts/AppContext';
 import { BUDGET_TIERS, PERSONALITY_OPTIONS } from '../hooks/useStyleProfile';
 import { getRankTitle } from '../hooks/useConsultStreak';
 import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
-import { AppColors, AppFonts, ThemeName, isEditorialTheme, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, ThemeName, isEditorialTheme, isMondrianTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { MondrianYouScreen } from './mondrian/MondrianYouScreen';
 import { useTempUnit } from '../contexts/TemperatureContext';
 
 const PASSPORT_MILESTONES = [
@@ -28,8 +29,8 @@ const RANK_PROGRESS = [
 ];
 
 export function YouScreen() {
-  const { colors, fonts, isDark, themeName } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
+  const { colors, fonts, metrics, isDark, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, metrics, themeName), [colors, fonts, metrics, themeName]);
   const { formatTemp } = useTempUnit();
   const navigation = useNavigation<any>();
   const [lockedExpanded, setLockedExpanded] = useState(false);
@@ -59,6 +60,8 @@ export function YouScreen() {
     () => Object.fromEntries(BADGE_CATEGORY_ORDER.map(cat => [cat, earnedBadges.filter(b => b.category === cat)])),
     [earnedBadges],
   );
+
+  if (isMondrianTheme(themeName)) return <MondrianYouScreen />;
 
   return (
     <View style={styles.root}>
@@ -93,7 +96,7 @@ export function YouScreen() {
           )}
           {streak > 0 && (
             <View style={styles.streakChip}>
-              <MaterialCommunityIcons name="fire" size={12} color={colors.scarlet} />
+              <MaterialCommunityIcons name="fire" size={12} color={colors.scarletFg} />
               <Text style={styles.streakChipText}>{streak}-DAY STREAK</Text>
             </View>
           )}
@@ -116,7 +119,7 @@ export function YouScreen() {
             accessibilityRole="button"
             accessibilityLabel="View your city map"
           >
-            <MaterialCommunityIcons name="map-outline" size={12} color={!isEditorialTheme(themeName) ? colors.scarlet : colors.textSecondary} />
+            <MaterialCommunityIcons name="map-outline" size={12} color={!isEditorialTheme(themeName) ? colors.scarletFg : colors.textSecondary} />
             <Text style={styles.mapLinkText}>VIEW ON MAP</Text>
           </Pressable>
 
@@ -161,7 +164,7 @@ export function YouScreen() {
                 <View style={styles.badgeGrid}>
                   {catBadges.map(b => (
                     <View key={b.id} style={styles.badge}>
-                      <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.textPrimary} />
+                      <MaterialCommunityIcons name={b.icon as any} size={18} color={metrics.cardGap === 32 ? '#000000' : colors.textPrimary} />
                       <Text style={styles.badgeTitle}>{b.title}</Text>
                       <Text style={styles.badgeDesc}>{b.desc}</Text>
                     </View>
@@ -269,7 +272,7 @@ export function YouScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${s.item.item} from saved looks`}
                 >
-                  <MaterialCommunityIcons name="heart" size={16} color={!isEditorialTheme(themeName) ? colors.scarlet : colors.textMuted} />
+                  <MaterialCommunityIcons name="heart" size={16} color={!isEditorialTheme(themeName) ? colors.scarletFg : colors.textMuted} />
                 </Pressable>
               </View>
             ))}
@@ -306,7 +309,7 @@ export function YouScreen() {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, themeName: ThemeName) { return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: {
     paddingTop: Platform.OS === 'ios' ? 16 : 12,
@@ -329,7 +332,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   rankEyebrow: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 3,
     color: 'rgba(250,249,246,0.40)',
     marginBottom: spacing.sm,
@@ -355,7 +358,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   rankNext: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: 'rgba(250,249,246,0.30)',
     letterSpacing: 0.3,
   },
@@ -366,15 +369,15 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
     marginTop: spacing.md,
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.25)',
+    borderColor: !isEditorialTheme(themeName) ? colors.scarletFg : 'rgba(250,249,246,0.25)',
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
   streakChipText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
-    color: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.50)',
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : 'rgba(250,249,246,0.50)',
   },
   foundingChip: {
     flexDirection: 'row',
@@ -388,7 +391,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   foundingChipText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: '#FAF9F6',
   },
@@ -408,13 +411,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   sectionLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: colors.textMuted,
   },
   editBtn: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.5,
   },
@@ -445,19 +448,19 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
     alignSelf: 'flex-start',
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: !isEditorialTheme(themeName) ? colors.scarlet : colors.borderMid,
+    borderColor: !isEditorialTheme(themeName) ? colors.scarletFg : colors.borderMid,
     paddingHorizontal: spacing.sm,
     paddingVertical: 5,
   },
   mapLinkText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
-    color: !isEditorialTheme(themeName) ? colors.scarlet : colors.textSecondary,
+    fontSize: 11,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textSecondary,
     letterSpacing: 1.5,
   },
   passportNext: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.3,
     marginBottom: spacing.md,
@@ -478,7 +481,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   stampText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textSecondary,
     letterSpacing: 1,
   },
@@ -505,7 +508,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   keywordText: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.5,
   },
@@ -516,13 +519,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   profileMetaLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 1.5,
   },
   profileMetaVal: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.3,
   },
@@ -530,7 +533,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   setupProfileText: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: !isEditorialTheme(themeName) ? colors.scarlet : colors.textSecondary,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textSecondary,
     letterSpacing: 0.5,
   },
 
@@ -540,16 +543,16 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   badgeCategoryLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
-    color: !isEditorialTheme(themeName) ? colors.scarlet : colors.textMuted,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textMuted,
     marginBottom: spacing.sm,
   },
 
   /* Weather badges */
   badgeCount: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.5,
   },
@@ -573,19 +576,28 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   badge: {
     width: '47%',
-    borderWidth: 1,
-    borderColor: colors.borderMid,
+    borderWidth: metrics.borderWidth > 1 ? metrics.borderWidth : 1,
+    borderColor: metrics.borderWidth > 1 ? colors.borderHard : colors.borderMid,
     padding: spacing.sm,
     gap: 4,
+    borderRadius: metrics.radius,
+    backgroundColor: metrics.cardGap === 32 ? colors.scarlet : (metrics.borderWidth > 1 ? colors.bgCard : 'transparent'),
+    ...(metrics.shadowOpacity > 0 ? {
+      shadowColor: metrics.shadowColor,
+      shadowOffset: { width: metrics.shadowOffset, height: metrics.shadowOffset },
+      shadowOpacity: metrics.shadowOpacity,
+      shadowRadius: 0,
+    } : {}),
   },
   badgeLocked: {
     borderColor: colors.border,
+    backgroundColor: metrics.cardGap === 32 ? colors.bgCard : 'transparent',
     opacity: 0.45,
   },
   badgeTitle: {
     fontFamily: fonts.displayBold,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: metrics.cardGap === 32 ? '#000000' : colors.textPrimary,
     letterSpacing: -0.1,
   },
   badgeTitleLocked: {
@@ -596,14 +608,14 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   badgeDesc: {
     fontFamily: fonts.mono,
-    fontSize: 9,
-    color: colors.textMuted,
+    fontSize: 11,
+    color: metrics.cardGap === 32 ? '#000000' : colors.textMuted,
     letterSpacing: 0.3,
     lineHeight: 14,
   },
   badgeEmpty: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.3,
     lineHeight: 17,
@@ -628,7 +640,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   savedLeft: { flex: 1 },
   savedCategory: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 2,
     color: colors.textMuted,
     marginBottom: 2,
@@ -641,7 +653,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
   },
   savedMeta: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 0.3,
     marginTop: 2,
@@ -656,10 +668,10 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) { 
     borderBottomColor: colors.border,
   },
   archiveDate: { width: 52, marginRight: spacing.md },
-  archiveDateDay: { fontFamily: fonts.mono, fontSize: 10, color: colors.textPrimary, letterSpacing: 0.3 },
-  archiveDateTime: { fontFamily: fonts.mono, fontSize: 9, color: colors.textMuted, marginTop: 2 },
+  archiveDateDay: { fontFamily: fonts.mono, fontSize: 12, color: colors.textPrimary, letterSpacing: 0.3 },
+  archiveDateTime: { fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted, marginTop: 2 },
   archiveCenter: { flex: 1 },
   archiveCity: { fontFamily: fonts.display, fontSize: 20, color: colors.textPrimary, letterSpacing: -0.3 },
-  archiveVibe: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, letterSpacing: 0.3, marginTop: 1 },
+  archiveVibe: { fontFamily: fonts.mono, fontSize: 12, color: colors.textMuted, letterSpacing: 0.3, marginTop: 1 },
   archiveTemp: { fontFamily: fonts.displayBold, fontSize: 20, color: colors.textPrimary, marginLeft: spacing.sm },
 }); }

@@ -163,12 +163,25 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
     await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle has spoken enough today');
   });
 
-  it('throws with fallback message when proxy returns non-ok with no error field', async () => {
+  it('retries transient proxy failures before throwing overloaded message', async () => {
+    const { oracle, asyncStorage } = loadOracleModule('https://fake-proxy.example.com/api');
+    asyncStorage.getItem.mockResolvedValueOnce(null);
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: () => Promise.resolve({}),
+    });
+
+    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle is momentarily overwhelmed');
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('throws with fallback message when proxy returns non-retryable server error with no error field', async () => {
     const { oracle, asyncStorage } = loadOracleModule('https://fake-proxy.example.com/api');
     asyncStorage.getItem.mockResolvedValueOnce(null);
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      status: 503,
+      status: 500,
       json: () => Promise.resolve({}),
     });
 

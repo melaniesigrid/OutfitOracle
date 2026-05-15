@@ -139,7 +139,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   pieceNum: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
     color: y2kTokens.mutedPurple,
     flex: 1,
@@ -180,7 +180,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   shopText: {
     fontFamily: typo.monoLabel.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
     color: y2kTokens.hotPink,
   },

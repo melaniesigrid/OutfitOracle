@@ -169,7 +169,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   mastheadKicker: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 3,
     color: 'rgba(250,249,246,0.30)',
     marginBottom: spacing.xl,
@@ -197,7 +197,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   mastheadStep: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: 'rgba(250,249,246,0.35)',
     textAlign: 'right',
@@ -215,7 +215,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
 
   stepLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: colors.textMuted,
     marginBottom: spacing.sm,
@@ -293,7 +293,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   budgetNote: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.3,
     marginTop: 2,

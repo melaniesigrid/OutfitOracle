@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   },
   mastheadKicker: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 3,
     color: 'rgba(250,249,246,0.30)',
     marginBottom: spacing.xl,
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   },
   mastheadTagline: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: 'rgba(250,249,246,0.35)',
     textAlign: 'right',
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: colors.textMuted,
     marginBottom: spacing.sm,
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   },
   recentsLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: colors.textMuted,
     marginBottom: spacing.sm,
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   },
   errorLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: colors.scarlet,
     marginBottom: spacing.sm,
@@ -741,13 +741,13 @@ const styles = StyleSheet.create({
   },
   cacheBadgeText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: colors.textMuted,
   },
   cacheRefresh: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.5,
   },
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
   },
   shareBtnText: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: colors.textPrimary,
   },
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
   },
   footerNote: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 16,
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
   },
   locationBtnText: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1.5,
     color: colors.textMuted,
   },
@@ -834,13 +834,13 @@ const styles = StyleSheet.create({
   },
   streakBadge: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: colors.scarlet,
   },
   profileBadge: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1,
     color: 'rgba(250,249,246,0.40)',
   },
@@ -856,7 +856,7 @@ const styles = StyleSheet.create({
   },
   milestoneKicker: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 2.5,
     color: colors.scarlet,
   },
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
   },
   milestoneDismiss: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1,
     color: 'rgba(250,249,246,0.30)',
     marginTop: 4,
@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
   },
   archiveLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: colors.textMuted,
     marginBottom: spacing.md,
@@ -904,13 +904,13 @@ const styles = StyleSheet.create({
   },
   archiveDateDay: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textPrimary,
     letterSpacing: 0.3,
   },
   archiveDateTime: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textMuted,
     marginTop: 2,
   },
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
   },
   archiveVibe: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.3,
     marginTop: 1,

@@ -141,7 +141,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   kicker: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 3,
     color: colors.textMuted,
     marginBottom: spacing.md,

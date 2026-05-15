@@ -92,14 +92,14 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   fileLabelLeft: {
     fontFamily: typo.monoData.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1.5,
     color: y2kTokens.cream,
     opacity: 0.7,
   },
   fileLabelRight: {
     fontFamily: typo.monoLabel.fontFamily,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: y2kTokens.hotPink,
   },
@@ -126,7 +126,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   condition: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.cream,
     letterSpacing: 2,
     marginTop: 3,
@@ -148,7 +148,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   metaLine: {
     fontFamily: typo.monoMicro.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     color: y2kTokens.cream,
     letterSpacing: 1,
     marginTop: 4,

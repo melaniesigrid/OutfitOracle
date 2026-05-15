@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   eyebrow: {
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 2,
     color: 'rgba(250,249,246,0.40)',
   },
@@ -164,13 +164,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   desc: {
-    fontSize: 10,
+    fontSize: 12,
     color: 'rgba(250,249,246,0.50)',
     letterSpacing: 0.2,
     lineHeight: 14,
   },
   tapHint: {
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
     color: 'rgba(250,249,246,0.20)',
     paddingRight: spacing.md,
