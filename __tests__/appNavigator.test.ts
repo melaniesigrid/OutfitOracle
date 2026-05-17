@@ -82,19 +82,38 @@ describe('needsOnboarding gate logic', () => {
 
 describe('hydrated gate', () => {
   type AnyStatus = 'loading' | 'not-set' | 'skipped' | 'set';
-  function isHydrated(onboardingDone: boolean | null, status: AnyStatus): boolean {
-    return onboardingDone !== null && status !== 'loading';
+  type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated';
+  function isHydrated(onboardingDone: boolean | null, status: AnyStatus, authStatus: AuthStatus): boolean {
+    return onboardingDone !== null && status !== 'loading' && authStatus !== 'loading';
   }
 
   it('null onboardingDone → not hydrated (splash stays visible)', () => {
-    expect(isHydrated(null, 'set')).toBe(false);
+    expect(isHydrated(null, 'set', 'authenticated')).toBe(false);
   });
 
   it('profile loading → not hydrated (splash stays visible)', () => {
-    expect(isHydrated(true, 'loading')).toBe(false);
+    expect(isHydrated(true, 'loading', 'authenticated')).toBe(false);
+  });
+
+  it('auth loading → not hydrated (splash stays visible)', () => {
+    expect(isHydrated(true, 'set', 'loading')).toBe(false);
   });
 
   it('both resolved → hydrated (splash dismissed)', () => {
-    expect(isHydrated(true, 'set')).toBe(true);
+    expect(isHydrated(true, 'set', 'authenticated')).toBe(true);
+  });
+});
+
+describe('auth gate logic', () => {
+  function needsAuth(authStatus: 'unauthenticated' | 'authenticated'): boolean {
+    return authStatus === 'unauthenticated';
+  }
+
+  it('unauthenticated users see the auth screen before onboarding/main app', () => {
+    expect(needsAuth('unauthenticated')).toBe(true);
+  });
+
+  it('authenticated users can continue into onboarding or the main app', () => {
+    expect(needsAuth('authenticated')).toBe(false);
   });
 });
