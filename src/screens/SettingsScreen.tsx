@@ -8,7 +8,8 @@ import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, ThemeName, THEMES, spacing, isY2KTheme, isMondrianTheme } from '../theme';
+import { useAuth } from '../contexts/AuthContext';
+import { AppColors, AppFonts, THEME_OPTIONS, THEMES, spacing, isY2KTheme, isMondrianTheme } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { MondrianSettingsScreen } from './mondrian/MondrianSettingsScreen';
 import { useTempUnit, TempUnit } from '../contexts/TemperatureContext';
@@ -18,6 +19,7 @@ import {
   getAnalyticsEnabledPreference,
   setAnalyticsEnabledPreference,
 } from '../services/analytics';
+import { AUTH_SESSION_KEY, AUTH_USERS_KEY } from '../services/auth';
 
 const ALL_KEYS = [
   '@outfit_oracle_history',
@@ -34,6 +36,8 @@ const ALL_KEYS = [
   '@outfit_oracle_y2k_font_subtheme',
   '@outfit_oracle_magic_shown',
   ANALYTICS_ENABLED_KEY,
+  AUTH_USERS_KEY,
+  AUTH_SESSION_KEY,
 ];
 
 const SOFT_KEYS = [
@@ -47,20 +51,6 @@ const SOFT_KEYS = [
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.1.0';
 const PRIVACY_POLICY_URL = 'https://melaniesigrid.github.io/OutfitOracle/';
-
-const THEME_OPTIONS: { id: ThemeName; label: string }[] = [
-  { id: 'classic',          label: 'Classic' },
-  { id: 'editorial-light',  label: 'Editorial Light' },
-  { id: 'editorial-dark',   label: 'Editorial Dark' },
-  { id: 'terra-firma',      label: 'Terra Firma' },
-  { id: 'morning-paper',    label: 'Morning Paper' },
-  { id: 'golden-hour',      label: 'Golden Hour' },
-  { id: 'electric',         label: 'Electric' },
-  { id: 'y2k',              label: 'Y2K ♡' },
-  { id: 'neo-brutal-light', label: 'Neo-Brutal Light' },
-  { id: 'neo-brutal-dark',  label: 'Neo-Brutal Dark' },
-  { id: 'mondrian',         label: 'Mondrian' },
-];
 
 const Y2K_FONT_OPTIONS: { id: Y2KFontSubtheme; label: string; sub: string }[] = [
   { id: 'decree', label: 'Decree',  sub: 'Syne · Cormorant' },
@@ -84,6 +74,7 @@ function EditorialSettingsScreen() {
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation<any>();
   const { historyCtx } = useAppData();
+  const { user, signOut } = useAuth();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const showY2KFonts = isY2KTheme(themeName);
 
@@ -129,7 +120,7 @@ function EditorialSettingsScreen() {
   async function resetAll() {
     Alert.alert(
       'Reset Everything',
-      'This deletes all your data — history, streak, style profile, and onboarding progress. The app will restart from scratch.',
+      'This deletes all your data — account, history, streak, style profile, and onboarding progress. The app will restart from scratch.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -137,8 +128,31 @@ function EditorialSettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             await Promise.all(ALL_KEYS.map(k => AsyncStorage.removeItem(k)));
+            try {
+              const all = await AsyncStorage.getAllKeys();
+              const imageKeys = all.filter(k => k.startsWith('@oracle_image_v1_'));
+              if (imageKeys.length > 0) await AsyncStorage.multiRemove(imageKeys);
+            } catch { /* non-fatal */ }
             historyCtx.clear();
-            Alert.alert('Done', 'All data removed. Please close and reopen Outfit Oracle.');
+            await signOut();
+            Alert.alert('Done', 'All data removed.');
+          },
+        },
+      ],
+    );
+  }
+
+  async function confirmSignOut() {
+    Alert.alert(
+      'Sign Out',
+      'Your saved data stays on this device. You can log back in with this account.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
           },
         },
       ],
@@ -164,6 +178,36 @@ function EditorialSettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+        {/* ── ACCOUNT ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>ACCOUNT</Text>
+
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              <MaterialCommunityIcons name="account-circle-outline" size={16} color="rgba(250,249,246,0.50)" />
+              <View>
+                <Text style={styles.rowText}>{user?.name ?? 'Outfit Oracle account'}</Text>
+                <Text style={styles.rowSub}>{user?.email ?? 'Local device account'}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.rowDivider} />
+
+          <Pressable
+            style={styles.row}
+            onPress={confirmSignOut}
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+          >
+            <View style={styles.rowLeft}>
+              <MaterialCommunityIcons name="logout" size={16} color="rgba(250,249,246,0.50)" />
+              <Text style={styles.rowText}>Sign out</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={16} color="rgba(250,249,246,0.25)" />
+          </Pressable>
+        </View>
 
         {/* ── ORACLE THEME ── */}
         <View style={styles.section}>
@@ -280,7 +324,7 @@ function EditorialSettingsScreen() {
               <MaterialCommunityIcons name="delete-outline" size={16} color={colors.scarlet} />
               <View>
                 <Text style={[styles.rowText, styles.rowTextDanger]}>Reset all data</Text>
-                <Text style={styles.rowSub}>Removes everything, including profile</Text>
+                <Text style={styles.rowSub}>Removes everything, including account</Text>
               </View>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={16} color="rgba(196,18,48,0.40)" />
