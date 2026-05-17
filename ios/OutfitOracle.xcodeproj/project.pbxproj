@@ -10,6 +10,7 @@
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		2B5B8C7A8A144F3F9E5C1D2A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2B5B8C798A144F3F9E5C1D2A /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		728AB831BC3242CEAAE5F642 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08988C7BE5E4820A3E0B06D /* noop-file.swift */; };
 		96905EF65AED1B983A6B3ABC /* libPods-OutfitOracle.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 58EEBF8E8E6FB1BC6CAF49B5 /* libPods-OutfitOracle.a */; };
@@ -25,6 +26,7 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = OutfitOracle/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = OutfitOracle/main.m; sourceTree = "<group>"; };
 		1DB8869C608D4871836845C8 /* OutfitOracle-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "OutfitOracle-Bridging-Header.h"; path = "OutfitOracle/OutfitOracle-Bridging-Header.h"; sourceTree = "<group>"; };
+		2B5B8C798A144F3F9E5C1D2A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = OutfitOracle/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		58EEBF8E8E6FB1BC6CAF49B5 /* libPods-OutfitOracle.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-OutfitOracle.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C2E3173556A471DD304B334 /* Pods-OutfitOracle.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OutfitOracle.debug.xcconfig"; path = "Target Support Files/Pods-OutfitOracle/Pods-OutfitOracle.debug.xcconfig"; sourceTree = "<group>"; };
 		7A4D352CD337FB3A3BF06240 /* Pods-OutfitOracle.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OutfitOracle.release.xcconfig"; path = "Target Support Files/Pods-OutfitOracle/Pods-OutfitOracle.release.xcconfig"; sourceTree = "<group>"; };
@@ -56,6 +58,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB71A68108700A75B9A /* main.m */,
+				2B5B8C798A144F3F9E5C1D2A /* PrivacyInfo.xcprivacy */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 				A08988C7BE5E4820A3E0B06D /* noop-file.swift */,
 				1DB8869C608D4871836845C8 /* OutfitOracle-Bridging-Header.h */,
@@ -201,6 +204,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
+				2B5B8C7A8A144F3F9E5C1D2A /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -358,7 +362,7 @@
 				INFOPLIST_FILE = OutfitOracle/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.4.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -386,7 +390,7 @@
 				INFOPLIST_FILE = OutfitOracle/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.4.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",

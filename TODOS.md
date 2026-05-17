@@ -116,12 +116,15 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 
 ---
 
-## Test Debt (v1.3.0 — Y2K branch)
+## Test Debt (v1.4.0 — auth + image gen branch)
 
-### Test coverage for getSeason, formatTemp, and offline cache fallback
-**What:** Three new code paths added in feat/y2k-system-and-bug-fixes have zero test coverage: (1) `getSeason()` hemisphere-aware season detection in `src/services/oracle.ts`, (2) `formatTemp()` Celsius/Fahrenheit conversion in `src/contexts/TemperatureContext.tsx`, (3) the network-error-to-cache fallback in `src/hooks/useOracle.ts`.
-**Why:** getSeason() and formatTemp() are pure functions — bugs would silently produce wrong Claude prompt context (wrong season) and wrong temperatures in every UI element. The offline fallback is the most user-visible: breaking it means a network blip surfaces an error instead of showing cached data.
-**Pros:** Catches regressions in hemisphere logic (Southern Hemisphere users get inverted seasons), C/F conversion (32°F edge case, negative temps), and offline UX (most important for launch).
-**Cons:** The offline fallback test requires mocking AsyncStorage + fetch — uses the same pattern as `oracleProxy.test.ts`, so setup is straightforward. ~30 min total with CC.
-**Context:** Added 2026-05-14 during /plan-eng-review of feat/y2k-system-and-bug-fixes. Tests were deferred to keep the ship timeline. formatTemp is in TemperatureContext, getSeason is a module-private function in oracle.ts (export it for testing or test via buildPrompt output). oracleProxy.test.ts already shows the mock pattern for fetch + AsyncStorage.
-**Depends on:** Nothing — all three are self-contained.
+### ~~Test coverage for getSeason~~ — RESOLVED in 1.4.0
+`getSeason()` is exported and covered by 22 tests in `__tests__/oracleUtils.test.ts` (northern/southern hemisphere, all months, equator, undefined lat). Also added: `themePredicates.test.ts` (isDarkColor + all 5 isXTheme predicates) and `y2kTypography.test.ts` (font set + typography for both subthemes). Total: 134 tests across 11 suites.
+
+### Test coverage for formatTemp and offline cache fallback
+**What:** Two remaining coverage gaps: (1) `formatTemp()` Celsius/Fahrenheit conversion in `src/contexts/TemperatureContext.tsx`, (2) the network-error-to-cache fallback in `src/hooks/useOracle.ts`.
+**Why:** formatTemp() bugs silently produce wrong temperatures in every UI element. The offline fallback is user-visible: breaking it surfaces an error instead of cached data on a network blip.
+**Pros:** Catches regressions in C/F conversion (32°F edge case, negative temps) and offline UX (most important for launch).
+**Cons:** Offline fallback test requires mocking AsyncStorage + fetch — uses the same pattern as `oracleProxy.test.ts`, so setup is straightforward. ~20 min total.
+**Context:** Added 2026-05-14. `getSeason` resolved in 1.4.0. formatTemp is in TemperatureContext (pure function, easy). oracleProxy.test.ts already shows the mock pattern for fetch + AsyncStorage.
+**Depends on:** Nothing — both are self-contained.

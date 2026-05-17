@@ -110,12 +110,13 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 
 - [x] **Rotate the Anthropic API key** — new key generated; old key removed from `.env`; Cloudflare Worker secret updated via `wrangler secret put ANTHROPIC_API_KEY`. ✅ 2026/05/12
 - [x] **Host the privacy policy** — `docs/index.html` deployed to GitHub Pages at `https://melaniesigrid.github.io/OutfitOracle/`. ✅ 2026/05/14
-- [-] **Configure Sentry DSN** — Sentry project created at `outfitoracle.sentry.io` (project ID 4511388656205824). **Action required: copy DSN from sentry.io → Project Settings → Client Keys → add `EXPO_PUBLIC_SENTRY_DSN=<dsn>` to `.env` → rebuild.** `App.tsx` is already wired: `Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN })`, only enabled in non-DEV builds when key is set. 🏗️ 2026/05/14
-- [-] **Add PrivacyInfo.xcprivacy to Xcode** — file created at `ios/OutfitOracle/PrivacyInfo.xcprivacy` with all four standard RN Required Reasons API entries. **Action required: open Xcode → File → Add Files to "OutfitOracle" → select `ios/OutfitOracle/PrivacyInfo.xcprivacy` → Add.** Without this step, Apple will reject the archive. 🏗️ 2026/05/11
+- [x] **Configure Sentry DSN** — Sentry project created at `outfitoracle.sentry.io` (project ID 4511388656205824); `EXPO_PUBLIC_SENTRY_DSN` is set locally for rebuilds. `App.tsx` is wired with `Sentry.init({ dsn: process.env.EXPO_PUBLIC_SENTRY_DSN })`, only enabled in non-DEV builds when the key is set. ✅ 2026/05/15
+- [x] **Add PrivacyInfo.xcprivacy to Xcode** — file exists at `ios/OutfitOracle/PrivacyInfo.xcprivacy` with all four standard RN Required Reasons API entries and is now referenced by `ios/OutfitOracle.xcodeproj/project.pbxproj` in the app target resources. ✅ 2026/05/15
 - [x] **Mandatory profile onboarding gate** — `AppNavigator` now gates on `profileCtx.profileState.status`; skippable inline flow replaced with mandatory full-screen onboarding; returning users who previously skipped are redirected to the style step. ✅ 2026/05/13
 
 ### Nice-to-have before archive
 
+- [ ] **Register outfitoracle.app domain** — purchase via Namecheap or Google Domains (~$15/yr). Required for: App Clip deep links, business email (`hello@outfitoracle.app`), custom privacy policy URL, and affiliate network applications. Point DNS to GitHub Pages immediately so `https://outfitoracle.app/privacy` resolves alongside the existing GitHub Pages URL. Do this now — domain propagation takes 24–48 hours.
 - [ ] **VoiceOver / TalkBack device audit** — all Pressables have labels and roles in code; needs a 15-minute end-to-end test on a real device with VoiceOver enabled. Apple will require this for public release.
 - [ ] **App Store Connect record** — create the app listing (name: "Outfit Oracle", category: Lifestyle, age rating: 4+, privacy policy URL from above). Required before you can upload a build.
 - [ ] **App Store screenshots** — 6.5" iPhone (1284×2778) and 5.5" iPhone (1242×2208); minimum 3 per device class. Can be captured from the simulator.
@@ -184,7 +185,7 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 ### Content Depth
 - [ ] **Item imagery on OutfitCard** — Pexels API (free, 200 req/hr, fashion-quality photography); search with `{category} {simplified descriptor}`; cache per session in a Map keyed by item ID; thumbnail renders in OutfitCard as an 80×80 bordered image beside the item name. API key is non-sensitive (public search) and can live in `.env` as `EXPO_PUBLIC_PEXELS_KEY`. Fetches run in parallel after verdict arrives. *Medium effort, high delight.*
 - [x] **Seasonal prompt tuning** — `getSeason(month, lat)` added to both app and Worker `buildPrompt`; hemisphere-aware (southern hemisphere shifts by 6 months); "Season: Spring/Summer/Autumn/Winter" injected into weather context. ✅ 2026/05/14
-- [ ] **"Oracle of the Week" in TodayScreen** — a curated editorial card surfacing the most-saved vibe from the current week across the user's own history; no AI call, pure aggregation from `useOutfitHistory`. Gives the Today tab a reason to be opened even without consulting.
+- [x] **"Oracle of the Week" in TodayScreen** — curated editorial card surfaces this week's strongest saved vibe, falling back to most-consulted vibe when nothing has been saved; no AI call, pure local aggregation from saved looks and `useOutfitHistory`. ✅ 2026/05/15
 - [x] **Skeleton loading UI** — shimmer placeholder during fetch ✅ 2026/05/11
 - [x] **Expanded TodayScreen** — hourly forecast, 7-day daily, UV index, sun/moon, allergens & AQI ✅ 2026/05/11
 - [x] **TodayScreen widget redesign** — all sections refactored into uniform dark bordered Widget cards; Word of the Day widget (60-word curated fashion vocabulary, deterministic per calendar day) shown above weather ✅ 2026/05/11
@@ -214,7 +215,7 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 - [x] **Temperature sensitivity** — Runs Cold / Normal / Runs Hot 3-way toggle in ProfileEditScreen; shifts layering recommendations in both app and Worker `buildPrompt` ✅ 2026/05/11
 - [x] **Colour preferences** — 16-colour swatch grid in ProfileEditScreen; tap-cycle (love → avoid → clear); up to 3 loves + 2 avoids; injected into Claude prompt in both app and Worker ✅ 2026/05/12
 - [x] **Mandatory onboarding gate** — `AppNavigator` gates on `profileState.status`; skip button removed; returning skipped users redirected to style step. ✅ 2026/05/13
-- [ ] **Name collection in onboarding** — add an optional name field ("What shall the Oracle call you?") as a final step before entering the app; renders a personalised greeting in YouScreen rank hero ("Welcome back, Melanie.")
+- [x] **Name collection in onboarding** — optional final step asks "What shall the Oracle call you?", saves to style profile, and renders a personalised greeting in YouScreen rank hero ("Welcome back, Melanie."). ✅ 2026/05/15
 - [ ] **Settings sheet** — toggle notifications, clear data, export history
 
 ### Wardrobe
@@ -234,9 +235,9 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 - [ ] **Mandatory onboarding gate** *(see Launch Checklist — this is the implementation detail)* — `App.tsx` checks `profileCtx.status`; renders `<WelcomeOnboarding />` full-screen when `not-set`; tab navigator only mounts after profile is saved. The onboarding component needs a redesign from its current inline/skippable form: full-bleed dark opening screen, editorial copy, 3 steps max, no skip.
 - [ ] **Tab bar badge on Oracle tab** — when a cached result is available and it's over 2 hours old, show a small dot on the Oracle tab icon hinting the Oracle has a fresh take waiting. Subtle urgency without being pushy.
 - [ ] **Transition polish** — the switch between POLISHED and CASUAL outfit sets currently re-renders cards with no animation; add a crossfade or slide so the toggle feels intentional.
-- [ ] **Empty state illustrations** — Oracle Archives, Saved Looks, and the Map are blank on first launch; replace with editorial one-liners ("The Oracle awaits your first inquiry." / "No looks saved. The wardrobe is a blank canvas.") in Cormorant Garamond italic. Currently shows nothing, which reads as broken.
+- [x] **Empty state illustrations** — Oracle Archives, Saved Looks, and the Map now show editorial first-run states instead of blank surfaces. ✅ 2026/05/15
 - [ ] **Keyboard avoidance on Oracle tab** — on smaller devices (iPhone SE), the city input can be obscured by the keyboard; verify `KeyboardAvoidingView` behaviour with `behavior="padding"` is consistent across all supported device sizes.
-- [ ] **Haptic on save** — `OutfitCard` heart fires `selectionAsync` on toggle; upgrade the save action to `impactAsync(Medium)` to make saving feel more satisfying than unsaving.
+- [x] **Haptic on save** — `OutfitCard` now fires `impactAsync(Medium)` when saving and keeps `selectionAsync` for unsaving. ✅ 2026/05/15
 - [x] **Three-theme system** — Classic (IBM Plex Mono, broad scarlet), Editorial Light (Space Mono, one scarlet per screen, cream bg), Editorial Dark (Space Mono, warm near-black palette); `ThemeContext` + `useTheme` hook; persisted to AsyncStorage; picker in SettingsScreen; full makeStyles refactor across all 26 theme-importing files; TodayScreen scroll bg themes to cream/dark per mode ✅ 2026/05/14
 - [x] **Y2K theme** — digital zine / fashion club aesthetic; lavender + hot pink + deep purple + cream palette; Syne ExtraBold display + Cormorant Italic serif + IBM Plex Mono; Y2KOracleScreen with double-border Y2KCard system, Y2KDecreeCard (44px headline, scarlet rating pip bar, oracle signature), Y2KWeatherCard (80px temp hero, file-label headers), Y2KOutfitCard, Y2KAvoidSection, Y2KBadge, Y2KSticker, Y2KSignature components; OracleScreen routes to Y2KOracleScreen via isY2KTheme(); 61/61 tests pass ✅ 2026/05/14
 - [x] **Achievement unlock toast** — dark editorial bottom-sheet slide-up with badge icon, title, desc, and `Haptics.notificationAsync(Success)`; auto-dismisses after 3.5s; badge detection moves to AppContext so toast fires from any tab ✅ 2026/05/14
@@ -245,9 +246,42 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 
 ---
 
+## Phase 3.8 — Business Infrastructure *(do before Phase 4)*
+
+> Non-negotiable groundwork. Affiliate networks check domain age, professional email, and brand presence before approving applications. Set this up while the app is in TestFlight — it takes 2–4 weeks to get approved by networks.
+
+### Domain & Email (Week 1 of Phase 3.8)
+- [ ] **Register outfitoracle.app** — Namecheap or Google Domains (~$15/yr). If already done in the TestFlight checklist, verify DNS is resolving correctly.
+- [ ] **Set up Google Workspace** — Business Starter ($6/user/month). Creates `@outfitoracle.app` email with Google Drive for contracts and a professional presence for brand outreach.
+- [ ] **Create `hello@outfitoracle.app`** — primary address; use for affiliate applications, all brand correspondence, and App Store contact email. Never use personal Gmail for business accounts.
+- [ ] **Create `partnerships@outfitoracle.app`** — for brand deals, PR pitches, and collaboration inquiries.
+- [ ] **Create `affiliate@outfitoracle.app`** — dedicated address for affiliate network applications and approval emails. Keeps approval correspondence separate and searchable.
+- [ ] **Create `support@outfitoracle.app`** — for user support and App Store review responses.
+- [ ] **Create a dedicated browser profile** — separate Chrome/Firefox profile logged into all OutfitOracle business accounts. Never log into affiliate dashboards or product APIs from a personal browsing profile — account history biases recommendation outputs.
+- [ ] **Create a password vault** — 1Password or Bitwarden, OutfitOracle business vault only. Store every API key, affiliate credential, and network login here.
+
+### Affiliate Network Applications (Week 1–2 of Phase 3.8)
+Apply in this order — lowest approval friction first. Use `affiliate@outfitoracle.app` for all applications.
+
+- [ ] **Apply to ShareASale** — broadest fashion/beauty catalog; fast approval; good for initial product inventory. Apply at `shareasale.com/info/merchant.cfm`. Category: Fashion & Clothing.
+- [ ] **Apply to Commission Junction (CJ)** — Revolve, Madewell, Gap; easy onboarding; solid reporting API. Apply at `cj.com`. Category: Apparel.
+- [ ] **Apply to Impact** — used by Reformation, Allbirds, Quay; modern tracking; best API for automated link generation. Apply at `impact.com`.
+- [ ] **Apply to Rakuten Advertising** — Net-a-Porter, Nordstrom, SSENSE, Saks; premium brands; requires some traffic to approve. Apply at `rakutenadvertising.com`.
+- [ ] **Apply to Awin** (after launch) — European brand coverage: ASOS, & Other Stories, Weekday, Monki. Apply at `awin.com`. Requires a deposit (~$5 refundable) that confirms legitimate publisher status.
+- [ ] **Apply to LTK (LikeToKnowIt)** (after 1k+ MAU) — fashion-native; commission is excellent (5–20%); approval requires demonstrating an audience. Apply at `liketoknow.it/creators`.
+- [ ] **Create Amazon Associates account** — use `affiliate@outfitoracle.app` and a business Amazon account; NEVER link to personal Amazon account (purchase history pollutes product recommendations). Tag: `outfitoracle-20`. Apply at `affiliate-program.amazon.com`.
+
+### API Hygiene (Week 2 of Phase 3.8)
+- [ ] **Set up `.env` structure** — create `.env.development`, `.env.staging`, `.env.production` with separate affiliate and product API keys per environment. Template in `AFFILIATE_STRATEGY.md § Technical Implementation`.
+- [ ] **Create neutral test user profiles** — three fictional personas for staging tests (e.g., "minimalist, London, 12°C, work" / "Y2K, New York, 28°C, weekend" / "editorial dark, Paris, 5°C, evening"). Never test product APIs using real location or personal style preferences — personalization algorithms will corrupt the neutral recommendation baseline.
+- [ ] **Verify `.env` files are in `.gitignore`** — all affiliate API keys must never be committed. Run `git ls-files | grep .env` to confirm nothing is tracked.
+- [ ] **Add affiliate disclosure screen** — in-app page accessible from Settings and linked inline on any screen with affiliate product cards. Copy in `AFFILIATE_STRATEGY.md § Affiliate Disclosure UX`.
+
+---
+
 ## Phase 4 — Monetisation
 
-> Only introduce monetisation after Phase 2 is shipped and retention metrics confirm D7 > 30%. Charging too early kills growth.
+> Only introduce monetisation after Phase 2 is shipped and retention metrics confirm D7 > 30%. Charging too early kills growth. Phase 3.8 business infrastructure should be complete before any Phase 4 work begins.
 
 ### Oracle Pro — Subscription ($4.99/month or $34.99/year)
 - [ ] **Paywall design** — editorial, non-aggressive; shown after 3 free consults/day; 7-day free trial standard
@@ -256,14 +290,58 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 - [ ] **Restore purchases** — required by Apple; RevenueCat handles this automatically
 - [ ] **RevenueCat integration** — handles receipt validation, restoration, and A/B testing; simpler than raw `expo-in-app-purchases`
 
-### Affiliate Revenue
-- [ ] **Retailer-specific links** — replace Google Shopping URLs with ASOS, Nordstrom, or Farfetch affiliate links; 4–8% commission per purchase; highest revenue per user
-- [ ] **"Shop the full look" button** — one tap opens a curated page with all outfit items pre-searched; better conversion than individual item links
-- [ ] **Price tier filtering** — surface items matching the user's budget tier from their style profile
+### Affiliate Revenue — Phase 4a: Foundation *(manual links, no API)*
 
-### Brand Partnerships *(post-scale)*
-- [ ] **Sponsored "Oracle's Pick"** — a 6th card in outfit results, clearly labelled "Presented by [Brand]"; sold directly or via a fashion ad network
-- [ ] **City-based editorial drops** — brand-funded, city-specific content ("This week in Milan: the Oracle recommends...") surfaced at the top of the Today tab
+> Goal: affiliate-ready infrastructure with hand-curated links. Validates the UX and disclosure flow before investing in product API integration.
+
+- [ ] **`AffiliateProduct` TypeScript interface** — full data model with `id`, `productName`, `brand`, `retailer`, `category`, `affiliateUrl`, `price`, `budgetTier`, `occasionTags`, `weatherTags`, `aestheticTags`, `availability`, `oracleApprovalLevel`, `disclosureRequired`, `isSponsored`, `lastCheckedAt`. Full schema in `AFFILIATE_STRATEGY.md § Product Data Model`.
+- [ ] **`AffiliateProductCard` component** — editorial card with product image, brand, name, price, Oracle approval note, and `↗ Affiliate link` disclosure micro-copy. Full implementation in `AFFILIATE_STRATEGY.md § Technical Implementation`.
+- [ ] **`AffiliateRedirectHandler`** — `openAffiliateLink(product)` logs click event (product ID + category, no PII) via PostHog then opens affiliate URL via `Linking.openURL`. Outbound link modal shown before navigating away ("You're leaving Outfit Oracle").
+- [ ] **Manual product catalog (JSON)** — 15–20 hand-curated products organized by `weatherTags`, `occasionTags`, `aestheticTags`, and `budgetTier`. Covers at minimum: cold outerwear, warm-weather tops, rain footwear, work bottom, evening accessories. Use ShareASale or CJ links.
+- [ ] **`ShopTheLookSection` component** — collapsible section on TodayScreen below the verdict; horizontally scrollable rail of 3 `AffiliateProductCard` items matched to current weather + occasion. Feature-flagged: `EXPO_PUBLIC_AFFILIATE_ENABLED=false` until QA-complete.
+- [ ] **Outfit item tap-to-shop** — each row in the outfit list gets a subtle `↗` tap target. Opens `AffiliateProductSheet` (bottom modal) with the matched product card and a "Shop at [Retailer]" CTA. Falls back to Google Shopping if no affiliate match exists.
+- [ ] **Affiliate disclosure in Settings** — link to full disclosure page. Copy: *"Some links may earn Outfit Oracle a commission. The verdict remains judgmental and independent."*
+- [ ] **PostHog affiliate events** — add `affiliate_card_viewed`, `affiliate_link_tapped`, `affiliate_modal_dismissed`, `affiliate_outbound_confirmed` to analytics service.
+- [ ] **Enable affiliate section in production** — flip `EXPO_PUBLIC_AFFILIATE_ENABLED=true` after internal QA confirms UX is clean, disclosure is visible, and no affiliate URL is logged in plain text.
+
+### Affiliate Revenue — Phase 4b: Tracking & Enrichment
+
+> Goal: reliable click attribution, organized product taxonomy, environment separation.
+
+- [ ] **Product tagging taxonomy** — finalize and document all valid values for `weatherTags`, `occasionTags`, `aestheticTags`, `seasonTags`, `budgetTier`. Consistency here determines matching quality.
+- [ ] **Availability validation** — add `lastCheckedAt` staleness check; suppress products where `lastCheckedAt` is >24 hours old until refreshed. Out-of-stock links are the fastest way to erode trust.
+- [ ] **"The Oracle approves" editorial badge** — `oracleApprovalLevel` renders as a styled label on cards: `approved` → "The Oracle approves.", `conditional` → "Conditionally acceptable.", `emergency-option` → "The Oracle considers this acceptable given the circumstances."
+- [ ] **Price tier matching** — `matchProducts()` filters by `budgetTier` against user's style profile; allows one tier above for aspirational upsell, labeled "The Oracle also recommends, if the budget allows."
+- [ ] **Seasonal expiry** — add `expiresAt` to products; winter coats expire May 1, linen shirts expire October 1. Prevents embarrassing weather-mismatched recommendations.
+- [ ] **Day + evening image alignment** *(after image generation ships)* — when the oracle returns `outfits` (day) and `outfitsAlt` (evening), surface separate product rails under each. Evening rail should prioritise elevated pieces.
+- [ ] **Affiliate revenue estimate tracking** — PostHog dashboard: click volume by category, weather condition, occasion, aesthetic tag, and budget tier. Track estimated commission (clicks × average conversion rate × average order value × commission rate). This informs which categories to expand first.
+
+### Affiliate Revenue — Phase 4c: Dynamic Product Matching *(requires product API)*
+
+> Goal: automated product matching with live inventory. No more manual catalog updates.
+
+- [ ] **Integrate ShareASale Product API or Rakuten Product API** — fetch products by category + keyword; cache results per session; filter by availability and price range.
+- [ ] **`matchProducts()` service** — full implementation: filter by `weatherTags` ∩ weather conditions, `occasionTags` ∩ occasion, `aestheticTags` ∩ style profile, `budgetTier`, gender, availability, and `expiresAt`. Rank by `oracleApprovalLevel` then aesthetic affinity score. Commission rate is stored for analytics only — **never used for ranking**. Full implementation in `AFFILIATE_STRATEGY.md § Technical Implementation`.
+- [ ] **Product image CDN** — resize and serve product images at correct dimensions (160×213px for rail cards, 220×293px for featured cards) to avoid layout shift and slow load times.
+- [ ] **Product carousel component** — swipeable 6-card full-width carousel for "Shop the look" section. Each card: brand, product name, price, Oracle approval label, and affiliate tap target.
+- [ ] **Weather-specific emergency recommendation trigger** — when extreme weather is detected (temp < −10°C, temp > 35°C, heavy rain), surface an editorial callout above the verdict: *"It is −14°C in Montreal. The Oracle has identified exactly one acceptable coat."* with 1–2 targeted affiliate products.
+- [ ] **Seasonal recommendations section** — on TodayScreen during seasonal transitions (±2 weeks of equinox/solstice), surface a seasonal callout: *"The Oracle notes that autumn is here and your wardrobe is not ready."* Feeds a category-specific product rail.
+- [ ] **Availability refresh job** — background task runs every 24 hours; checks availability on active products; marks stale or out-of-stock items; removes them from active recommendation pool until refreshed.
+
+### Affiliate Revenue — Phase 4d: Optimization *(post-launch, data-driven)*
+
+> Goal: revenue optimization without compromising editorial standards or user trust.
+
+- [ ] **A/B test product card layouts** — image-first vs. brand-first vs. Oracle-note-first. Measure: tap rate, outbound confirmation rate, return rate.
+- [ ] **Revenue attribution by segment** — analyze commission performance by: weather condition, city tier, occasion, aesthetic tag, budget tier, and time of day. Double down on highest-converting segments.
+- [ ] **Direct brand outreach** — once app has 1k+ MAU, email `partnerships@outfitoracle.app` pitches to: Reformation, COS, Arket, Madewell, Mejuri, Senso. Target brands whose aesthetic already matches Oracle recommendations — the pitch is product-market fit, not ad inventory.
+- [ ] **Affiliate link quarterly audit** — check for dead links, availability drift, commission rate changes, and retailer policy updates. Run before each seasonal transition.
+- [ ] **Expand affiliate catalog to 3+ networks, 50+ retailers** — prioritize European coverage (Awin), luxury tier (FARFETCH Partner Program), and resale (The RealReal, Vestiaire) for sustainability-forward positioning.
+
+### Brand Partnerships *(post-scale, 5k+ MAU)*
+- [ ] **Sponsored "Oracle's Pick"** — a clearly labelled `isSponsored: true` card in the outfit rail; disclosed as "Featured"; sold directly to brands via `partnerships@outfitoracle.app` or via a fashion ad network. Never replaces organic affiliate cards — appears as an additional slot.
+- [ ] **City-based editorial drops** — brand-funded, city-specific content (*"This week in Milan: the Oracle recommends..."*) surfaced at the top of the Today tab; sold as a seasonal sponsorship package.
+- [ ] **Oracle x Brand co-editorial** — the Oracle writes a weather+city-specific editorial in a brand's voice for their owned channels; Outfit Oracle earns a flat fee + affiliate commission on referenced products. Differentiator: no other styling app has an AI voice distinctive enough to co-author editorial content.
 
 ---
 
@@ -313,6 +391,7 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 
 ## Recently Completed
 
+- [x] **Expo SDK 54 upgrade for Expo Go** — upgraded Expo to `~54.0.0`, React to `19.1.0`, React Native to `0.81.5`, aligned Expo modules with `npx expo install --fix`, removed stale `@types/react-native`, added `npm run go`, and fixed the React 19 `useRef` type issue in `Confetti`. ✅ 2026/05/15
 - [x] **Seven-theme system** — Classic / Editorial Light / Editorial Dark / Terra Firma (terracotta) / Morning Paper (sage, Syne display) / Golden Hour (amber-gold) / Electric (TREVO-inspired vivid cobalt + hot-pink, Syne_800ExtraBold display); each with distinct palette, fonts, `isWarmTheme`/`isBannerTheme` TodayScreen flags; Electric is `isDark: true`, cobalt throughout (`#1E2DFF` scrollable content, `#0A15CC` header); all 7 wired in `ThemeName` union, `THEMES` record, SettingsScreen picker ✅ 2026/05/14
 - [x] **DESIGN.md full rewrite** — comprehensive 7-theme design system doc; complete token specs per theme, scarlet token semantics, Syne font role table, `isWarmTheme`/`isBannerTheme` flag logic, motion spec, decisions log ✅ 2026/05/14
 - [x] **Allergen widget icons** — bee (AQI), grass (grass pollen), leaf-maple (birch), flower-pollen (ragweed) added to TodayScreen pollen widget; `graphPad` style added ✅ 2026/05/14
