@@ -1,18 +1,21 @@
 import React, { useRef, useMemo, useState, useCallback } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  Platform, StatusBar, Animated, LayoutChangeEvent,
+  Platform, StatusBar, Animated, LayoutChangeEvent, ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, AppMetrics, AppFlags, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, isDarkColor, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, AppFlags, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, isWeatherGlanceTheme, isDarkColor, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTempUnit } from '../contexts/TemperatureContext';
 import { HourlyGraph } from '../components/HourlyGraph';
+import { WeatherGlanceCard } from '../components/WeatherGlanceCard';
 import { Y2KTodayScreen } from './y2k/Y2KTodayScreen';
 import { MondrianTodayScreen } from './mondrian/MondrianTodayScreen';
+import { HistoryEntry } from '../hooks/useOutfitHistory';
+import { SavedOutfit } from '../hooks/useSavedOutfits';
 
 // ─── Theme icon mapping ───────────────────────────────────────────────────────
 // Each warm theme substitutes a curated set of MCIcons for the base weather icons.
@@ -124,6 +127,49 @@ function getWord(): WordEntry {
   return WORDS[dayOfYear() % WORDS.length];
 }
 
+// ─── Oracle of the Week ──────────────────────────────────────────────────────
+
+interface WeeklyOracle {
+  vibe: string;
+  city: string;
+  count: number;
+  source: 'saved' | 'consulted';
+}
+
+function startOfWeekMs(): number {
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  start.setDate(start.getDate() - day + 1);
+  start.setHours(0, 0, 0, 0);
+  return start.getTime();
+}
+
+function getWeeklyOracle(history: HistoryEntry[], saved: SavedOutfit[]): WeeklyOracle | null {
+  const weekStart = startOfWeekMs();
+  const savedThisWeek = saved.filter(item => item.savedAt >= weekStart);
+  const consultedThisWeek = history.filter(entry => entry.consultedAt >= weekStart);
+  const sourceItems = savedThisWeek.length > 0
+    ? savedThisWeek.map(item => ({ vibe: item.vibe, city: item.city, source: 'saved' as const }))
+    : consultedThisWeek.map(entry => ({ vibe: entry.verdict.vibe, city: entry.city, source: 'consulted' as const }));
+
+  if (sourceItems.length === 0) return null;
+
+  const ranked = new Map<string, WeeklyOracle>();
+  sourceItems.forEach(item => {
+    const key = item.vibe.trim().toLowerCase();
+    const existing = ranked.get(key);
+    ranked.set(key, {
+      vibe: existing?.vibe ?? item.vibe,
+      city: existing?.city ?? item.city,
+      count: (existing?.count ?? 0) + 1,
+      source: item.source,
+    });
+  });
+
+  return [...ranked.values()].sort((a, b) => b.count - a.count)[0] ?? null;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function uvLabel(uv: number): string {
@@ -178,10 +224,14 @@ function StandardTodayScreen() {
   const { colors, fonts, metrics, flags, themeName } = useTheme();
   const { formatTemp, unit } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts, metrics, flags, themeName), [colors, fonts, metrics, flags, themeName]);
-  const { oracle, profileCtx, streakCtx } = useAppData();
+  const { oracle, profileCtx, streakCtx, historyCtx, savedCtx } = useAppData();
   const { weather, verdict, cachedAt, cachedCity, isFromCache, isOffline, status } = oracle;
   const profile = profileCtx.profile;
   const { streak, rankTitle } = streakCtx;
+  const weeklyOracle = useMemo(
+    () => getWeeklyOracle(historyCtx.history, savedCtx.saved),
+    [historyCtx.history, savedCtx.saved],
+  );
 
   const heroOpacity = useRef(new Animated.Value(0)).current;
   const heroY       = useRef(new Animated.Value(12)).current;
@@ -203,6 +253,7 @@ function StandardTodayScreen() {
   const word       = getWord();
 
   const isY2K         = themeName === 'y2k';
+  const isWeatherGlance = isWeatherGlanceTheme(themeName);
   const isWarmTheme   = flags.isWarmTheme;
   const isBannerTheme = flags.isBannerTheme;
   // Widget surface direction: computed from the actual widget background, not flags.
@@ -227,7 +278,12 @@ function StandardTodayScreen() {
             <Text style={styles.streakLabel}>{streak}-DAY {(rankTitle ?? '').toUpperCase()}</Text>
           )}
         </View>
-        {cachedCity ? (
+        {isLoading ? (
+          <View style={styles.cityChip}>
+            <ActivityIndicator size="small" color={colors.scarlet} style={{ marginRight: 5 }} />
+            <Text style={styles.cityChipText}>CONSULTING</Text>
+          </View>
+        ) : cachedCity ? (
           <View style={styles.cityChip}>
             <Text style={styles.cityChipText}>{cachedCity}</Text>
           </View>
@@ -260,44 +316,77 @@ function StandardTodayScreen() {
           )}
         </Widget>
 
+        <Widget label="ORACLE OF THE WEEK" styles={styles}>
+          {weeklyOracle ? (
+            <View style={styles.weeklyOracle}>
+              <Text style={styles.weeklyVibe}>{weeklyOracle.vibe}</Text>
+              <Text style={styles.weeklyMeta}>
+                {weeklyOracle.source === 'saved' ? 'Most saved' : 'Most consulted'} this week · {weeklyOracle.city}
+              </Text>
+              <Text style={styles.weeklyBody}>
+                {weeklyOracle.count === 1
+                  ? 'A single strong signal is enough. The week has chosen a direction.'
+                  : `${weeklyOracle.count} signals agree. This is the mood to build around.`}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.weeklyOracle}>
+              <Text style={styles.weeklyVibe}>No ruling yet.</Text>
+              <Text style={styles.weeklyMeta}>This week is still unwritten.</Text>
+              <Text style={styles.weeklyBody}>
+                Consult or save a look and the Oracle will name the week&apos;s prevailing mood.
+              </Text>
+            </View>
+          )}
+        </Widget>
+
         {showResult ? (
           <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroY }] }}>
 
             {/* ── WEATHER HERO ── */}
-            <View style={styles.weatherHero}>
-              <View style={styles.heroTop}>
-                <View style={styles.heroLeft}>
-                  <Text style={styles.heroCity}>{weather.city}</Text>
-                  <Text style={styles.heroCountry}>{weather.country}</Text>
-                  <Text style={styles.heroCondition}>{weather.conditionLabel.toUpperCase()}</Text>
+            {isWeatherGlance ? (
+              <WeatherGlanceCard
+                weather={weather}
+                formatTemp={formatTemp}
+                mode="hero"
+                style={styles.weatherGlanceHero}
+              />
+            ) : (
+              <View style={styles.weatherHero}>
+                <View style={styles.heroTop}>
+                  <View style={styles.heroLeft}>
+                    <Text style={styles.heroCity}>{weather.city}</Text>
+                    <Text style={styles.heroCountry}>{weather.country}</Text>
+                    <Text style={styles.heroCondition}>{weather.conditionLabel.toUpperCase()}</Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name={themeIcon(weather.conditionIcon, themeName) as any}
+                    size={isWarmTheme ? 52 : 48}
+                    color={heroIconColor}
+                  />
                 </View>
-                <MaterialCommunityIcons
-                  name={themeIcon(weather.conditionIcon, themeName) as any}
-                  size={isWarmTheme ? 52 : 48}
-                  color={heroIconColor}
-                />
-              </View>
 
-              <Text style={styles.heroTemp}>{formatTemp(weather.temp)}°</Text>
+                <Text style={styles.heroTemp}>{formatTemp(weather.temp)}°</Text>
 
-              <View style={styles.heroStats}>
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatLabel}>FEELS</Text>
-                  <Text style={styles.heroStatVal}>{formatTemp(weather.feelsLike)}°</Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatLabel}>HUMIDITY</Text>
-                  <Text style={styles.heroStatVal}>{weather.humidity}%</Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatLabel}>WIND</Text>
-                  <Text style={styles.heroStatVal}>{weather.windSpeed}</Text>
-                  <Text style={styles.heroStatUnit}>km/h</Text>
+                <View style={styles.heroStats}>
+                  <View style={styles.heroStat}>
+                    <Text style={styles.heroStatLabel}>FEELS</Text>
+                    <Text style={styles.heroStatVal}>{formatTemp(weather.feelsLike)}°</Text>
+                  </View>
+                  <View style={styles.heroStatDivider} />
+                  <View style={styles.heroStat}>
+                    <Text style={styles.heroStatLabel}>HUMIDITY</Text>
+                    <Text style={styles.heroStatVal}>{weather.humidity}%</Text>
+                  </View>
+                  <View style={styles.heroStatDivider} />
+                  <View style={styles.heroStat}>
+                    <Text style={styles.heroStatLabel}>WIND</Text>
+                    <Text style={styles.heroStatVal}>{weather.windSpeed}</Text>
+                    <Text style={styles.heroStatUnit}>km/h</Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
 
             {/* ── HOURLY FORECAST ── */}
             {!!weather.hourly?.length && (
@@ -494,6 +583,20 @@ function StandardTodayScreen() {
             </View>
 
           </Animated.View>
+        ) : isLoading ? (
+          /* ── CONSULTING STATE ── */
+          <View style={styles.emptyState}>
+            <View style={styles.emptyEyeWrap}>
+              <ActivityIndicator size="large" color={colors.scarlet} />
+            </View>
+            <View style={styles.emptyRule} />
+            <Text style={styles.emptyTitle}>Consulting.</Text>
+            <Text style={styles.emptySub}>
+              {status === 'fetching-weather'
+                ? 'Reading the conditions.\nWeather data incoming.'
+                : 'The Oracle deliberates.\nYour verdict is being prepared.'}
+            </Text>
+          </View>
         ) : (
           /* ── EMPTY STATE ── */
           <View style={styles.emptyState}>
@@ -627,6 +730,8 @@ return StyleSheet.create({
     borderColor: cityChipBorderColor,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   cityChipText: {
     fontFamily: fonts.mono,
@@ -712,9 +817,42 @@ return StyleSheet.create({
     paddingBottom: spacing.md,
   },
 
+  /* ── Oracle of the Week ── */
+  weeklyOracle: {
+    gap: spacing.xs,
+  },
+  weeklyVibe: {
+    fontFamily: fonts.display,
+    fontSize: 34,
+    lineHeight: 38,
+    color: S.high,
+    letterSpacing: -0.5,
+  },
+  weeklyMeta: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    lineHeight: 16,
+    color: isElectric ? colors.scarletFg : widgetIsDark ? 'rgba(250,249,246,0.44)' : colors.textMuted,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+  },
+  weeklyBody: {
+    fontFamily: isWarm ? fonts.serif : fonts.mono,
+    fontSize: isWarm ? 14 : 12,
+    lineHeight: isWarm ? 22 : 18,
+    color: S.low,
+    letterSpacing: isWarm ? 0.1 : 0.2,
+    marginTop: spacing.xs,
+  },
+
   /* ── Weather hero ── */
+  weatherGlanceHero: {
+    marginHorizontal: isBanner && metrics.borderWidth === 0 ? 0 : spacing.lg,
+    marginTop: isBanner && metrics.borderWidth === 0 ? 0 : spacing.sm,
+    marginBottom: metrics.cardGap === 32 ? spacing.xl : 0,
+  },
   weatherHero: {
-    backgroundColor: metrics.cardGap === 32 ? '#000000' : colors.bgDark,
+    backgroundColor: colors.bgDark,
     marginHorizontal: isBanner && metrics.borderWidth === 0 ? 0 : spacing.lg,
     marginTop: isBanner && metrics.borderWidth === 0 ? 0 : spacing.sm,
     marginBottom: metrics.cardGap === 32 ? spacing.xl : 0,

@@ -26,23 +26,30 @@ interface Particle {
   endRot: number;
   translateY: Animated.Value;
   rotate: Animated.Value;
+  rotDeg: Animated.AnimatedInterpolation<string>; // pre-computed, not created in render
   opacity: Animated.Value;
 }
 
 function makeParticles(colors: string[]): Particle[] {
-  return Array.from({ length: COUNT }, () => ({
-    x:         rand(0, SW - 14),
-    color:     colors[randInt(0, colors.length - 1)],
-    w:         rand(6, 13),
-    h:         rand(4, 9),
-    delay:     rand(0, 450),
-    duration:  rand(1800, 2800),
-    startRot:  rand(-60, 60),
-    endRot:    rand(-300, 300),
-    translateY: new Animated.Value(-20),
-    rotate:     new Animated.Value(0),
-    opacity:    new Animated.Value(1),
-  }));
+  return Array.from({ length: COUNT }, () => {
+    const startRot = rand(-60, 60);
+    const endRot   = rand(-300, 300);
+    const rotate   = new Animated.Value(0);
+    return {
+      x:         rand(0, SW - 14),
+      color:     colors[randInt(0, colors.length - 1)],
+      w:         rand(6, 13),
+      h:         rand(4, 9),
+      delay:     rand(0, 450),
+      duration:  rand(1800, 2800),
+      startRot,
+      endRot,
+      translateY: new Animated.Value(-20),
+      rotate,
+      rotDeg: rotate.interpolate({ inputRange: [0, 1], outputRange: [`${startRot}deg`, `${endRot}deg`] }),
+      opacity:    new Animated.Value(1),
+    };
+  });
 }
 
 const styles = StyleSheet.create({
@@ -66,7 +73,7 @@ export function Confetti({ visible }: Props) {
                                   ? COLORS_WARM :
     COLORS_DEFAULT;
 
-  const particlesRef = useRef<Particle[]>();
+  const particlesRef = useRef<Particle[] | null>(null);
   if (!particlesRef.current) {
     particlesRef.current = makeParticles(colors);
   }
@@ -120,10 +127,6 @@ export function Confetti({ visible }: Props) {
   return (
     <View style={[StyleSheet.absoluteFill, styles.overlay]} pointerEvents="none">
       {particles.map((p, i) => {
-        const rotDeg = p.rotate.interpolate({
-          inputRange:  [0, 1],
-          outputRange: [`${p.startRot}deg`, `${p.endRot}deg`],
-        });
         return (
           <Animated.View
             key={i}
@@ -137,7 +140,7 @@ export function Confetti({ visible }: Props) {
               borderRadius: 1,
               transform: [
                 { translateY: p.translateY },
-                { rotate: rotDeg },
+                { rotate: p.rotDeg },
               ],
               opacity: p.opacity,
             }}

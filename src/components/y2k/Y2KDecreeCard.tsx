@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { OracleVerdict } from '../../services/oracle';
 import { y2kTokens, spacing } from '../../theme';
 import { Y2KCard } from './Y2KCard';
@@ -32,8 +32,8 @@ export function Y2KDecreeCard({ verdict }: Props) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 500, useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
     ]).start();
   }, []);
 

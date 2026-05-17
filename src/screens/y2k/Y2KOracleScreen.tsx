@@ -30,9 +30,11 @@ import { Y2KAvoidSection } from '../../components/y2k/Y2KAvoidSection';
 import { Y2KBadge } from '../../components/y2k/Y2KBadge';
 import { Y2KSticker } from '../../components/y2k/Y2KSticker';
 import { useTempUnit } from '../../contexts/TemperatureContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function Y2KOracleScreen() {
   const { y2kFontSubtheme } = useTheme();
+  const insets = useSafeAreaInsets();
   const typo = useMemo(() => getY2KTypography(y2kFontSubtheme), [y2kFontSubtheme]);
   const { formatTemp } = useTempUnit();
   const { magicOpacity, showMagicMoment, dismissMagicMoment, tryTriggerFirstConsult } = useMagicMoment();
@@ -49,10 +51,12 @@ export function Y2KOracleScreen() {
   const [occasion, setOccasion]       = useState<Occasion>('Any');
   const [lookMode, setLookMode]       = useState<'polished' | 'casual'>('polished');
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
+  const [suggestionsArmed, setSuggestionsArmed] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
 
   const debounceRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressSuggestRef = useRef(false);
+  const searchSeqRef       = useRef(0);
   const scrollRef          = useRef<ScrollView>(null);
   const shareCardRef       = useRef<View>(null);
   const btnScale           = useRef(new Animated.Value(1)).current;
@@ -67,7 +71,12 @@ export function Y2KOracleScreen() {
 
   // Pre-fill from cache
   useEffect(() => {
-    if (cachedCity && !city) setCity(cachedCity);
+    if (cachedCity && !city) {
+      suppressSuggestRef.current = true;
+      setSuggestionsArmed(false);
+      setSuggestions([]);
+      setCity(cachedCity);
+    }
   }, [cachedCity]);
 
   // Haptic on result
@@ -111,23 +120,27 @@ export function Y2KOracleScreen() {
 
   // Autocomplete debounce
   useEffect(() => {
-    if (isLoading || city.trim().length < 2 || suppressSuggestRef.current) {
+    const seq = ++searchSeqRef.current;
+    if (!suggestionsArmed || isLoading || city.trim().length < 2 || suppressSuggestRef.current) {
       setSuggestions([]);
       return;
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      if (suppressSuggestRef.current) return;
+      if (!suggestionsArmed || suppressSuggestRef.current) return;
       const results = await searchCities(city);
-      setSuggestions(results);
+      if (searchSeqRef.current === seq && suggestionsArmed && !suppressSuggestRef.current) {
+        setSuggestions(results);
+      }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [city, isLoading]);
+  }, [city, isLoading, suggestionsArmed]);
 
   const handleConsult = (overrideCity?: string) => {
     const target = (overrideCity ?? city).trim();
     if (!target || isLoading) return;
     suppressSuggestRef.current = true;
+    setSuggestionsArmed(false);
     setSuggestions([]);
     setCity(target);
     setLookMode('polished');
@@ -151,6 +164,7 @@ export function Y2KOracleScreen() {
       const detectedCountry = place.isoCountryCode ?? place.country ?? '';
       if (!detectedCity) return;
       suppressSuggestRef.current = true;
+      setSuggestionsArmed(false);
       setSuggestions([]);
       setCity(detectedCity);
       addCity(detectedCity);
@@ -194,7 +208,7 @@ export function Y2KOracleScreen() {
           }
         >
           {/* ── Y2K HEADER ── */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
             <View style={[styles.headerTopRule, { backgroundColor: y2kTokens.hotPink }]} />
             <View style={styles.headerRow}>
               <Text style={[styles.headerTitle, { fontFamily: typo.displayLarge.fontFamily, letterSpacing: typo.displayLarge.letterSpacing }]}>
@@ -226,8 +240,15 @@ export function Y2KOracleScreen() {
                   value={city}
                   onChangeText={text => {
                     suppressSuggestRef.current = false;
+                    setSuggestionsArmed(true);
                     setCity(text);
                     if (!text.trim()) setSuggestions([]);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setSuggestionsArmed(false);
+                      setSuggestions([]);
+                    }, 120);
                   }}
                   placeholder="Toronto, London, Tokyo…"
                   placeholderTextColor={y2kTokens.mutedPurple + '88'}
@@ -427,7 +448,6 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    paddingTop: Platform.OS === 'ios' ? 16 : 12,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
@@ -688,8 +708,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 0,
     borderWidth: 2,
-    borderColor: '#000000',
-    shadowColor: '#000000',
+    borderColor: y2kTokens.ink,
+    shadowColor: y2kTokens.ink,
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -697,7 +717,7 @@ const styles = StyleSheet.create({
   shareBtnText: {
     fontFamily: 'Knewave_400Regular',
     fontSize: 16,
-    color: '#FFFFFF',
+    color: y2kTokens.cream,
     letterSpacing: 1,
   },
   resetBtn: {
