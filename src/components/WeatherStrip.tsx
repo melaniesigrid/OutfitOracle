@@ -4,27 +4,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WeatherData } from '../services/weather';
 import { AppColors, AppFonts, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTempUnit } from '../contexts/TemperatureContext';
 
 interface Props {
   weather: WeatherData;
 }
 
-type Styles = ReturnType<typeof makeStyles>;
-
-const Stat = ({
-  label, value, sub, styles,
-}: {
-  label: string; value: string; sub?: string; styles: Styles;
-}) => (
-  <View style={styles.stat}>
-    <Text style={styles.statLabel}>{label}</Text>
-    <Text style={styles.statValue}>{value}</Text>
-    {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
-  </View>
-);
-
 export function WeatherStrip({ weather }: Props) {
   const { colors, fonts } = useTheme();
+  const { formatTemp } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const opacity    = useRef(new Animated.Value(0)).current;
   const translateX = useRef(new Animated.Value(-10)).current;
@@ -46,18 +34,14 @@ export function WeatherStrip({ weather }: Props) {
         </View>
         <MaterialCommunityIcons
           name={weather.conditionIcon as any}
-          size={36}
-          color={colors.textSecondary}
+          size={32}
+          color={colors.textMuted}
         />
       </View>
-      <View style={styles.rule} />
-      <View style={styles.statsRow}>
-        <Stat label="TEMP" value={`${weather.temp}°C`} sub={`feels ${weather.feelsLike}°C`} styles={styles} />
-        <View style={styles.divider} />
-        <Stat label="HUMIDITY" value={`${weather.humidity}%`} sub="relative" styles={styles} />
-        <View style={styles.divider} />
-        <Stat label="WIND" value={`${weather.windSpeed}`} sub="km/h" styles={styles} />
-      </View>
+      <Text style={styles.tempHero}>{formatTemp(weather.temp)}</Text>
+      <Text style={styles.metaLine}>
+        {'FEELS ' + formatTemp(weather.feelsLike) + '  ·  HUMIDITY ' + weather.humidity + '%  ·  WIND ' + weather.windSpeed + ' km/h'}
+      </Text>
       <View style={styles.rule} />
     </Animated.View>
   );
@@ -76,57 +60,40 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xs,
     },
     locationLeft: {
       flex: 1,
     },
     locationName: {
       fontFamily: fonts.display,
-      fontSize: 28,
+      fontSize: 22,
       color: colors.textPrimary,
-      lineHeight: 32,
-      letterSpacing: -0.5,
+      lineHeight: 26,
+      letterSpacing: -0.3,
     },
     condition: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 11,
       color: colors.textMuted,
       letterSpacing: 2,
-      marginTop: 4,
+      marginTop: 3,
     },
-    statsRow: {
-      flexDirection: 'row',
-      paddingVertical: spacing.md,
-      alignItems: 'center',
-    },
-    stat: {
-      flex: 1,
-      alignItems: 'center',
-    },
-    divider: {
-      width: 1,
-      height: 44,
-      backgroundColor: colors.border,
-    },
-    statLabel: {
-      fontFamily: fonts.mono,
-      fontSize: 10,
-      letterSpacing: 2,
-      color: colors.textMuted,
-      marginBottom: 4,
-    },
-    statValue: {
-      fontFamily: fonts.displayBold,
-      fontSize: 24,
+    tempHero: {
+      fontFamily: fonts.displayLight,
+      fontSize: 84,
       color: colors.textPrimary,
-      lineHeight: 28,
+      letterSpacing: -3,
+      marginTop: spacing.xs,
+      marginBottom: spacing.xs,
     },
-    statSub: {
+    metaLine: {
       fontFamily: fonts.mono,
-      fontSize: 10,
-      color: colors.textSecondary,
-      marginTop: 2,
+      fontSize: 11,
+      color: colors.textMuted,
+      letterSpacing: 1.5,
+      marginBottom: spacing.md,
     },
   });
 }

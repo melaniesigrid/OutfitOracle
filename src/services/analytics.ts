@@ -3,8 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const API_KEY  = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '';
 const ENDPOINT = 'https://us.i.posthog.com/capture/';
 const ID_KEY   = '@outfit_oracle_device_id';
+export const ANALYTICS_ENABLED_KEY = '@outfit_oracle_analytics_enabled';
 
 let deviceId: string | null = null;
+let analyticsEnabled: boolean | null = null;
 
 async function getDeviceId(): Promise<string> {
   if (deviceId) return deviceId;
@@ -20,19 +22,34 @@ async function getDeviceId(): Promise<string> {
   return deviceId;
 }
 
+export async function getAnalyticsEnabledPreference(): Promise<boolean> {
+  if (analyticsEnabled !== null) return analyticsEnabled;
+  const stored = await AsyncStorage.getItem(ANALYTICS_ENABLED_KEY).catch(() => null);
+  analyticsEnabled = stored !== 'false';
+  return analyticsEnabled;
+}
+
+export async function setAnalyticsEnabledPreference(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(ANALYTICS_ENABLED_KEY, enabled ? 'true' : 'false');
+  analyticsEnabled = enabled;
+}
+
 function track(event: string, properties: Record<string, unknown> = {}): void {
   if (!API_KEY) return;
-  getDeviceId().then(id => {
-    fetch(ENDPOINT, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key:     API_KEY,
-        event,
-        distinct_id: id,
-        properties,
-        timestamp:   new Date().toISOString(),
-      }),
+  getAnalyticsEnabledPreference().then(enabled => {
+    if (!enabled) return;
+    getDeviceId().then(id => {
+      fetch(ENDPOINT, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key:     API_KEY,
+          event,
+          distinct_id: id,
+          properties,
+          timestamp:   new Date().toISOString(),
+        }),
+      }).catch(() => {});
     }).catch(() => {});
   }).catch(() => {});
 }

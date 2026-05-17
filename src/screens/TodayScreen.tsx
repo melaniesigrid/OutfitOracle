@@ -1,14 +1,49 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState, useCallback } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  Platform, StatusBar, Animated,
+  Platform, StatusBar, Animated, LayoutChangeEvent, ActivityIndicator,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, AppFlags, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, isWeatherGlanceTheme, isDarkColor, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTempUnit } from '../contexts/TemperatureContext';
+import { HourlyGraph } from '../components/HourlyGraph';
+import { WeatherGlanceCard } from '../components/WeatherGlanceCard';
+import { Y2KTodayScreen } from './y2k/Y2KTodayScreen';
+import { MondrianTodayScreen } from './mondrian/MondrianTodayScreen';
+import { HistoryEntry } from '../hooks/useOutfitHistory';
+import { SavedOutfit } from '../hooks/useSavedOutfits';
+
+// ─── Theme icon mapping ───────────────────────────────────────────────────────
+// Each warm theme substitutes a curated set of MCIcons for the base weather icons.
+// Morning Paper → outline / botanical  Terra Firma → solid / earthy  Golden Hour → glowing / warm
+
+const THEME_ICON_MAP: Partial<Record<ThemeName, Record<string, string>>> = {
+  'morning-paper': {
+    'weather-sunny':       'white-balance-sunny',   // geometric circle, clean
+    'weather-cloudy':      'cloud-outline',          // delicate outline
+    'weather-rainy':       'water-outline',          // droplet outline, botanical
+    'weather-pouring':     'weather-rainy',          // keep legible
+    'weather-snowy':       'snowflake',              // precise geometric
+    'weather-snowy-heavy': 'snowflake-variant',      // alternate geometric
+  },
+  'terra-firma': {
+    'weather-cloudy':      'cloud',                  // solid, heavy
+    'weather-fog':         'weather-fog',            // keep
+  },
+  'golden-hour': {
+    'weather-sunny':         'flare',               // starburst glow
+    'weather-partly-cloudy': 'weather-sunset',      // warm horizon
+    'weather-fog':           'weather-hazy',        // hazier, warmer
+  },
+};
+
+function themeIcon(base: string, theme: ThemeName): string {
+  return THEME_ICON_MAP[theme]?.[base] ?? base;
+}
 
 // ─── Word of the Day ──────────────────────────────────────────────────────────
 
@@ -92,6 +127,49 @@ function getWord(): WordEntry {
   return WORDS[dayOfYear() % WORDS.length];
 }
 
+// ─── Oracle of the Week ──────────────────────────────────────────────────────
+
+interface WeeklyOracle {
+  vibe: string;
+  city: string;
+  count: number;
+  source: 'saved' | 'consulted';
+}
+
+function startOfWeekMs(): number {
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  start.setDate(start.getDate() - day + 1);
+  start.setHours(0, 0, 0, 0);
+  return start.getTime();
+}
+
+function getWeeklyOracle(history: HistoryEntry[], saved: SavedOutfit[]): WeeklyOracle | null {
+  const weekStart = startOfWeekMs();
+  const savedThisWeek = saved.filter(item => item.savedAt >= weekStart);
+  const consultedThisWeek = history.filter(entry => entry.consultedAt >= weekStart);
+  const sourceItems = savedThisWeek.length > 0
+    ? savedThisWeek.map(item => ({ vibe: item.vibe, city: item.city, source: 'saved' as const }))
+    : consultedThisWeek.map(entry => ({ vibe: entry.verdict.vibe, city: entry.city, source: 'consulted' as const }));
+
+  if (sourceItems.length === 0) return null;
+
+  const ranked = new Map<string, WeeklyOracle>();
+  sourceItems.forEach(item => {
+    const key = item.vibe.trim().toLowerCase();
+    const existing = ranked.get(key);
+    ranked.set(key, {
+      vibe: existing?.vibe ?? item.vibe,
+      city: existing?.city ?? item.city,
+      count: (existing?.count ?? 0) + 1,
+      source: item.source,
+    });
+  });
+
+  return [...ranked.values()].sort((a, b) => b.count - a.count)[0] ?? null;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function uvLabel(uv: number): string {
@@ -120,6 +198,8 @@ function pollenLevel(val: number): string {
 
 // ─── Widget shell ─────────────────────────────────────────────────────────────
 
+// HourlyGraph is now in src/components/HourlyGraph.tsx (shared with Y2K screen)
+
 type Styles = ReturnType<typeof makeStyles>;
 function Widget({ label, children, noPad, styles }: { label: string; children: React.ReactNode; noPad?: boolean; styles: Styles }) {
   return (
@@ -133,29 +213,58 @@ function Widget({ label, children, noPad, styles }: { label: string; children: R
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function TodayScreen() {
-  const { colors, fonts } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
-  const { oracle, profileCtx, streakCtx } = useAppData();
-  const { weather, verdict, cachedAt, cachedCity, isFromCache, status } = oracle;
+  const { themeName } = useTheme();
+  if (isY2KTheme(themeName)) return <Y2KTodayScreen />;
+  if (isMondrianTheme(themeName)) return <MondrianTodayScreen />;
+  return <StandardTodayScreen />;
+}
+
+function StandardTodayScreen() {
+  const navigation = useNavigation<any>();
+  const { colors, fonts, metrics, flags, themeName } = useTheme();
+  const { formatTemp, unit } = useTempUnit();
+  const styles = useMemo(() => makeStyles(colors, fonts, metrics, flags, themeName), [colors, fonts, metrics, flags, themeName]);
+  const { oracle, profileCtx, streakCtx, historyCtx, savedCtx } = useAppData();
+  const { weather, verdict, cachedAt, cachedCity, isFromCache, isOffline, status } = oracle;
   const profile = profileCtx.profile;
   const { streak, rankTitle } = streakCtx;
+  const weeklyOracle = useMemo(
+    () => getWeeklyOracle(historyCtx.history, savedCtx.saved),
+    [historyCtx.history, savedCtx.saved],
+  );
 
   const heroOpacity = useRef(new Animated.Value(0)).current;
   const heroY       = useRef(new Animated.Value(12)).current;
 
-  useFocusEffect(() => {
-    heroOpacity.setValue(0);
-    heroY.setValue(12);
-    Animated.parallel([
-      Animated.timing(heroOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(heroY,       { toValue: 0, duration: 450, useNativeDriver: true }),
-    ]).start();
-  });
+  useFocusEffect(
+    useCallback(() => {
+      heroOpacity.setValue(0);
+      heroY.setValue(12);
+      Animated.parallel([
+        Animated.timing(heroOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(heroY,       { toValue: 0, duration: 450, useNativeDriver: true }),
+      ]).start();
+    }, [heroOpacity, heroY])
+  );
 
   const showResult = !!weather && !!verdict;
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const hoursAgo   = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
   const word       = getWord();
+
+  const isY2K         = themeName === 'y2k';
+  const isWeatherGlance = isWeatherGlanceTheme(themeName);
+  const isWarmTheme   = flags.isWarmTheme;
+  const isBannerTheme = flags.isBannerTheme;
+  // Widget surface direction: computed from the actual widget background, not flags.
+  // This works for every theme automatically — no per-theme checks needed.
+  const widgetIsDark  = isDarkColor(colors.widgetBg);
+  const heroIconColor = isWarmTheme ? colors.scarlet : 'rgba(250,249,246,0.60)';
+  // Graph and condition icons render inside the widget — use surface-relative colour.
+  const graphIconColor  = widgetIsDark ? heroIconColor : colors.textMuted;
+  const condIconColor   = widgetIsDark ? 'rgba(250,249,246,0.50)' : colors.textMuted;
+  // Precipitation color: Electric has vivid-blue bg — light-blue #4FA3D4 blends in; use periwinkle textSecondary instead
+  const precipAccentColor = (themeName === 'electric' || isY2K) ? colors.textSecondary : '#4FA3D4';
 
   return (
     <View style={styles.root}>
@@ -169,7 +278,12 @@ export function TodayScreen() {
             <Text style={styles.streakLabel}>{streak}-DAY {(rankTitle ?? '').toUpperCase()}</Text>
           )}
         </View>
-        {cachedCity ? (
+        {isLoading ? (
+          <View style={styles.cityChip}>
+            <ActivityIndicator size="small" color={colors.scarlet} style={{ marginRight: 5 }} />
+            <Text style={styles.cityChipText}>CONSULTING</Text>
+          </View>
+        ) : cachedCity ? (
           <View style={styles.cityChip}>
             <Text style={styles.cityChipText}>{cachedCity}</Text>
           </View>
@@ -183,81 +297,113 @@ export function TodayScreen() {
       >
         {/* ── WORD OF THE DAY (always visible) ── */}
         <Widget label="WORD OF THE DAY" styles={styles}>
-          <View style={styles.wotdAccent} />
-          <Text style={styles.wotdWord}>{word.word}</Text>
-          <Text style={styles.wotdOrigin}>{word.origin}</Text>
-          <Text style={styles.wotdDef}>{word.definition}</Text>
+          {isWarmTheme ? (
+            <View style={styles.wotdInner}>
+              <View style={styles.wotdRule} />
+              <View style={styles.wotdTextCol}>
+                <Text style={[styles.wotdWord, { paddingHorizontal: 0, paddingTop: 0 }]}>{word.word}</Text>
+                <Text style={[styles.wotdOrigin, { paddingHorizontal: 0 }]}>{word.origin}</Text>
+                <Text style={[styles.wotdDef, { paddingHorizontal: 0, paddingBottom: 0 }]}>{word.definition}</Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={styles.wotdAccent} />
+              <Text style={styles.wotdWord}>{word.word}</Text>
+              <Text style={styles.wotdOrigin}>{word.origin}</Text>
+              <Text style={styles.wotdDef}>{word.definition}</Text>
+            </>
+          )}
+        </Widget>
+
+        <Widget label="ORACLE OF THE WEEK" styles={styles}>
+          {weeklyOracle ? (
+            <View style={styles.weeklyOracle}>
+              <Text style={styles.weeklyVibe}>{weeklyOracle.vibe}</Text>
+              <Text style={styles.weeklyMeta}>
+                {weeklyOracle.source === 'saved' ? 'Most saved' : 'Most consulted'} this week · {weeklyOracle.city}
+              </Text>
+              <Text style={styles.weeklyBody}>
+                {weeklyOracle.count === 1
+                  ? 'A single strong signal is enough. The week has chosen a direction.'
+                  : `${weeklyOracle.count} signals agree. This is the mood to build around.`}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.weeklyOracle}>
+              <Text style={styles.weeklyVibe}>No ruling yet.</Text>
+              <Text style={styles.weeklyMeta}>This week is still unwritten.</Text>
+              <Text style={styles.weeklyBody}>
+                Consult or save a look and the Oracle will name the week&apos;s prevailing mood.
+              </Text>
+            </View>
+          )}
         </Widget>
 
         {showResult ? (
           <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroY }] }}>
 
             {/* ── WEATHER HERO ── */}
-            <View style={styles.weatherHero}>
-              <View style={styles.heroTop}>
-                <View style={styles.heroLeft}>
-                  <Text style={styles.heroCity}>{weather.city}</Text>
-                  <Text style={styles.heroCountry}>{weather.country}</Text>
-                  <Text style={styles.heroCondition}>{weather.conditionLabel.toUpperCase()}</Text>
+            {isWeatherGlance ? (
+              <WeatherGlanceCard
+                weather={weather}
+                formatTemp={formatTemp}
+                mode="hero"
+                style={styles.weatherGlanceHero}
+              />
+            ) : (
+              <View style={styles.weatherHero}>
+                <View style={styles.heroTop}>
+                  <View style={styles.heroLeft}>
+                    <Text style={styles.heroCity}>{weather.city}</Text>
+                    <Text style={styles.heroCountry}>{weather.country}</Text>
+                    <Text style={styles.heroCondition}>{weather.conditionLabel.toUpperCase()}</Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name={themeIcon(weather.conditionIcon, themeName) as any}
+                    size={isWarmTheme ? 52 : 48}
+                    color={heroIconColor}
+                  />
                 </View>
-                <MaterialCommunityIcons
-                  name={weather.conditionIcon as any}
-                  size={48}
-                  color="rgba(250,249,246,0.60)"
-                />
-              </View>
 
-              <Text style={styles.heroTemp}>{weather.temp}°</Text>
+                <Text style={styles.heroTemp}>{formatTemp(weather.temp)}°</Text>
 
-              <View style={styles.heroStats}>
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatLabel}>FEELS</Text>
-                  <Text style={styles.heroStatVal}>{weather.feelsLike}°</Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatLabel}>HUMIDITY</Text>
-                  <Text style={styles.heroStatVal}>{weather.humidity}%</Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatLabel}>WIND</Text>
-                  <Text style={styles.heroStatVal}>{weather.windSpeed}</Text>
-                  <Text style={styles.heroStatUnit}>km/h</Text>
+                <View style={styles.heroStats}>
+                  <View style={styles.heroStat}>
+                    <Text style={styles.heroStatLabel}>FEELS</Text>
+                    <Text style={styles.heroStatVal}>{formatTemp(weather.feelsLike)}°</Text>
+                  </View>
+                  <View style={styles.heroStatDivider} />
+                  <View style={styles.heroStat}>
+                    <Text style={styles.heroStatLabel}>HUMIDITY</Text>
+                    <Text style={styles.heroStatVal}>{weather.humidity}%</Text>
+                  </View>
+                  <View style={styles.heroStatDivider} />
+                  <View style={styles.heroStat}>
+                    <Text style={styles.heroStatLabel}>WIND</Text>
+                    <Text style={styles.heroStatVal}>{weather.windSpeed}</Text>
+                    <Text style={styles.heroStatUnit}>km/h</Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
 
             {/* ── HOURLY FORECAST ── */}
             {!!weather.hourly?.length && (
               <Widget label="NEXT 24 HOURS" noPad styles={styles}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.hourlyList}
-                >
-                  {weather.hourly.map((h, i) => (
-                    <View key={i} style={styles.hourlyItem}>
-                      <Text style={styles.hourlyTime}>{h.time}</Text>
-                      <MaterialCommunityIcons
-                        name={h.conditionIcon as any}
-                        size={18}
-                        color="rgba(250,249,246,0.60)"
-                      />
-                      <Text style={styles.hourlyTemp}>{h.temp}°</Text>
-                      {h.precipProb > 0 && (
-                        <Text style={styles.hourlyPrecip}>{h.precipProb}%</Text>
-                      )}
-                      {h.uvIndex > 0 && (
-                        <View style={[styles.hourlyUV, { borderColor: uvColor(h.uvIndex) + '60' }]}>
-                          <Text style={[styles.hourlyUVText, { color: uvColor(h.uvIndex) }]}>
-                            UV{h.uvIndex}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </ScrollView>
+                <View style={styles.graphPad}>
+                  <HourlyGraph
+                    hours={weather.hourly}
+                    accentColor={precipAccentColor}
+                    textHigh={styles.hourlyTemp.color as string}
+                    textFaint={styles.hourlyTime.color as string}
+                    lineColor={isWarmTheme ? colors.scarlet + 'A0' : widgetIsDark ? 'rgba(250,249,246,0.30)' : colors.borderMid}
+                    iconColor={graphIconColor}
+                    monoFont={fonts.mono}
+                    formatTemp={formatTemp}
+                    themeIconFn={(base) => themeIcon(base, themeName)}
+                  />
+                </View>
               </Widget>
             )}
 
@@ -282,14 +428,14 @@ export function TodayScreen() {
                   )}
                   {weather.sunrise && (
                     <View style={styles.condCard}>
-                      <MaterialCommunityIcons name="weather-sunset-up" size={20} color="rgba(250,249,246,0.50)" />
+                      <MaterialCommunityIcons name="weather-sunset-up" size={20} color={condIconColor} />
                       <Text style={styles.condCardVal}>{weather.sunrise}</Text>
                       <Text style={styles.condCardLabel}>SUNRISE</Text>
                     </View>
                   )}
                   {weather.sunset && (
                     <View style={styles.condCard}>
-                      <MaterialCommunityIcons name="weather-sunset-down" size={20} color="rgba(250,249,246,0.50)" />
+                      <MaterialCommunityIcons name="weather-sunset-down" size={20} color={condIconColor} />
                       <Text style={styles.condCardVal}>{weather.sunset}</Text>
                       <Text style={styles.condCardLabel}>SUNSET</Text>
                     </View>
@@ -299,7 +445,7 @@ export function TodayScreen() {
                       <MaterialCommunityIcons
                         name={(weather.moonPhaseIcon ?? 'moon-full') as any}
                         size={20}
-                        color="rgba(250,249,246,0.50)"
+                        color={condIconColor}
                       />
                       <Text style={styles.condCardLabel}>{weather.moonPhaseName.toUpperCase()}</Text>
                     </View>
@@ -321,9 +467,9 @@ export function TodayScreen() {
                   >
                     <Text style={styles.dailyDay}>{d.dayLabel}</Text>
                     <MaterialCommunityIcons
-                      name={d.conditionIcon as any}
+                      name={themeIcon(d.conditionIcon, themeName) as any}
                       size={18}
-                      color="rgba(250,249,246,0.55)"
+                      color={isWarmTheme ? colors.scarlet + '80' : widgetIsDark ? 'rgba(250,249,246,0.55)' : colors.textMuted}
                     />
                     <Text style={styles.dailyCondLabel} numberOfLines={1}>{d.conditionLabel}</Text>
                     {d.precipProb > 0 ? (
@@ -332,8 +478,8 @@ export function TodayScreen() {
                       <Text style={styles.dailyPrecipEmpty}>—</Text>
                     )}
                     <View style={styles.dailyTemps}>
-                      <Text style={styles.dailyTempMax}>{d.tempMax}°</Text>
-                      <Text style={styles.dailyTempMin}>{d.tempMin}°</Text>
+                      <Text style={styles.dailyTempMax}>{formatTemp(d.tempMax)}°</Text>
+                      <Text style={styles.dailyTempMin}>{formatTemp(d.tempMin)}°</Text>
                     </View>
                   </View>
                 ))}
@@ -344,16 +490,20 @@ export function TodayScreen() {
             {weather.pollen && (
               <Widget label="ALLERGENS & AIR" styles={styles}>
                 <View style={styles.aqiRow}>
-                  <Text style={styles.aqiVal}>{weather.pollen.aqi}</Text>
+                  <View style={styles.aqiValRow}>
+                    <MaterialCommunityIcons name="bee" size={22} color={styles.aqiVal.color as string} />
+                    <Text style={styles.aqiVal}>{weather.pollen.aqi}</Text>
+                  </View>
                   <Text style={styles.aqiLabel}>AQI — {weather.pollen.aqiLabel.toUpperCase()}</Text>
                 </View>
                 <View style={styles.pollenGrid}>
                   {[
-                    { label: 'GRASS',   val: weather.pollen.grass },
-                    { label: 'BIRCH',   val: weather.pollen.birch },
-                    { label: 'RAGWEED', val: weather.pollen.ragweed },
+                    { label: 'GRASS',   val: weather.pollen.grass,   icon: 'grass'         as const },
+                    { label: 'BIRCH',   val: weather.pollen.birch,   icon: 'leaf-maple'    as const },
+                    { label: 'RAGWEED', val: weather.pollen.ragweed, icon: 'flower-pollen' as const },
                   ].map(p => (
                     <View key={p.label} style={styles.pollenItem}>
+                      <MaterialCommunityIcons name={p.icon} size={16} color={styles.pollenTypeLabel.color as string} />
                       <Text style={styles.pollenVal}>{p.val}</Text>
                       <Text style={styles.pollenSubLabel}>{pollenLevel(p.val).toUpperCase()}</Text>
                       <Text style={styles.pollenTypeLabel}>{p.label}</Text>
@@ -369,7 +519,7 @@ export function TodayScreen() {
                 "{verdict.verdict}"
               </Text>
               <View style={styles.verdictMeta}>
-                <View>
+                <View style={styles.verdictVibeBlock}>
                   <Text style={styles.verdictMetaLabel}>TODAY'S VIBE</Text>
                   <Text style={styles.verdictVibe}>{verdict.vibe}</Text>
                 </View>
@@ -386,17 +536,33 @@ export function TodayScreen() {
 
             {/* ── TODAY'S LOOK (outfit chips) ── */}
             <Widget label="TODAY'S LOOK" styles={styles}>
-              {verdict.outfits.slice(0, 3).map(item => (
-                <View key={item.category} style={styles.chip}>
-                  <Text style={styles.chipCategory}>{item.category.toUpperCase()}</Text>
-                  <Text style={styles.chipItem}>{item.item}</Text>
+              {isWarmTheme ? (
+                <View style={styles.chipWrap}>
+                  {verdict.outfits.slice(0, 3).map((item, i) => (
+                    <View
+                      key={item.category}
+                      style={[styles.chipTag, i === 0 && styles.chipTagAccent]}
+                    >
+                      <Text style={styles.chipTagText}>{item.item}</Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
+              ) : (
+                verdict.outfits.slice(0, 3).map(item => (
+                  <View key={item.category} style={styles.chip}>
+                    <Text style={styles.chipCategory}>{item.category.toUpperCase()}</Text>
+                    <Text style={styles.chipItem}>{item.item}</Text>
+                  </View>
+                ))
+              )}
             </Widget>
 
             {/* ── REFRESH ROW ── */}
             <View style={styles.refreshRow}>
-              {hoursAgo !== null && (
+              {isOffline && (
+                <Text style={styles.offlineChip}>OFFLINE · LAST KNOWN</Text>
+              )}
+              {!isOffline && hoursAgo !== null && (
                 <Text style={styles.refreshMeta}>
                   {hoursAgo === 0 ? 'Just now' : `${hoursAgo}h ago`} · {cachedCity}
                 </Text>
@@ -417,14 +583,37 @@ export function TodayScreen() {
             </View>
 
           </Animated.View>
+        ) : isLoading ? (
+          /* ── CONSULTING STATE ── */
+          <View style={styles.emptyState}>
+            <View style={styles.emptyEyeWrap}>
+              <ActivityIndicator size="large" color={colors.scarlet} />
+            </View>
+            <View style={styles.emptyRule} />
+            <Text style={styles.emptyTitle}>Consulting.</Text>
+            <Text style={styles.emptySub}>
+              {status === 'fetching-weather'
+                ? 'Reading the conditions.\nWeather data incoming.'
+                : 'The Oracle deliberates.\nYour verdict is being prepared.'}
+            </Text>
+          </View>
         ) : (
           /* ── EMPTY STATE ── */
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="eye-outline" size={40} color={colors.textMuted} />
+            <View style={styles.emptyEyeWrap}>
+              <MaterialCommunityIcons name="eye-outline" size={48} color={styles.emptyIcon.color as string} />
+            </View>
+            <View style={styles.emptyRule} />
             <Text style={styles.emptyTitle}>The Oracle awaits.</Text>
-            <Text style={styles.emptySub}>
-              Head to the Oracle tab to receive{'\n'}today's verdict.
-            </Text>
+            <Text style={styles.emptySub}>The eye is open.{'\n'}Enter your city to receive today's verdict.</Text>
+            <Pressable
+              style={styles.emptyBtn}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); navigation.navigate('Oracle'); }}
+              accessibilityRole="button"
+              accessibilityLabel="Go to Oracle tab"
+            >
+              <Text style={styles.emptyBtnText}>CONSULT THE ORACLE →</Text>
+            </Pressable>
           </View>
         )}
 
@@ -446,7 +635,69 @@ export function TodayScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, flags: AppFlags, themeName: ThemeName) {
+  const isWarm       = flags.isWarmTheme;
+  const isBanner     = flags.isBannerTheme;
+  const isElectric   = themeName === 'electric';
+  const precipColor  = themeName === 'electric' ? colors.textSecondary : '#4FA3D4';
+
+  // ── Surface token set ───────────────────────────────────────────────────────
+  // Derived from the actual widget background — no flags needed.
+  // Dark widget bg → light rgba foreground; light widget bg → theme text tokens.
+  const widgetIsDark = isDarkColor(colors.widgetBg);
+  const S = {
+    widgetBg: colors.widgetBg,
+    label:    isElectric ? colors.textMuted : widgetIsDark ? 'rgba(250,249,246,0.30)' : colors.textMuted,
+    high:     widgetIsDark ? '#FAF9F6'                : colors.textPrimary,
+    med:      isElectric ? colors.textSecondary : widgetIsDark ? 'rgba(250,249,246,0.80)' : colors.textSecondary,
+    low:      isElectric ? colors.textMuted : widgetIsDark ? 'rgba(250,249,246,0.55)' : colors.textMuted,
+    faint:    isElectric ? colors.borderMid : widgetIsDark ? 'rgba(250,249,246,0.40)' : colors.borderMid,
+    ghost:    isElectric ? colors.border : widgetIsDark ? 'rgba(250,249,246,0.15)' : colors.border,
+    divider:  isElectric ? colors.border : widgetIsDark ? 'rgba(250,249,246,0.07)' : colors.border,
+    divMed:   isElectric ? colors.borderMid : widgetIsDark ? 'rgba(250,249,246,0.10)' : colors.borderMid,
+  };
+
+  // ── Hero temperature (always dark panel) ────────────────────────────────────
+  const heroTempColor =
+    themeName === 'golden-hour' ? colors.scarlet :
+    themeName === 'terra-firma' ? '#D4873A' :
+    themeName === 'electric'    ? colors.scarlet :
+    '#FAF9F6';
+
+  const heroTempSize =
+    themeName === 'golden-hour' ? 130 :
+    themeName === 'terra-firma' ? 112 :
+    96;
+
+  const heroTempShadow = themeName === 'golden-hour' ? {
+    textShadowColor: 'rgba(200,128,64,0.40)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 40,
+  } : {};
+
+  // ── Hero accent colors ──────────────────────────────────────────────────────
+  const heroCityColor      = themeName === 'golden-hour' ? '#C4A87A' : '#FAF9F6';
+  const heroStatValColor   = themeName === 'golden-hour' ? '#C4A87A' : '#FAF9F6';
+  const heroStatLabelColor =
+    themeName === 'golden-hour' ? 'rgba(196,168,122,0.50)' :
+    isElectric ? colors.textMuted :
+    'rgba(250,249,246,0.40)';
+  const heroStatValFamily  = isWarm ? fonts.mono : fonts.displayBold;
+  const heroStatValSize    = isWarm ? 14 : 20;
+  const heroStatValLine    = isWarm ? 18 : 24;
+
+  const statDividerColor =
+    themeName === 'terra-firma'   ? 'rgba(181,73,26,0.25)'   :
+    themeName === 'morning-paper' ? 'rgba(107,127,94,0.25)'  :
+    themeName === 'golden-hour'   ? 'rgba(200,128,64,0.25)'  :
+    'rgba(250,249,246,0.10)';
+
+  const heroConditionColor  = isElectric ? colors.scarletFg : isWarm ? colors.scarlet : 'rgba(250,249,246,0.55)';
+  const cityChipBorderColor = isElectric ? colors.scarletFg : isWarm ? colors.scarlet : 'rgba(250,249,246,0.20)';
+  const cityChipTextColor   = isElectric ? colors.scarletFg : isWarm ? colors.scarlet : 'rgba(250,249,246,0.50)';
+  const wotdDefFont         = isWarm ? fonts.serif    : fonts.mono;
+
+return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -469,21 +720,23 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   streakLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.45)',
     marginTop: 2,
   },
   cityChip: {
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.20)',
+    borderColor: cityChipBorderColor,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   cityChipText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
-    color: 'rgba(250,249,246,0.50)',
+    fontSize: 11,
+    color: cityChipTextColor,
     letterSpacing: 1,
   },
 
@@ -491,23 +744,37 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   content: { paddingBottom: 48 },
 
   /* ── Widget shell ── */
+  /* ── Widget shell ── */
   widget: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    backgroundColor: '#111009',
-    borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.08)',
+    marginHorizontal: isBanner && metrics.borderWidth === 0 ? 0 : spacing.lg,
+    marginTop: isBanner && metrics.borderWidth === 0 ? 0 : spacing.sm,
+    backgroundColor: S.widgetBg,
+    borderWidth: metrics.borderWidth,
+    borderColor: metrics.borderWidth > 1 ? colors.borderHard : colors.borderMid,
+    borderBottomWidth: isBanner && metrics.borderWidth === 0 ? 1 : metrics.borderWidth,
+    borderBottomColor: isBanner && metrics.borderWidth === 0 ? S.divider : (metrics.borderWidth > 1 ? colors.borderHard : colors.borderMid),
+    borderRadius: metrics.radius,
+    marginBottom: metrics.cardGap === 32 ? spacing.md : 0, // extra spacing
+    ...(metrics.shadowOpacity > 0 ? {
+      shadowColor: metrics.shadowColor,
+      shadowOffset: { width: metrics.shadowOffset, height: metrics.shadowOffset },
+      shadowOpacity: metrics.shadowOpacity,
+      shadowRadius: 0,
+    } : {}),
   },
   widgetLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2.5,
-    color: 'rgba(250,249,246,0.30)',
+    color: metrics.borderWidth >= 3 ? colors.textPrimary : S.label,
+    fontWeight: metrics.borderWidth >= 3 ? '700' : 'normal',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(250,249,246,0.06)',
+    borderBottomWidth: metrics.borderWidth >= 3 ? metrics.borderWidth : 1,
+    borderBottomColor: metrics.borderWidth >= 3 ? colors.borderHard : S.divider,
+    borderLeftWidth: metrics.widgetLeftBorderWidth,
+    borderLeftColor: colors.scarlet,
   },
   widgetBody: {
     padding: spacing.md,
@@ -524,40 +791,81 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   wotdWord: {
     fontFamily: fonts.display,
-    fontSize: 34,
-    color: '#FAF9F6',
+    fontSize: isWarm ? 30 : 34,
+    color: S.high,
     letterSpacing: -0.5,
-    lineHeight: 38,
+    lineHeight: isWarm ? 34 : 38,
     marginBottom: 4,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
   },
   wotdOrigin: {
     fontFamily: fonts.mono,
-    fontSize: 10,
-    color: colors.scarlet,
+    fontSize: 12,
+    color: widgetIsDark ? 'rgba(250,249,246,0.40)' : !isEditorialTheme(themeName) ? colors.scarlet : 'rgba(250,249,246,0.40)',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.md,
   },
   wotdDef: {
-    fontFamily: fonts.mono,
-    fontSize: 12,
-    color: 'rgba(250,249,246,0.55)',
-    lineHeight: 18,
-    letterSpacing: 0.2,
+    fontFamily: wotdDefFont,
+    fontSize: isWarm ? 14 : 12,
+    color: S.low,
+    lineHeight: isWarm ? 22 : 18,
+    letterSpacing: isWarm ? 0.1 : 0.2,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
 
+  /* ── Oracle of the Week ── */
+  weeklyOracle: {
+    gap: spacing.xs,
+  },
+  weeklyVibe: {
+    fontFamily: fonts.display,
+    fontSize: 34,
+    lineHeight: 38,
+    color: S.high,
+    letterSpacing: -0.5,
+  },
+  weeklyMeta: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    lineHeight: 16,
+    color: isElectric ? colors.scarletFg : widgetIsDark ? 'rgba(250,249,246,0.44)' : colors.textMuted,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+  },
+  weeklyBody: {
+    fontFamily: isWarm ? fonts.serif : fonts.mono,
+    fontSize: isWarm ? 14 : 12,
+    lineHeight: isWarm ? 22 : 18,
+    color: S.low,
+    letterSpacing: isWarm ? 0.1 : 0.2,
+    marginTop: spacing.xs,
+  },
+
   /* ── Weather hero ── */
+  weatherGlanceHero: {
+    marginHorizontal: isBanner && metrics.borderWidth === 0 ? 0 : spacing.lg,
+    marginTop: isBanner && metrics.borderWidth === 0 ? 0 : spacing.sm,
+    marginBottom: metrics.cardGap === 32 ? spacing.xl : 0,
+  },
   weatherHero: {
-    backgroundColor: '#111009',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
+    backgroundColor: colors.bgDark,
+    marginHorizontal: isBanner && metrics.borderWidth === 0 ? 0 : spacing.lg,
+    marginTop: isBanner && metrics.borderWidth === 0 ? 0 : spacing.sm,
+    marginBottom: metrics.cardGap === 32 ? spacing.xl : 0,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.08)',
+    borderWidth: metrics.cardGap === 32 ? metrics.borderWidth : (metrics.borderWidth === 2 ? 2 : (isBanner && metrics.borderWidth === 0 ? 0 : 1)),
+    borderColor: metrics.cardGap === 32 ? colors.borderHard : (metrics.borderWidth === 2 ? colors.scarlet + '30' : 'rgba(250,249,246,0.07)'),
+    borderRadius: metrics.radius,
+    ...(metrics.cardGap === 32 ? {
+      shadowColor: metrics.shadowColor,
+      shadowOffset: { width: metrics.shadowOffset, height: metrics.shadowOffset },
+      shadowOpacity: metrics.shadowOpacity,
+      shadowRadius: 0,
+    } : {}),
   },
   heroTop: {
     flexDirection: 'row',
@@ -567,38 +875,39 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   heroLeft: { flex: 1 },
   heroCity: {
-    fontFamily: fonts.display,
-    fontSize: 28,
-    color: '#FAF9F6',
-    letterSpacing: -0.5,
-    lineHeight: 32,
+    fontFamily: isWarm ? fonts.mono : fonts.display,
+    fontSize: isWarm ? 13 : 28,
+    fontWeight: isWarm ? '700' : undefined,
+    color: heroCityColor,
+    letterSpacing: isWarm ? 0.05 : -0.5,
+    lineHeight: isWarm ? 18 : 32,
   },
   heroCountry: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: 'rgba(250,249,246,0.45)',
     letterSpacing: 1,
     marginTop: 2,
   },
   heroCondition: {
     fontFamily: fonts.mono,
-    fontSize: 10,
-    color: 'rgba(250,249,246,0.55)',
+    fontSize: 12,
+    color: heroConditionColor,
     letterSpacing: 2,
     marginTop: 6,
   },
   heroTemp: {
     fontFamily: fonts.displayLight,
-    fontSize: 96,
-    color: '#FAF9F6',
-    lineHeight: 96,
+    fontSize: heroTempSize,
+    color: heroTempColor,
     letterSpacing: -4,
     marginBottom: spacing.lg,
+    ...heroTempShadow,
   },
   heroStats: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(250,249,246,0.10)',
+    borderTopColor: statDividerColor,
     paddingTop: spacing.md,
   },
   heroStat: {
@@ -607,24 +916,24 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   heroStatDivider: {
     width: 1,
-    backgroundColor: 'rgba(250,249,246,0.10)',
+    backgroundColor: statDividerColor,
   },
   heroStatLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
-    color: 'rgba(250,249,246,0.40)',
+    color: heroStatLabelColor,
     marginBottom: 4,
   },
   heroStatVal: {
-    fontFamily: fonts.displayBold,
-    fontSize: 20,
-    color: '#FAF9F6',
-    lineHeight: 24,
+    fontFamily: heroStatValFamily,
+    fontSize: heroStatValSize,
+    color: heroStatValColor,
+    lineHeight: heroStatValLine,
   },
   heroStatUnit: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.35)',
     marginTop: 2,
   },
@@ -641,22 +950,22 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.07)',
+    borderColor: S.divider,
   },
   hourlyTime: {
     fontFamily: fonts.mono,
-    fontSize: 9,
-    color: 'rgba(250,249,246,0.40)',
+    fontSize: 11,
+    color: S.faint,
     letterSpacing: 0.5,
   },
   hourlyTemp: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 16,
-    color: '#FAF9F6',
+    color: S.high,
   },
   hourlyPrecip: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: '#4FA3D4',
     letterSpacing: 0.3,
   },
@@ -667,7 +976,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   hourlyUVText: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 0.5,
   },
 
@@ -683,21 +992,21 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     alignItems: 'center',
     gap: 5,
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.09)',
+    borderColor: S.divider,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
   },
   condCardVal: {
-    fontFamily: fonts.displayBold,
-    fontSize: 22,
-    color: '#FAF9F6',
-    lineHeight: 26,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
+    fontSize: isWarm ? 16 : 22,
+    color: S.high,
+    lineHeight: isWarm ? 20 : 26,
   },
   condCardLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1,
-    color: 'rgba(250,249,246,0.35)',
+    color: S.label,
     textAlign: 'center',
   },
 
@@ -710,34 +1019,34 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   dailyRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(250,249,246,0.07)',
+    borderBottomColor: S.divider,
   },
   dailyDay: {
     fontFamily: fonts.mono,
-    fontSize: 10,
-    color: 'rgba(250,249,246,0.55)',
+    fontSize: 12,
+    color: S.med,
     letterSpacing: 0.5,
     width: 38,
   },
   dailyCondLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
-    color: 'rgba(250,249,246,0.35)',
+    fontSize: 11,
+    color: S.low,
     flex: 1,
     letterSpacing: 0.3,
   },
   dailyPrecip: {
     fontFamily: fonts.mono,
-    fontSize: 10,
-    color: '#4FA3D4',
+    fontSize: 12,
+    color: precipColor,
     width: 32,
     textAlign: 'right',
     letterSpacing: 0.3,
   },
   dailyPrecipEmpty: {
     fontFamily: fonts.mono,
-    fontSize: 10,
-    color: 'rgba(250,249,246,0.15)',
+    fontSize: 12,
+    color: S.ghost,
     width: 32,
     textAlign: 'right',
   },
@@ -748,29 +1057,39 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     justifyContent: 'flex-end',
   },
   dailyTempMax: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 16,
-    color: '#FAF9F6',
+    color: S.high,
   },
   dailyTempMin: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 16,
-    color: 'rgba(250,249,246,0.30)',
+    color: S.faint,
+  },
+
+  /* ── Hourly graph padding ── */
+  graphPad: {
+    paddingVertical: spacing.sm,
   },
 
   /* ── Allergens & AQI ── */
   aqiRow: { marginBottom: spacing.md },
+  aqiValRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   aqiVal: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 36,
-    color: '#FAF9F6',
+    color: S.high,
     lineHeight: 40,
     letterSpacing: -0.5,
   },
   aqiLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
-    color: 'rgba(250,249,246,0.35)',
+    fontSize: 11,
+    color: S.label,
     letterSpacing: 1.5,
     marginTop: 2,
   },
@@ -781,64 +1100,67 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   pollenItem: {
     flex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(250,249,246,0.09)',
+    borderColor: S.divider,
     padding: spacing.sm,
     gap: 3,
     alignItems: 'center',
   },
   pollenVal: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 22,
-    color: '#FAF9F6',
+    color: S.high,
     lineHeight: 26,
   },
   pollenSubLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
-    color: 'rgba(250,249,246,0.45)',
+    fontSize: 11,
+    color: S.low,
     letterSpacing: 0.5,
   },
   pollenTypeLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
-    color: 'rgba(250,249,246,0.25)',
+    fontSize: 11,
+    color: S.ghost,
     letterSpacing: 1,
   },
 
   /* ── Oracle verdict ── */
   verdictPull: {
     fontFamily: fonts.display,
-    fontSize: 20,
-    color: '#FAF9F6',
-    lineHeight: 28,
+    fontSize: isWarm ? 22 : 20,
+    color: S.high,
+    lineHeight: isWarm ? 30 : 28,
     letterSpacing: -0.3,
     marginBottom: spacing.md,
   },
   verdictMeta: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(250,249,246,0.10)',
+    borderTopColor: S.divMed,
     paddingTop: spacing.md,
+    gap: spacing.md,
+  },
+  verdictVibeBlock: {
+    flex: 1,
   },
   verdictMetaLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
-    color: 'rgba(250,249,246,0.35)',
+    color: S.label,
     marginBottom: 4,
   },
   verdictVibe: {
-    fontFamily: fonts.displayBold,
+    fontFamily: isWarm ? fonts.mono : fonts.displayBold,
     fontSize: 16,
-    color: '#FAF9F6',
+    color: S.high,
   },
   ratingBlock: { alignItems: 'flex-end' },
   ratingDashes: { flexDirection: 'row', gap: 4, marginTop: 4 },
   dash: { width: 16, height: 3 },
-  dashFilled: { backgroundColor: '#FAF9F6' },
-  dashEmpty:  { backgroundColor: 'rgba(250,249,246,0.15)' },
+  dashFilled: { backgroundColor: S.high },
+  dashEmpty:  { backgroundColor: S.ghost },
 
   /* ── Outfit chips ── */
   chip: {
@@ -847,21 +1169,63 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     gap: spacing.sm,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(250,249,246,0.07)',
+    borderBottomColor: S.divider,
   },
   chipCategory: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1.5,
-    color: 'rgba(250,249,246,0.35)',
+    color: S.label,
     width: 72,
   },
   chipItem: {
-    fontFamily: fonts.displayBold,
-    fontSize: 16,
-    color: '#FAF9F6',
+    fontFamily: isWarm ? fonts.display : fonts.displayBold,
+    fontSize: isWarm ? 18 : 16,
+    color: S.high,
     flex: 1,
-    letterSpacing: -0.2,
+    letterSpacing: isWarm ? -0.3 : -0.2,
+  },
+
+  /* ── WOTD warm layout (flex-row rule + text) ── */
+  wotdInner: {
+    flexDirection: 'row',
+    gap: 14,
+    padding: spacing.md,
+  },
+  wotdRule: {
+    width: 2,
+    backgroundColor: colors.scarlet,
+    minHeight: 64,
+  },
+  wotdTextCol: {
+    flex: 1,
+  },
+
+  /* ── Outfit chips — horizontal wrap (warm themes) ── */
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chipTag: {
+    borderWidth: 1,
+    borderColor: colors.scarlet,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  chipTagAccent: {
+    backgroundColor: colors.scarlet + '12',
+  },
+  chipTagText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 0.15,
+    color: colors.scarlet,
+    textTransform: 'uppercase' as const,
+  },
+  chipTagTextSecondary: {
+    color: colors.textSecondary,
+    borderColor: colors.border,
   },
 
   /* ── Refresh row ── */
@@ -874,13 +1238,19 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   refreshMeta: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 0.5,
   },
+  offlineChip: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.scarlet,
+    letterSpacing: 1.5,
+  },
   refreshBtn: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.5,
   },
@@ -888,22 +1258,55 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   /* ── Empty state ── */
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 64,
-    gap: spacing.md,
+    paddingVertical: 72,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  emptyEyeWrap: {
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIcon: {
+    color: S.faint,
+  },
+  emptyRule: {
+    width: 28,
+    height: 1,
+    backgroundColor: S.ghost,
+    marginVertical: spacing.md,
   },
   emptyTitle: {
     fontFamily: fonts.display,
-    fontSize: 32,
-    color: colors.textSecondary,
+    fontSize: 28,
+    color: S.med,
     letterSpacing: -0.5,
+    textAlign: 'center',
   },
   emptySub: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.textMuted,
+    color: S.label,
     textAlign: 'center',
-    lineHeight: 18,
-    letterSpacing: 0.3,
+    lineHeight: 16,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+    marginTop: spacing.xs,
+  },
+  emptyBtn: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.scarlet,
+  },
+  emptyBtnText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.scarlet,
+    letterSpacing: 2,
+    textAlign: 'center',
   },
 
   /* ── Greeting ── */
@@ -916,7 +1319,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   greetingSub: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.3,
   },

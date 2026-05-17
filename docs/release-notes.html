@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Release Notes - Outfit Oracle</title>
+  <link rel="stylesheet" href="./theme.css" />
+</head>
+<body>
+  <div class="wrap wrap--wide">
+    <header class="page-header">
+      <nav class="page-nav" aria-label="Primary">
+        <a href="./index.html">Privacy Policy</a>
+      </nav>
+      <p class="wordmark">Outfit Oracle</p>
+      <h1 class="page-title--wide">Release Notes</h1>
+      <p class="page-dek">Site and app updates are tracked here in reverse chronological order, grouped by month.</p>
+    </header>
+
+    <main>
+      <section class="month" aria-labelledby="may-2026">
+        <h2 id="may-2026" class="month-title">May 2026</h2>
+        <ol class="release-list">
+          <li>
+            <article class="release">
+              <time datetime="2026-05-14">14 May 2026</time>
+              <div>
+                <h3 class="release-title">Y2K theme, confetti, and temperature controls</h3>
+                <p>Outfit Oracle 1.3.0 adds a full Y2K design system with lavender, hot pink, lime accents, dedicated Y2K components, and two font subthemes. Badge unlocks now feel more celebratory with confetti and a springing toast animation.</p>
+                <p>The release also introduces an hourly temperature graph and a Celsius/Fahrenheit setting that carries through weather strips, archive entries, and forecasts.</p>
+              </div>
+            </article>
+          </li>
+
+          <li>
+            <article class="release">
+              <time datetime="2026-05-14">14 May 2026</time>
+              <div>
+                <h3 class="release-title">Theme system and achievement toasts</h3>
+                <p>Outfit Oracle 1.2.0 introduces Classic, Editorial Light, and Editorial Dark themes, with theme selection saved across sessions. Achievement badge toasts now appear when users unlock weather badges, and cold-start badge spam has been fixed.</p>
+                <p>This update also makes status bars theme-aware, improves editorial error copy, and documents the design system for future contributors.</p>
+              </div>
+            </article>
+          </li>
+
+          <li>
+            <article class="release">
+              <time datetime="2026-05-14">14 May 2026</time>
+              <div>
+                <h3 class="release-title">Reliability fixes for launch and badges</h3>
+                <p>Outfit Oracle 1.1.1 fixes several persistence and startup edge cases, including founding member badge storage, storage read failures, and font load failures. These changes prevent the splash screen from hanging if local storage or font loading rejects.</p>
+                <p>The release also cleans up locked achievement presentation and expands the automated test suite around onboarding and badge behavior.</p>
+              </div>
+            </article>
+          </li>
+
+          <li>
+            <article class="release">
+              <time datetime="2026-05-13">13 May 2026</time>
+              <div>
+                <h3 class="release-title">Founding member badge and onboarding gate</h3>
+                <p>Outfit Oracle 1.1.0 adds the founding member badge for the first 100 unique devices, with server-controlled eligibility through Cloudflare KV. Style onboarding is now required before entering the app, replacing the previous optional skip path.</p>
+                <p>The worker also gains stricter device identifier validation and hybrid rate limiting, while related memoization and TypeScript issues are cleaned up.</p>
+              </div>
+            </article>
+          </li>
+
+          <li>
+            <article class="release">
+              <time datetime="2026-05-12">12 May 2026</time>
+              <div>
+                <h3 class="release-title">Initial launch</h3>
+                <p>Outfit Oracle 1.0.0 launches with weather-powered outfit recommendations, a Cloudflare Worker AI proxy, and an editorial cream, black, and scarlet interface. The first build includes Today, Oracle, and You tabs with forecasts, outfit history, saved looks, and sharing.</p>
+                <p>The launch also includes style profiles, consult streaks, achievements, weekly challenges, GPS city detection, privacy controls, Sentry crash reporting, and Open-Meteo weather data.</p>
+              </div>
+            </article>
+          </li>
+        </ol>
+      </section>
+
+      <aside class="format" aria-labelledby="future-format">
+        <h2 id="future-format">Format For Future Entries</h2>
+        <p>Keep each update short, dated, and outcome-focused. Add new entries at the top of the correct month, and create a new month section when needed.</p>
+        <code>&lt;li&gt;
+  &lt;article class="release"&gt;
+    &lt;time datetime="YYYY-MM-DD"&gt;DD Month YYYY&lt;/time&gt;
+    &lt;div&gt;
+      &lt;h3&gt;Short headline in plain language&lt;/h3&gt;
+      &lt;p&gt;Sentence one explains what changed and why it matters.&lt;/p&gt;
+      &lt;p&gt;Sentence two adds key user-facing details, fixes, or contributor notes.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/article&gt;
+&lt;/li&gt;</code>
+      </aside>
+    </main>
+
+    <footer class="page-footer">
+      &copy; 2026 Outfit Oracle &nbsp;&middot;&nbsp; <a href="./index.html">Privacy Policy</a>
+    </footer>
+  </div>
+</body>
+</html>

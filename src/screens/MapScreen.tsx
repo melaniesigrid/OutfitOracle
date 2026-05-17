@@ -306,7 +306,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   headerLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: 'rgba(250,249,246,0.70)',
   },
@@ -325,7 +325,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   countBadgeLabel: {
     fontFamily: fonts.mono,
-    fontSize: 7,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.75)',
     letterSpacing: 1,
   },
@@ -360,7 +360,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   legendText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.55)',
     letterSpacing: 0.5,
   },
@@ -404,7 +404,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   visitCountText: {
     fontFamily: fonts.mono,
-    fontSize: 7,
+    fontSize: 11,
     color: '#FAF9F6',
   },
   inspirationMarker: {
@@ -421,7 +421,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   inspirationLabel: {
     fontFamily: fonts.mono,
-    fontSize: 7,
+    fontSize: 11,
     color: 'rgba(30,30,30,0.65)',
     letterSpacing: 0.5,
     backgroundColor: 'rgba(250,249,246,0.70)',
@@ -467,14 +467,14 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   cityCardCountry: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.40)',
     letterSpacing: 1,
     marginTop: 2,
   },
   cityCardVibe: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.scarlet,
     letterSpacing: 1,
     marginTop: spacing.sm,
@@ -492,13 +492,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   cityCardDate: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.30)',
     letterSpacing: 0.5,
   },
   cityCardVisits: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.30)',
     letterSpacing: 0.5,
     paddingHorizontal: spacing.lg,
@@ -526,7 +526,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   statLabel: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     color: 'rgba(250,249,246,0.35)',
     letterSpacing: 1.5,
     marginTop: 2,
@@ -543,13 +543,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   stampText: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     color: colors.scarlet,
     letterSpacing: 1,
   },
   emptyHint: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: 'rgba(250,249,246,0.30)',
     letterSpacing: 0.3,
     lineHeight: 16,

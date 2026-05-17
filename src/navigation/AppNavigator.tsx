@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAppData } from '../contexts/AppContext';
 import { BadgeToast } from '../components/BadgeToast';
+import { Confetti } from '../components/Confetti';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { OnboardingCarousel } from '../screens/OnboardingCarousel';
 import { PersonalityScreen } from '../screens/PersonalityScreen';
@@ -21,6 +22,17 @@ const ONBOARDING_KEY = '@onboarding_complete';
 type OnboardingStep = 'welcome' | 'carousel' | 'personality' | 'style';
 
 const Stack = createNativeStackNavigator();
+
+function BadgeToastPortal() {
+  const { newBadgeQueue, dismissBadgeToast } = useAppData();
+  const badge = newBadgeQueue[0];
+  return (
+    <>
+      <Confetti visible={!!badge} />
+      <BadgeToast badge={badge} onDismiss={dismissBadgeToast} />
+    </>
+  );
+}
 
 function MainStack() {
   return (
@@ -46,7 +58,7 @@ function MainStack() {
 }
 
 export function AppNavigator() {
-  const { profileCtx, newBadgeQueue, dismissBadgeToast } = useAppData();
+  const { profileCtx } = useAppData();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [pendingPersonality, setPendingPersonality] = useState<OraclePersonality>('editorial');
@@ -120,7 +132,7 @@ export function AppNavigator() {
   return (
     <View style={{ flex: 1 }}>
       <MainStack />
-      <BadgeToast badge={newBadgeQueue[0]} onDismiss={dismissBadgeToast} />
+      <BadgeToastPortal />
     </View>
   );
 }

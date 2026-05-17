@@ -1,0 +1,88 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Outfit Oracle//Launch Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Outfit Oracle Launch
+X-WR-TIMEZONE:America/Toronto
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260515-readiness@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;TZID=America/Toronto:20260515T090000
+DTEND;TZID=America/Toronto:20260515T120000
+SUMMARY:Outfit Oracle - Internal TestFlight readiness sprint
+DESCRIPTION:Run typecheck and tests. Set Sentry DSN. Add PrivacyInfo.xcprivacy to Xcode. Create App Store Connect record.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260515-upload@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;TZID=America/Toronto:20260515T130000
+DTEND;TZID=America/Toronto:20260515T150000
+SUMMARY:Outfit Oracle - Archive and upload build
+DESCRIPTION:Xcode archive succeeds. Build appears in App Store Connect. Internal testing enabled.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260515-phone@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;TZID=America/Toronto:20260515T153000
+DTEND;TZID=America/Toronto:20260515T163000
+SUMMARY:Outfit Oracle - Download on phone
+DESCRIPTION:Install from TestFlight on Melanie's iPhone. Complete onboarding and one first consult.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260516-deviceqa@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;TZID=America/Toronto:20260516T100000
+DTEND;TZID=America/Toronto:20260516T130000
+SUMMARY:Outfit Oracle - Device QA day
+DESCRIPTION:Check first-run, settings, share, saved looks, map, themes, VoiceOver, offline cache, and analytics opt-out on a real device.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260517-fixes@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;TZID=America/Toronto:20260517T100000
+DTEND;TZID=America/Toronto:20260517T130000
+SUMMARY:Outfit Oracle - Launch-blocker fix window
+DESCRIPTION:Fix only P0/P1 issues from device QA. Upload a new build only if needed.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260518-assets@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;TZID=America/Toronto:20260518T100000
+DTEND;TZID=America/Toronto:20260518T120000
+SUMMARY:Outfit Oracle - External beta prep
+DESCRIPTION:Capture screenshots. Finalize subtitle and keywords. Set beta feedback email.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260519-submit@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;TZID=America/Toronto:20260519T100000
+DTEND;TZID=America/Toronto:20260519T113000
+SUMMARY:Outfit Oracle - External TestFlight submission
+DESCRIPTION:Submit build for beta review if internal QA is clean.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260520-beta@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;VALUE=DATE:20260520
+DTEND;VALUE=DATE:20260524
+SUMMARY:Outfit Oracle - External beta observation
+DESCRIPTION:Invite 5-20 trusted testers. Check Sentry daily. Triage feedback into blocker or later.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260524-decision@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;TZID=America/Toronto:20260524T110000
+DTEND;TZID=America/Toronto:20260524T120000
+SUMMARY:Outfit Oracle - Public launch decision
+DESCRIPTION:Go or no-go based on crash-free sessions, first-consult reliability, and feedback severity.
+END:VEVENT
+BEGIN:VEVENT
+UID:outfit-oracle-launch-20260525-release-window@outfitoracle
+DTSTAMP:20260515T120000Z
+DTSTART;VALUE=DATE:20260525
+DTEND;VALUE=DATE:20260530
+SUMMARY:Outfit Oracle - Public release window
+DESCRIPTION:Submit for public App Store release or upload one final beta build based on the launch decision.
+END:VEVENT
+END:VCALENDAR

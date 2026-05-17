@@ -3,10 +3,8 @@ module.exports = {
   testEnvironment: 'node',
   watchman: false,
   testMatch: ['**/__tests__/**/*.test.ts'],
-  globals: {
-    'ts-jest': {
-      tsconfig: { jsx: 'react' },
-    },
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react' } }],
   },
   moduleNameMapper: {
     '^react-native$': '<rootDir>/__mocks__/react-native.js',

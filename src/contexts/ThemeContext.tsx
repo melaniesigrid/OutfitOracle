@@ -1,25 +1,39 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ThemeName, AppColors, AppFonts, THEMES, getThemeTokens } from '../theme';
+import { ThemeName, AppColors, AppFonts, AppMetrics, AppFlags, THEMES, getThemeTokens, isY2KTheme } from '../theme';
+import { Y2KFontSubtheme, getY2KFontSet } from '../theme/y2kTypography';
 
-const THEME_KEY = '@outfit_oracle_theme';
+const THEME_KEY         = '@outfit_oracle_theme';
+const Y2K_SUBTHEME_KEY  = '@outfit_oracle_y2k_font_subtheme';
 
 interface ThemeContextValue {
   themeName: ThemeName;
   colors: AppColors;
   fonts: AppFonts;
+  metrics: AppMetrics;
+  flags: AppFlags;
   isDark: boolean;
   setTheme: (name: ThemeName) => void;
+  /** Only meaningful when themeName === 'y2k' */
+  y2kFontSubtheme: Y2KFontSubtheme;
+  setY2KFontSubtheme: (s: Y2KFontSubtheme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeName, setThemeName] = useState<ThemeName>('classic');
+  const [themeName, setThemeName]           = useState<ThemeName>('classic');
+  const [y2kFontSubtheme, setSubthemeState] = useState<Y2KFontSubtheme>('club');
 
   useEffect(() => {
-    AsyncStorage.getItem(THEME_KEY).then(stored => {
-      if (stored && stored in THEMES) setThemeName(stored as ThemeName);
+    Promise.all([
+      AsyncStorage.getItem(THEME_KEY),
+      AsyncStorage.getItem(Y2K_SUBTHEME_KEY),
+    ]).then(([storedTheme, storedSubtheme]) => {
+      if (storedTheme && storedTheme in THEMES) setThemeName(storedTheme as ThemeName);
+      if (storedSubtheme === 'club' || storedSubtheme === 'decree') {
+        setSubthemeState(storedSubtheme);
+      }
     });
   }, []);
 
@@ -28,11 +42,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(THEME_KEY, name).catch(() => {});
   }, []);
 
-  const { colors, fonts, isDark } = getThemeTokens(themeName);
+  const setY2KFontSubtheme = useCallback((s: Y2KFontSubtheme) => {
+    setSubthemeState(s);
+    AsyncStorage.setItem(Y2K_SUBTHEME_KEY, s).catch(() => {});
+  }, []);
+
+  const { colors, fonts: baseFont, metrics, flags, isDark } = getThemeTokens(themeName);
+
+  // For Y2K theme, substitute font families from the active subtheme
+  const fonts: AppFonts = useMemo(() => {
+    if (!isY2KTheme(themeName)) return baseFont;
+    const f = getY2KFontSet(y2kFontSubtheme);
+    return {
+      ...baseFont,
+      display:      f.display,
+      displayBold:  f.display,
+      displayLight: f.displaySub,
+      serif:        f.editorialItalic,
+      mono:         f.mono,
+      monoMedium:   f.monoMedium,
+    };
+  }, [themeName, baseFont, y2kFontSubtheme]);
 
   const value = useMemo(
-    () => ({ themeName, colors, fonts, isDark, setTheme }),
-    [themeName, colors, fonts, isDark, setTheme],
+    () => ({ themeName, colors, fonts, metrics, flags, isDark, setTheme, y2kFontSubtheme, setY2KFontSubtheme }),
+    [themeName, colors, fonts, metrics, flags, isDark, setTheme, y2kFontSubtheme, setY2KFontSubtheme],
   );
 
   return (

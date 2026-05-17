@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { OracleVerdict } from '../services/oracle';
 import { AppColors, AppFonts, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
@@ -9,36 +8,10 @@ interface Props {
   verdict: OracleVerdict;
 }
 
-type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
-
-function vibeIcons(vibe: string): MCIName[] {
-  const v = vibe.toLowerCase();
-  const icons: MCIName[] = [];
-
-  if (/rain|wet|drizzle|storm|cloud/.test(v))   icons.push('weather-rainy');
-  if (/snow|winter|icy|frost|frozen/.test(v))    icons.push('snowflake');
-  if (/sun|summer|warm|hot|bright/.test(v))      icons.push('white-balance-sunny');
-  if (/wind|breezy|gust/.test(v))                icons.push('weather-windy');
-  if (/fog|mist|haze/.test(v))                   icons.push('weather-fog');
-  if (/night|dark|moon|mid/.test(v))             icons.push('weather-night');
-  if (/chic|elegant|luxe|glam|vogue/.test(v))    icons.push('star-four-points');
-  if (/cozy|comfort|casual|lazy|soft/.test(v))   icons.push('sofa-outline');
-  if (/city|urban|street|metro/.test(v))         icons.push('city-variant-outline');
-  if (/apoc|chaos|dramatic|fierce|savage/.test(v)) icons.push('lightning-bolt');
-  if (/main character|boss|power/.test(v))       icons.push('crown-outline');
-  if (/intell|academ|scholar|book/.test(v))      icons.push('book-open-variant');
-
-  // Always include a fashion anchor
-  icons.push('hanger');
-
-  return icons.slice(0, 3);
-}
-
 export function VerdictCard({ verdict }: Props) {
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const filled = verdict.rating;
-  const icons = vibeIcons(verdict.vibe);
 
   const opacity    = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
@@ -59,39 +32,29 @@ export function VerdictCard({ verdict }: Props) {
         <View style={styles.eyebrowLine} />
       </View>
 
+      {/* Vibe name — the headline */}
+      <Text style={styles.vibeName}>{verdict.vibe}</Text>
+
+      {/* Scarlet rule */}
+      <View style={styles.scarletRule} />
+
       {/* Pull quote */}
       <Text style={styles.verdictText}>"{verdict.verdict}"</Text>
 
       <View style={styles.rule} />
 
-      {/* Vibe + rating */}
-      <View style={styles.metaRow}>
-        <View style={styles.vibeBlock}>
-          <Text style={styles.metaLabel}>TODAY'S VIBE</Text>
-          <Text style={styles.vibeName}>{verdict.vibe}</Text>
-          <View style={styles.vibeIcons}>
-            {icons.map((name, i) => (
-              <MaterialCommunityIcons
-                key={i}
-                name={name}
-                size={18}
-                color={colors.textSecondary}
-              />
-            ))}
-          </View>
+      {/* Rating row */}
+      <View style={styles.ratingRow}>
+        <Text style={styles.ratingLabel}>EFFORT</Text>
+        <View style={styles.ratingDashes}>
+          {Array.from({ length: 5 }, (_, i) => (
+            <View
+              key={i}
+              style={[styles.dash, i < filled ? styles.dashFilled : styles.dashEmpty]}
+            />
+          ))}
         </View>
-        <View style={styles.ratingBlock}>
-          <Text style={styles.metaLabel}>EFFORT</Text>
-          <View style={styles.ratingDashes}>
-            {Array.from({ length: 5 }, (_, i) => (
-              <View
-                key={i}
-                style={[styles.dash, i < filled ? styles.dashFilled : styles.dashEmpty]}
-              />
-            ))}
-          </View>
-          <Text style={styles.ratingNum}>{filled} / 5</Text>
-        </View>
+        <Text style={styles.ratingNum}>{filled} / 5</Text>
       </View>
     </Animated.View>
   );
@@ -115,61 +78,55 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     eyebrowText: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       letterSpacing: 2.5,
       color: colors.textMuted,
     },
+    vibeName: {
+      fontFamily: fonts.displayLight,
+      fontSize: 52,
+      color: colors.textPrimary,
+      lineHeight: 56,
+      letterSpacing: -1.5,
+      marginBottom: spacing.md,
+    },
+    scarletRule: {
+      height: 1,
+      backgroundColor: colors.scarlet,
+      marginBottom: spacing.lg,
+    },
     verdictText: {
-      fontFamily: fonts.display,
-      fontSize: 22,
+      fontFamily: fonts.serif,
+      fontSize: 20,
+      fontStyle: 'italic',
       color: colors.textPrimary,
       lineHeight: 32,
       marginBottom: spacing.lg,
-      letterSpacing: -0.3,
     },
     rule: {
       height: 1,
       backgroundColor: colors.border,
       marginBottom: spacing.md,
     },
-    metaRow: {
+    ratingRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      paddingTop: spacing.xs,
+      alignItems: 'center',
+      gap: spacing.md,
     },
-    vibeBlock: {
-      flex: 1,
-    },
-    ratingBlock: {
-      alignItems: 'flex-end',
-    },
-    metaLabel: {
+    ratingLabel: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       letterSpacing: 2,
       color: colors.textMuted,
-      marginBottom: 6,
-    },
-    vibeName: {
-      fontFamily: fonts.displayBold,
-      fontSize: 18,
-      color: colors.textPrimary,
-      lineHeight: 22,
-      marginBottom: 8,
-    },
-    vibeIcons: {
-      flexDirection: 'row',
-      gap: 10,
     },
     ratingDashes: {
       flexDirection: 'row',
       gap: 4,
-      marginBottom: 6,
+      flex: 1,
     },
     dash: {
-      width: 18,
-      height: 3,
+      flex: 1,
+      height: 2,
     },
     dashFilled: {
       backgroundColor: colors.textPrimary,
@@ -179,7 +136,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     ratingNum: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       color: colors.textMuted,
       letterSpacing: 1,
     },

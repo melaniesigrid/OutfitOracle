@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView, RefreshControl,
   StyleSheet, KeyboardAvoidingView, Platform, StatusBar,
-  Dimensions, Share, Animated,
+  Dimensions, Share, Animated, Easing, Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useAppData } from '../contexts/AppContext';
 import { useRecentCities } from '../hooks/useRecentCities';
+import { useMagicMoment } from '../hooks/useMagicMoment';
 import { GenderToggle, Gender } from '../components/GenderToggle';
 import { OccasionPicker, Occasion } from '../components/OccasionPicker';
 import { WeatherStrip } from '../components/WeatherStrip';
@@ -26,14 +27,23 @@ import { searchCities, CitySuggestion } from '../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../services/analytics';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { Y2KOracleScreen } from './y2k/Y2KOracleScreen';
+import { MondrianOracleScreen } from './mondrian/MondrianOracleScreen';
 
 export function OracleScreen() {
-  const { colors, fonts, isDark } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { themeName } = useTheme();
+  if (isY2KTheme(themeName)) return <Y2KOracleScreen />;
+  if (isMondrianTheme(themeName)) return <MondrianOracleScreen />;
+  return <EditorialOracleScreen />;
+}
+
+function EditorialOracleScreen() {
+  const { colors, fonts, isDark, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const { oracle, profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
-  const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache } = oracle;
+  const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache, isOffline } = oracle;
   const profile = profileCtx.profile;
 
   const [city, setCity]               = useState('');
@@ -48,6 +58,10 @@ export function OracleScreen() {
   const scrollRef          = useRef<ScrollView>(null);
   const shareCardRef       = useRef<View>(null);
   const btnScale           = useRef(new Animated.Value(1)).current;
+  const resultTranslateX   = useRef(new Animated.Value(Dimensions.get('window').width)).current;
+  const toggleFade         = useRef(new Animated.Value(1)).current;
+  const isFirstToggle      = useRef(true);
+  const { magicOpacity, showMagicMoment, dismissMagicMoment, tryTriggerFirstConsult } = useMagicMoment();
 
   const isLoading = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && !!weather && !!verdict;
@@ -79,6 +93,7 @@ export function OracleScreen() {
   // Record consult in history + streak; persist founding member badge to dedicated key
   useEffect(() => {
     if (status === 'done' && !isFromCache && weather && verdict) {
+      tryTriggerFirstConsult(historyCtx.history.length);
       historyCtx.addEntry(city, gender, weather, verdict, occasion);
       streakCtx.recordConsult();
       if (verdict.foundingMember) {
@@ -86,6 +101,26 @@ export function OracleScreen() {
       }
     }
   }, [status, isFromCache]);
+
+  // Verdict arrival: horizontal wipe from right edge, 600ms ease-in-out per motion spec
+  useEffect(() => {
+    if (status === 'done') {
+      resultTranslateX.setValue(Dimensions.get('window').width);
+      Animated.timing(resultTranslateX, {
+        toValue: 0,
+        duration: 600,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [status]);
+
+  // POLISHED/CASUAL toggle crossfade — skip on initial render, fade in on mode switch
+  useEffect(() => {
+    if (isFirstToggle.current) { isFirstToggle.current = false; return; }
+    toggleFade.setValue(0);
+    Animated.timing(toggleFade, { toValue: 1, duration: 220, easing: Easing.out(Easing.ease), useNativeDriver: true }).start();
+  }, [lookMode]);
 
   // City autocomplete debounce
   useEffect(() => {
@@ -170,7 +205,14 @@ export function OracleScreen() {
 
           {/* ── HEADER ── */}
           <View style={styles.header}>
-            <Text style={styles.headerKicker}>— CONSULT THE ORACLE —</Text>
+            <View style={styles.headerTop} />
+            <View style={styles.headerRow}>
+              <Text style={styles.headerTitle}>OUTFIT ORACLE</Text>
+              <Text style={styles.headerDate}>
+                {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.headerBottom} />
           </View>
 
           {/* ── INPUT ── */}
@@ -239,8 +281,8 @@ export function OracleScreen() {
             <Pressable
               style={({ pressed }) => [styles.btn, pressed && styles.btnPressed, isLoading && styles.btnDisabled]}
               onPress={() => handleConsult()}
-              onPressIn={() => Animated.spring(btnScale, { toValue: 0.97, tension: 150, friction: 8, useNativeDriver: true }).start()}
-              onPressOut={() => Animated.spring(btnScale, { toValue: 1, tension: 60, friction: 6, useNativeDriver: true }).start()}
+              onPressIn={() => Animated.timing(btnScale, { toValue: 0.97, duration: 100, easing: Easing.out(Easing.ease), useNativeDriver: true }).start()}
+              onPressOut={() => Animated.timing(btnScale, { toValue: 1, duration: 150, easing: Easing.out(Easing.ease), useNativeDriver: true }).start()}
               disabled={isLoading}
               accessibilityRole="button"
               accessibilityLabel="Consult the Oracle"
@@ -267,15 +309,19 @@ export function OracleScreen() {
 
           {/* ── RESULTS ── */}
           {showResult ? (
-            <View style={styles.results}>
+            <Animated.View style={[styles.results, { transform: [{ translateX: resultTranslateX }] }]}>
               {isFromCache && cachedAt ? (
                 <View style={styles.cacheBadge}>
                   <Text style={styles.cacheBadgeText}>
-                    LAST CONSULTED · {new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {isOffline
+                      ? `OFFLINE — CACHED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                      : `LAST CONSULTED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                   </Text>
-                  <Pressable onPress={() => handleConsult(city)} accessibilityRole="button" accessibilityLabel="Refresh result">
-                    <Text style={styles.cacheRefresh}>↻ Refresh</Text>
-                  </Pressable>
+                  {!isOffline && (
+                    <Pressable onPress={() => handleConsult(city)} accessibilityRole="button" accessibilityLabel="Refresh result">
+                      <Text style={styles.cacheRefresh}>↻ Refresh</Text>
+                    </Pressable>
+                  )}
                 </View>
               ) : null}
               {wearAgainMatches.length > 0 && (
@@ -308,17 +354,19 @@ export function OracleScreen() {
                   ))}
                 </View>
               )}
-              {(lookMode === 'casual' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits).map((item, i) => (
-                <OutfitCard
-                  key={item.category}
-                  item={item}
-                  index={i}
-                  city={city}
-                  vibe={verdict.vibe}
-                  weather={weather ? { temp: weather.temp, conditionLabel: weather.conditionLabel } : undefined}
-                />
-              ))}
-              <AvoidSection items={verdict.avoid} />
+              <Animated.View style={{ opacity: toggleFade }}>
+                {(lookMode === 'casual' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits).map((item, i) => (
+                  <OutfitCard
+                    key={item.category}
+                    item={item}
+                    index={i}
+                    city={city}
+                    vibe={verdict.vibe}
+                    weather={weather ? { temp: weather.temp, conditionLabel: weather.conditionLabel } : undefined}
+                  />
+                ))}
+                <AvoidSection items={verdict.avoid} />
+              </Animated.View>
               <Pressable
                 style={styles.shareBtn}
                 onPress={handleShare}
@@ -335,7 +383,7 @@ export function OracleScreen() {
               >
                 <Text style={styles.resetText}>Ask Again →</Text>
               </Pressable>
-            </View>
+            </Animated.View>
           ) : null}
 
           {/* Off-screen share card */}
@@ -347,57 +395,95 @@ export function OracleScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── FIRST-CONSULT MAGIC MOMENT ── */}
+      {showMagicMoment && verdict && (
+        <Animated.View style={[styles.magicOverlay, { opacity: magicOpacity }]} pointerEvents="box-none">
+          <Pressable style={StyleSheet.absoluteFill} onPress={dismissMagicMoment} accessibilityRole="button" accessibilityLabel="Continue">
+            <View style={styles.magicContent}>
+              <Image source={require('../logo-dark.png')} style={styles.magicLogo} resizeMode="contain" />
+              <Text style={styles.magicCity}>{city}</Text>
+              <Text style={styles.magicVibe}>{verdict.vibe.toUpperCase()}</Text>
+            </View>
+          </Pressable>
+        </Animated.View>
+      )}
     </View>
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isElectric = themeName === 'electric';
+  const isEditorial = isEditorialTheme(themeName);
+  // Electric CTA: hot-pink button on cobalt — the one scarlet moment on the input screen
+  const btnBg       = isElectric ? colors.scarlet : colors.bgDark;
+  const btnTextColor = '#FAF9F6';
+  const btnArrowColor = 'rgba(250,249,246,0.55)';
+
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   content: { paddingBottom: 60 },
   header: {
     paddingTop: Platform.OS === 'ios' ? 16 : 12,
-    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     marginBottom: spacing.lg,
   },
-  headerKicker: {
+  headerTop: {
+    height: 1,
+    backgroundColor: colors.borderHard,
+    marginBottom: spacing.sm,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+  },
+  headerTitle: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 12,
     letterSpacing: 3,
+    color: colors.textPrimary,
+  },
+  headerDate: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1,
     color: colors.textMuted,
-    textAlign: 'center',
+  },
+  headerBottom: {
+    height: 1,
+    backgroundColor: colors.border,
   },
   inputSection: { paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
-  inputLabel: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
+  inputLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
   input: { fontFamily: fonts.display, fontSize: 30, color: colors.textPrimary, paddingVertical: spacing.sm, letterSpacing: -0.5 },
   inputRule: { height: 1, backgroundColor: colors.borderHard, marginTop: 4 },
   locationBtn: { paddingVertical: spacing.sm, marginTop: spacing.xs, alignSelf: 'flex-start' },
-  locationBtnText: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 1.5, color: colors.textMuted },
+  locationBtnText: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 1.5, color: colors.textMuted },
   recentsRow: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
-  recentsLabel: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
+  recentsLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
   recentChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   recentChip: { paddingHorizontal: spacing.md, paddingVertical: 7, borderWidth: 1, borderColor: colors.border },
   recentChipPressed: { backgroundColor: colors.bgSurface },
   recentChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.textSecondary, letterSpacing: 0.3 },
   btn: {
-    backgroundColor: colors.bgDark, paddingVertical: 18, paddingHorizontal: spacing.lg,
+    backgroundColor: btnBg, paddingVertical: 18, paddingHorizontal: spacing.lg,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginHorizontal: spacing.lg, marginBottom: spacing.xl,
   },
   btnPressed: { opacity: 0.75 },
   btnDisabled: { opacity: 0.45 },
-  btnText: { fontFamily: fonts.serif, fontSize: 18, color: '#FAF9F6', letterSpacing: 0.3 },
-  btnArrow: { fontFamily: fonts.mono, fontSize: 14, color: 'rgba(250,249,246,0.55)' },
+  btnText: { fontFamily: fonts.display, fontSize: 22, color: btnTextColor, letterSpacing: -0.3 },
+  btnArrow: { fontFamily: fonts.mono, fontSize: 14, color: btnArrowColor },
   errorBox: {
-    borderLeftWidth: 2, borderLeftColor: colors.scarlet,
+    borderLeftWidth: 2, borderLeftColor: colors.scarletFg,
     paddingLeft: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.lg,
   },
-  errorLabel: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2, color: colors.scarlet, marginBottom: spacing.sm },
+  errorLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2, color: colors.scarletFg, marginBottom: spacing.sm },
   errorText: { fontFamily: fonts.mono, fontSize: 12, color: colors.textSecondary, lineHeight: 19, marginBottom: spacing.md },
-  retryText: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.scarlet, letterSpacing: 0.5 },
+  retryText: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.scarletFg, letterSpacing: 0.5 },
   results: { marginTop: spacing.sm, paddingHorizontal: spacing.lg },
   lookToggle: {
     flexDirection: 'row',
@@ -415,7 +501,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   lookToggleText: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2,
     color: colors.textMuted,
   },
@@ -427,18 +513,18 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
     backgroundColor: colors.bgSurface, marginBottom: spacing.md,
   },
-  cacheBadgeText: { fontFamily: fonts.mono, fontSize: 9, letterSpacing: 1.5, color: colors.textMuted },
-  cacheRefresh: { fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary, letterSpacing: 0.5 },
+  cacheBadgeText: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.5, color: colors.textMuted },
+  cacheRefresh: { fontFamily: fonts.mono, fontSize: 12, color: colors.textSecondary, letterSpacing: 0.5 },
   shareBtn: {
     alignSelf: 'stretch', paddingVertical: 14, borderWidth: 1, borderColor: colors.borderHard,
     alignItems: 'center', marginBottom: spacing.md,
   },
-  shareBtnText: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2.5, color: colors.textPrimary },
+  shareBtnText: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textPrimary },
   resetBtn: { alignSelf: 'center', paddingVertical: spacing.md, marginBottom: spacing.lg },
   resetText: { fontFamily: fonts.serif, fontSize: 18, color: colors.textSecondary, letterSpacing: 0.3 },
   wearAgainBanner: {
     borderLeftWidth: 2,
-    borderLeftColor: colors.scarlet,
+    borderLeftColor: colors.scarletFg,
     paddingLeft: spacing.md,
     paddingVertical: spacing.sm,
     marginBottom: spacing.lg,
@@ -446,9 +532,9 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   wearAgainLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
-    color: colors.scarlet,
+    color: colors.scarletFg,
     marginBottom: 4,
   },
   wearAgainText: {
@@ -457,5 +543,39 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     color: colors.textSecondary,
     lineHeight: 19,
     fontStyle: 'italic',
+  },
+
+  /* First-consult magic moment overlay */
+  magicOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: '#0D0B08',
+    zIndex: 100,
+  },
+  magicContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  magicLogo: {
+    width: '72%',
+    height: 100,
+    marginBottom: spacing.xxl,
+  },
+  magicCity: {
+    fontFamily: fonts.displayLight,
+    fontSize: 48,
+    color: '#FAF9F6',
+    letterSpacing: -0.5,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  magicVibe: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: 'rgba(250,249,246,0.40)',
+    letterSpacing: 3,
+    textAlign: 'center',
   },
 }); }

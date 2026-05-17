@@ -3,7 +3,6 @@ import {
   View, Text, Pressable, StyleSheet, Platform,
   StatusBar, ScrollView, Dimensions,
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppColors, AppFonts, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -11,19 +10,16 @@ const { width } = Dimensions.get('window');
 
 const SLIDES = [
   {
-    icon: 'weather-partly-cloudy' as const,
     kicker: 'WEATHER-POWERED',
     headline: 'The sky sets\nthe dress code.',
     body: 'Real-time conditions from your city — temperature, humidity, wind — translated into a complete outfit brief.',
   },
   {
-    icon: 'eye-outline' as const,
     kicker: 'EDITORIALLY CURATED',
     headline: 'AI with taste.\nNot just data.',
     body: 'Claude Sonnet reads the weather and delivers verdicts with the confidence of a fashion editor who has seen everything.',
   },
   {
-    icon: 'crown-outline' as const,
     kicker: 'UNIQUELY YOURS',
     headline: 'The Oracle\nlearns your eye.',
     body: 'Your aesthetic, your budget, your city history. Every consultation gets sharper. Every verdict gets closer to perfect.',
@@ -74,13 +70,8 @@ export function OnboardingCarousel({ onContinue, onSkip }: Props) {
       >
         {SLIDES.map((slide, i) => (
           <View key={i} style={styles.slide}>
-            <View style={styles.iconWrap}>
-              <MaterialCommunityIcons
-                name={slide.icon}
-                size={52}
-                color={colors.scarlet}
-              />
-            </View>
+            {/* Ghost slide number — editorial backdrop */}
+            <Text style={styles.ghostNum}>{i + 1}</Text>
             <Text style={styles.kicker}>{slide.kicker}</Text>
             <Text style={styles.headline}>{slide.headline}</Text>
             <View style={styles.rule} />
@@ -136,23 +127,31 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
     justifyContent: 'flex-start',
+    overflow: 'visible',
   },
-  iconWrap: {
-    marginBottom: spacing.xl,
+  ghostNum: {
+    position: 'absolute',
+    right: -16,
+    top: spacing.sm,
+    fontFamily: fonts.displayLight,
+    fontSize: 200,
+    lineHeight: 200,
+    color: colors.textPrimary,
+    opacity: 0.05,
   },
   kicker: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 3,
     color: colors.textMuted,
     marginBottom: spacing.md,
   },
   headline: {
-    fontFamily: fonts.display,
-    fontSize: 48,
+    fontFamily: fonts.displayBold,
+    fontSize: 60,
     color: colors.textPrimary,
-    lineHeight: 54,
-    letterSpacing: -1,
+    lineHeight: 64,
+    letterSpacing: -1.5,
     marginBottom: spacing.lg,
   },
   rule: {
@@ -161,11 +160,10 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     marginBottom: spacing.lg,
   },
   body: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
+    fontFamily: fonts.serif,
+    fontSize: 16,
     color: colors.textSecondary,
-    lineHeight: 22,
-    letterSpacing: 0.2,
+    lineHeight: 26,
   },
   footer: {
     paddingHorizontal: spacing.lg,

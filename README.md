@@ -144,6 +144,31 @@ Deploy: `wrangler deploy`. Set the key: `wrangler secret put ANTHROPIC_API_KEY`.
 
 ---
 
+## Agentic engineering workflows
+
+This repo includes a small agent-orchestration layer I use to make AI-assisted engineering work more reproducible than ad hoc prompting. The goal is not to let agents edit freely; it is to define roles, boundaries, shared context, and review loops in files that can be inspected and improved like any other engineering artifact.
+
+| Area | Files | Purpose |
+|---|---|---|
+| Agent workflow guide | `docs/agent-workflows/README.md` | Documents which agent patterns are ready to use, which are experimental, and what each workflow is appropriate for |
+| Model debate runner | `tools/model-chat/model_chat.py`, `tools/model-chat/requirements.txt` | Runs several Claude API calls with different framings, captures the full transcript, and writes a synthesis to `active/model-chat/` |
+| Browser worker config | `multi-chrome-agent-workspace/chrome-agent-*/.mcp.json` | Gives each browser worker its own Chrome DevTools MCP connection on a separate debug port |
+| Browser worker instructions | `multi-chrome-agent-workspace/chrome-agent-*/CLAUDE.md`, `multi-chrome-agent-workspace/chat.md` | Defines worker responsibilities, status protocol, and a shared task board for parallel browser research |
+| Local skill specs | `model-chat-skill/SKILL.md`, `multi-agent-chrome-skill/SKILL.md` | Captures repeatable invocation patterns for debate-style analysis and parallel Chrome automation |
+| Methodology notes | `Stochastic Multi-Agent Consensus.md`, `Agent Chatrooms.md`, `Subagent Verification Loops.md` | Design notes for consensus polling, adversarial review, and fresh-context verification loops |
+
+Engineering choices:
+
+- **Configuration over memory**: worker behavior lives in `CLAUDE.md`, `SKILL.md`, `.mcp.json`, and shared markdown files instead of relying on one-off prompt history.
+- **Isolated execution**: browser agents use separate Chrome profiles and remote-debugging ports, reducing session bleed and making failures easier to attribute.
+- **Explicit coordination protocol**: multi-agent browser work uses `chat.md` with `[WORKING]`, `[DONE]`, `[ERROR]`, and `[WAITING]` markers so progress is auditable.
+- **Generated output hygiene**: `active/`, browser logs, and snapshots are ignored by git; source instructions and configs are kept, run artifacts are not.
+- **Review-oriented workflows**: the documented agent patterns emphasize independent analysis, structured disagreement, and verification before changes are accepted.
+
+These files are intentionally visible in the repo because they show how I approach AI-assisted development as an engineering system: scoped agents, portable configuration, explicit handoffs, and reproducible outputs.
+
+---
+
 ## Design language
 
 Editorial, not app-like. Borrowed from Vogue, AnOther Magazine, and high-end lookbooks.
@@ -185,3 +210,4 @@ Hosted at `https://melaniesigrid.github.io/OutfitOracle/` (GitHub Pages from `/d
 - [TODOS.md](TODOS.md) — open design/engineering debt
 - [BEST_PRACTICES.md](BEST_PRACTICES.md) — coding conventions
 - [CLAUDE.md](CLAUDE.md) — AI assistant guidance
+- [docs/agent-workflows](docs/agent-workflows/README.md) — agent orchestration and verification workflows

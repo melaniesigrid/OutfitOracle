@@ -4,6 +4,53 @@ All notable changes to Outfit Oracle are documented here.
 
 ---
 
+## [1.4.0] — 2026-05-17
+
+### Added
+- **Local account auth** — Sign up / sign in with name, email, and password. Credentials stored on-device only using PBKDF2-SHA256 (100k iterations, Web Crypto API). Sessions persist 90 days with expiry enforcement on next launch.
+- **Oracle image generation** — AI-generated editorial fashion photos and fashion-illustration sketches (day + night variants) via fal.ai FLUX Pro, proxied through the Cloudflare Worker so the API key never ships in the JS bundle. Day image auto-generates; night and sketch variants are on-demand to avoid $0.20–0.32 in sequential fal.ai charges per consult.
+- **Image generation proxy** — `/image` endpoint added to the Cloudflare Worker with the same device-ID validation and rate limiting as the oracle route.
+
+### Security
+- **PBKDF2 password hashing** — Replaced the prior multiply-hash scheme with PBKDF2-SHA256 (100k iterations, 16-byte cryptographically random salt). Available in Hermes ≥ Expo SDK 50 via `crypto.subtle` — no new native modules required.
+- **Password length cap** — Passwords over 1024 characters are rejected before hashing to prevent PBKDF2 DoS.
+- **Session expiry** — Auth sessions now include an `expiresAt` timestamp (90 days). Expired sessions are cleared on next app launch.
+- **fal.ai key moved server-side** — `EXPO_PUBLIC_FAL_KEY` is no longer baked into production builds. All image generation routes through the Worker proxy.
+- **Image rate limiting** — `/image` endpoint now enforces the same per-device daily limit as the oracle route; unauthenticated requests (no device ID or CF IP) are rejected 400.
+- **Prompt injection hardening** — Worker validates gender against an allowlist (`Men` / `Women`), caps `weather.city` and `weather.country` at 100 chars, and validates that city is a non-empty string before interpolating into the Claude prompt.
+- **Oracle image cache cleared on reset** — "Reset Everything" in Settings now scans `AsyncStorage.getAllKeys()` for the `@oracle_image_v1_` prefix and removes all cached image entries in addition to the static key list.
+
+### Performance
+- **Confetti `interpolate` hoisted out of render** — `rotate.interpolate()` for 55 particles was recreated on every render; moved into the `makeParticles()` factory and stored on the `Particle` object. Eliminates 55 `Animated.InterpolatedNode` allocations per frame during confetti.
+- **fal.ai CDN cache TTL** — Image cache entries now store `cachedAt`; entries older than 6 hours are treated as a miss and re-fetched to avoid serving expired CDN URLs.
+
+### Fixed
+- **TodayScreen background color** — Hardcoded `#000000` replaced with `colors.bgDark` token so all themes render correctly.
+- **Y2KOracleScreen share button** — Hardcoded `#000000` border/shadow and `#FFFFFF` label replaced with `y2kTokens.ink` and `y2kTokens.cream`.
+- **Y2KDecreeCard entrance animation** — Both `Animated.timing` calls now use `Easing.out(Easing.ease)` per DESIGN.md motion spec.
+- **`autoGenerate` flag explicit** — All four `useOracleImage` calls in `AppContext` now pass explicit `autoGenerate` booleans; the day variant is eager, the three others are lazy.
+
+### Tests
+- **134 tests across 11 suites** — Three new suites added: `oracleUtils.test.ts` (22 getSeason hemisphere/edge-case tests), `themePredicates.test.ts` (isDarkColor + all 5 isXTheme predicates + mutual exclusivity), `y2kTypography.test.ts` (getY2KFontSet + getY2KTypography for both subthemes). Total up from 94.
+
+---
+
+## [1.3.0] — 2026-05-14
+
+### Added
+- **Y2K theme** — Full lavender/hot-pink/lime design system: Y2KCard, Y2KBadge, Y2KSticker, Y2KDecreeCard, Y2KWeatherCard, Y2KOutfitCard, Y2KOracleScreen, Y2KTodayScreen. Two font subthemes: Decree (Syne + Cormorant) and Club (Baloo 2 + Knewave).
+- **Confetti celebration** — 55-particle animated overlay fires on badge unlock, theme-aware colors (lavender/lime for Y2K, hot-pink/white for Electric, warm earth tones for terra-firma themes). Sits below BadgeToast at `zIndex: 998`.
+- **BadgeToast spring animation** — Icon spring-pops with rotation after the card slides up. 4 s auto-dismiss with TAP × hint.
+- **HourlyGraph** — Shared sparkline component renders hourly temperature forecast on Today screens.
+- **Temperature toggle** — Celsius / Fahrenheit switcher via `TemperatureContext`. All temperature displays (Oracle Archives, weather strips, hourly graph) respect the setting.
+
+### Fixed
+- **Founding Member chip (YouScreen)** — Icon and label were using `colors.bg` (lavender on Y2K, vivid blue on Electric) as text color against a scarlet background. Fixed to cream `#FAF9F6` — readable on all theme variants.
+- **Electric consult button text** — Button text used `colors.bg` (#1E2DFF vivid blue) on a hot-pink (#FF1060) background — ~1.88:1 contrast, far below readable. Fixed to cream for all themes (~3.8:1 on hot pink).
+- **Archive temperature format** — Oracle Archives always showed raw Celsius, ignoring the C/F toggle. Now wrapped in `formatTemp()` from `TemperatureContext`.
+
+---
+
 ## [1.2.0] — 2026-05-14
 
 ### Added

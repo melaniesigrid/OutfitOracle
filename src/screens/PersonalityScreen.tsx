@@ -91,7 +91,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   kicker: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 3,
     color: colors.textMuted,
     marginBottom: spacing.md,
@@ -159,7 +159,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   cardDesc: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     lineHeight: 17,
     letterSpacing: 0.2,

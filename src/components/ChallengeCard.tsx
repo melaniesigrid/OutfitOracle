@@ -106,7 +106,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     kicker: {
       fontFamily: fonts.mono,
-      fontSize: 8,
+      fontSize: 11,
       letterSpacing: 2,
       color: colors.textMuted,
     },
@@ -115,7 +115,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     daysLeft: {
       fontFamily: fonts.mono,
-      fontSize: 8,
+      fontSize: 11,
       letterSpacing: 1,
       color: colors.textMuted,
     },
@@ -132,7 +132,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     brief: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       color: colors.textSecondary,
       lineHeight: 16,
       letterSpacing: 0.1,

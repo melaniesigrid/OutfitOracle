@@ -6,11 +6,6 @@
       "node",
       "jest"
     ],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "src/*"
-      ]
-    }
+    "baseUrl": "."
   }
 }

@@ -9,8 +9,10 @@ import { useAppData } from '../contexts/AppContext';
 import { BUDGET_TIERS, PERSONALITY_OPTIONS } from '../hooks/useStyleProfile';
 import { getRankTitle } from '../hooks/useConsultStreak';
 import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, ThemeName, isEditorialTheme, isMondrianTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { MondrianYouScreen } from './mondrian/MondrianYouScreen';
+import { useTempUnit } from '../contexts/TemperatureContext';
 
 const PASSPORT_MILESTONES = [
   { cities: 50, title: 'The Nomad Oracle',  icon: 'earth' as const },
@@ -27,8 +29,9 @@ const RANK_PROGRESS = [
 ];
 
 export function YouScreen() {
-  const { colors, fonts, isDark } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, metrics, isDark, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, metrics, themeName), [colors, fonts, metrics, themeName]);
+  const { formatTemp } = useTempUnit();
   const navigation = useNavigation<any>();
   const [lockedExpanded, setLockedExpanded] = useState(false);
   const [isFoundingMember, setIsFoundingMember] = useState(false);
@@ -58,6 +61,8 @@ export function YouScreen() {
     [earnedBadges],
   );
 
+  if (isMondrianTheme(themeName)) return <MondrianYouScreen />;
+
   return (
     <View style={styles.root}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
@@ -85,13 +90,13 @@ export function YouScreen() {
           </View>
           {isFoundingMember && (
             <View style={styles.foundingChip}>
-              <MaterialCommunityIcons name="seal" size={12} color={colors.bg} />
+              <MaterialCommunityIcons name="seal" size={12} color="#FAF9F6" />
               <Text style={styles.foundingChipText}>FOUNDING MEMBER</Text>
             </View>
           )}
           {streak > 0 && (
             <View style={styles.streakChip}>
-              <MaterialCommunityIcons name="fire" size={12} color={colors.scarlet} />
+              <MaterialCommunityIcons name="fire" size={12} color={colors.scarletFg} />
               <Text style={styles.streakChipText}>{streak}-DAY STREAK</Text>
             </View>
           )}
@@ -114,7 +119,7 @@ export function YouScreen() {
             accessibilityRole="button"
             accessibilityLabel="View your city map"
           >
-            <MaterialCommunityIcons name="map-outline" size={12} color={colors.scarlet} />
+            <MaterialCommunityIcons name="map-outline" size={12} color={!isEditorialTheme(themeName) ? colors.scarletFg : colors.textSecondary} />
             <Text style={styles.mapLinkText}>VIEW ON MAP</Text>
           </Pressable>
 
@@ -159,7 +164,7 @@ export function YouScreen() {
                 <View style={styles.badgeGrid}>
                   {catBadges.map(b => (
                     <View key={b.id} style={styles.badge}>
-                      <MaterialCommunityIcons name={b.icon as any} size={18} color={colors.textPrimary} />
+                      <MaterialCommunityIcons name={b.icon as any} size={18} color={metrics.cardGap === 32 ? '#000000' : colors.textPrimary} />
                       <Text style={styles.badgeTitle}>{b.title}</Text>
                       <Text style={styles.badgeDesc}>{b.desc}</Text>
                     </View>
@@ -247,13 +252,14 @@ export function YouScreen() {
         </View>
 
         {/* ── SAVED LOOKS ── */}
-        {savedCtx.saved.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>SAVED LOOKS</Text>
-              <Text style={styles.badgeCount}>{savedCtx.saved.length}</Text>
-            </View>
-            {savedCtx.saved.map(s => (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>SAVED LOOKS</Text>
+            {savedCtx.saved.length > 0 && <Text style={styles.badgeCount}>{savedCtx.saved.length}</Text>}
+          </View>
+          {savedCtx.saved.length === 0 ? (
+            <Text style={styles.emptyState}>No looks saved. The wardrobe is a blank canvas.</Text>
+          ) : savedCtx.saved.map(s => (
               <View key={`${s.item.item}-${s.savedAt}`} style={styles.savedRow}>
                 <View style={styles.savedLeft}>
                   <Text style={styles.savedCategory}>{s.item.category.toUpperCase()}</Text>
@@ -266,45 +272,44 @@ export function YouScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Remove ${s.item.item} from saved looks`}
                 >
-                  <MaterialCommunityIcons name="heart" size={16} color={colors.scarlet} />
+                  <MaterialCommunityIcons name="heart" size={16} color={!isEditorialTheme(themeName) ? colors.scarletFg : colors.textMuted} />
                 </Pressable>
               </View>
             ))}
-          </View>
-        )}
+        </View>
 
         {/* ── ORACLE ARCHIVES ── */}
-        {history.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>ORACLE ARCHIVES</Text>
-            </View>
-            {history.map(entry => (
-              <View key={entry.id} style={styles.archiveRow}>
-                <View style={styles.archiveDate}>
-                  <Text style={styles.archiveDateDay}>
-                    {new Date(entry.consultedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                  </Text>
-                  <Text style={styles.archiveDateTime}>
-                    {new Date(entry.consultedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                </View>
-                <View style={styles.archiveCenter}>
-                  <Text style={styles.archiveCity}>{entry.city}</Text>
-                  <Text style={styles.archiveVibe}>{entry.verdict.vibe}</Text>
-                </View>
-                <Text style={styles.archiveTemp}>{entry.weather.temp}°</Text>
-              </View>
-            ))}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>ORACLE ARCHIVES</Text>
           </View>
-        )}
+          {history.length === 0 ? (
+            <Text style={styles.emptyState}>The Oracle awaits your first inquiry.</Text>
+          ) : history.map(entry => (
+            <View key={entry.id} style={styles.archiveRow}>
+              <View style={styles.archiveDate}>
+                <Text style={styles.archiveDateDay}>
+                  {new Date(entry.consultedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                </Text>
+                <Text style={styles.archiveDateTime}>
+                  {new Date(entry.consultedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+              <View style={styles.archiveCenter}>
+                <Text style={styles.archiveCity}>{entry.city}</Text>
+                <Text style={styles.archiveVibe}>{entry.verdict.vibe}</Text>
+              </View>
+              <Text style={styles.archiveTemp}>{formatTemp(entry.weather.temp)}°</Text>
+            </View>
+          ))}
+        </View>
 
       </ScrollView>
     </View>
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, themeName: ThemeName) { return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: {
     paddingTop: Platform.OS === 'ios' ? 16 : 12,
@@ -327,7 +332,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   rankEyebrow: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 3,
     color: 'rgba(250,249,246,0.40)',
     marginBottom: spacing.sm,
@@ -353,7 +358,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   rankNext: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: 'rgba(250,249,246,0.30)',
     letterSpacing: 0.3,
   },
@@ -364,15 +369,15 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     marginTop: spacing.md,
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: colors.scarlet,
+    borderColor: !isEditorialTheme(themeName) ? colors.scarletFg : 'rgba(250,249,246,0.25)',
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
   streakChipText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : 'rgba(250,249,246,0.50)',
   },
   foundingChip: {
     flexDirection: 'row',
@@ -386,9 +391,9 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   foundingChipText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 1.5,
-    color: colors.bg,
+    color: '#FAF9F6',
   },
 
   /* Sections */
@@ -406,13 +411,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   sectionLabel: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 2.5,
     color: colors.textMuted,
   },
   editBtn: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.5,
   },
@@ -429,7 +434,6 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontSize: 52,
     color: colors.textPrimary,
     letterSpacing: -1,
-    lineHeight: 56,
   },
   passportLabel: {
     fontFamily: fonts.mono,
@@ -444,19 +448,19 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     alignSelf: 'flex-start',
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.scarlet,
+    borderColor: !isEditorialTheme(themeName) ? colors.scarletFg : colors.borderMid,
     paddingHorizontal: spacing.sm,
     paddingVertical: 5,
   },
   mapLinkText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
-    color: colors.scarlet,
+    fontSize: 11,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textSecondary,
     letterSpacing: 1.5,
   },
   passportNext: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.3,
     marginBottom: spacing.md,
@@ -477,7 +481,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   stampText: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textSecondary,
     letterSpacing: 1,
   },
@@ -504,7 +508,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   keywordText: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.5,
   },
@@ -515,13 +519,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   profileMetaLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 1.5,
   },
   profileMetaVal: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     letterSpacing: 0.3,
   },
@@ -529,7 +533,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   setupProfileText: {
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textSecondary,
     letterSpacing: 0.5,
   },
 
@@ -539,16 +543,16 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   badgeCategoryLabel: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
-    color: colors.scarlet,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textMuted,
     marginBottom: spacing.sm,
   },
 
   /* Weather badges */
   badgeCount: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.5,
   },
@@ -572,19 +576,28 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   badge: {
     width: '47%',
-    borderWidth: 1,
-    borderColor: colors.borderMid,
+    borderWidth: metrics.borderWidth > 1 ? metrics.borderWidth : 1,
+    borderColor: metrics.borderWidth > 1 ? colors.borderHard : colors.borderMid,
     padding: spacing.sm,
     gap: 4,
+    borderRadius: metrics.radius,
+    backgroundColor: metrics.cardGap === 32 ? colors.scarlet : (metrics.borderWidth > 1 ? colors.bgCard : 'transparent'),
+    ...(metrics.shadowOpacity > 0 ? {
+      shadowColor: metrics.shadowColor,
+      shadowOffset: { width: metrics.shadowOffset, height: metrics.shadowOffset },
+      shadowOpacity: metrics.shadowOpacity,
+      shadowRadius: 0,
+    } : {}),
   },
   badgeLocked: {
     borderColor: colors.border,
+    backgroundColor: metrics.cardGap === 32 ? colors.bgCard : 'transparent',
     opacity: 0.45,
   },
   badgeTitle: {
     fontFamily: fonts.displayBold,
     fontSize: 14,
-    color: colors.textPrimary,
+    color: metrics.cardGap === 32 ? '#000000' : colors.textPrimary,
     letterSpacing: -0.1,
   },
   badgeTitleLocked: {
@@ -595,17 +608,24 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   badgeDesc: {
     fontFamily: fonts.mono,
-    fontSize: 9,
-    color: colors.textMuted,
+    fontSize: 11,
+    color: metrics.cardGap === 32 ? '#000000' : colors.textMuted,
     letterSpacing: 0.3,
     lineHeight: 14,
   },
   badgeEmpty: {
     fontFamily: fonts.mono,
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textMuted,
     letterSpacing: 0.3,
     lineHeight: 17,
+  },
+  emptyState: {
+    fontFamily: fonts.serif,
+    fontSize: 16,
+    color: colors.textMuted,
+    lineHeight: 24,
+    fontStyle: 'italic',
   },
 
   /* Saved looks */
@@ -620,7 +640,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   savedLeft: { flex: 1 },
   savedCategory: {
     fontFamily: fonts.mono,
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 2,
     color: colors.textMuted,
     marginBottom: 2,
@@ -633,7 +653,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   savedMeta: {
     fontFamily: fonts.mono,
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textMuted,
     letterSpacing: 0.3,
     marginTop: 2,
@@ -648,10 +668,10 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     borderBottomColor: colors.border,
   },
   archiveDate: { width: 52, marginRight: spacing.md },
-  archiveDateDay: { fontFamily: fonts.mono, fontSize: 10, color: colors.textPrimary, letterSpacing: 0.3 },
-  archiveDateTime: { fontFamily: fonts.mono, fontSize: 9, color: colors.textMuted, marginTop: 2 },
+  archiveDateDay: { fontFamily: fonts.mono, fontSize: 12, color: colors.textPrimary, letterSpacing: 0.3 },
+  archiveDateTime: { fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted, marginTop: 2 },
   archiveCenter: { flex: 1 },
   archiveCity: { fontFamily: fonts.display, fontSize: 20, color: colors.textPrimary, letterSpacing: -0.3 },
-  archiveVibe: { fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, letterSpacing: 0.3, marginTop: 1 },
+  archiveVibe: { fontFamily: fonts.mono, fontSize: 12, color: colors.textMuted, letterSpacing: 0.3, marginTop: 1 },
   archiveTemp: { fontFamily: fonts.displayBold, fontSize: 20, color: colors.textPrimary, marginLeft: spacing.sm },
 }); }

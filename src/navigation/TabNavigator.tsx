@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TodayScreen } from '../screens/TodayScreen';
@@ -7,6 +7,7 @@ import { OracleScreen } from '../screens/OracleScreen';
 import { YouScreen } from '../screens/YouScreen';
 import { AppColors, AppFonts } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAppData } from '../contexts/AppContext';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,6 +20,8 @@ const ICONS: Record<string, string> = {
 export function TabNavigator() {
   const { colors, fonts } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { oracle } = useAppData();
+  const stale = oracle.isFromCache && oracle.cachedAt != null && (Date.now() - oracle.cachedAt > 2 * 60 * 60 * 1000);
 
   return (
     <Tab.Navigator
@@ -31,11 +34,10 @@ export function TabNavigator() {
         tabBarActiveTintColor: colors.textPrimary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarIcon: ({ color, size }) => (
-          <MaterialCommunityIcons
-            name={ICONS[route.name] as any}
-            size={size}
-            color={color}
-          />
+          <View>
+            <MaterialCommunityIcons name={ICONS[route.name] as any} size={size} color={color} />
+            {route.name === 'Oracle' && stale && <View style={styles.tabDot} />}
+          </View>
         ),
       })}
     >
@@ -60,9 +62,18 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     tabLabel: {
       fontFamily: fonts.mono,
-      fontSize: 9,
+      fontSize: 11,
       letterSpacing: 1.5,
       textTransform: 'uppercase',
+    },
+    tabDot: {
+      position: 'absolute',
+      top: -1,
+      right: -5,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.scarlet,
     },
   });
 }

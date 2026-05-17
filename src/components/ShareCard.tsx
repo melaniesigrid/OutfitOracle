@@ -196,21 +196,21 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     mastheadCity: {
       fontFamily:    fonts.mono,
-      fontSize:      9,
+      fontSize: 11,
       color:         '#FAF9F6',
       letterSpacing: 1.5,
       opacity:       0.85,
     },
     mastheadOccasion: {
       fontFamily:    fonts.mono,
-      fontSize:      8,
+      fontSize: 11,
       color:         colors.scarlet,
       letterSpacing: 1.5,
       marginTop:     3,
     },
     mastheadDate: {
       fontFamily:    fonts.mono,
-      fontSize:      8,
+      fontSize: 11,
       color:         '#FAF9F6',
       letterSpacing: 1,
       opacity:       0.5,
@@ -229,7 +229,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     sectionLabel: {
       fontFamily:    fonts.mono,
-      fontSize:      8,
+      fontSize: 11,
       letterSpacing: 2.5,
       color:         colors.textMuted,
       marginBottom:  6,
@@ -287,7 +287,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     weatherFeels: {
       fontFamily:    fonts.mono,
-      fontSize:      7,
+      fontSize: 11,
       color:         colors.textMuted,
       letterSpacing: 0.5,
       marginTop:     2,
@@ -306,7 +306,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     weatherStat: {
       fontFamily:    fonts.mono,
-      fontSize:      9,
+      fontSize: 11,
       color:         colors.textMuted,
       letterSpacing: 0.5,
     },
@@ -337,7 +337,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     outfitCategory: {
       fontFamily:    fonts.mono,
-      fontSize:      7,
+      fontSize: 11,
       letterSpacing: 2,
       marginBottom:  1,
     },
@@ -351,7 +351,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
 
     avoidLabel: {
       fontFamily:    fonts.mono,
-      fontSize:      8,
+      fontSize: 11,
       letterSpacing: 2.5,
       color:         colors.scarlet,
       marginBottom:  7,
@@ -369,7 +369,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     avoidText: {
       fontFamily:    fonts.mono,
-      fontSize:      7,
+      fontSize: 11,
       color:         colors.scarlet,
       letterSpacing: 1,
     },
@@ -396,7 +396,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     effortLabel: {
       fontFamily:    fonts.mono,
-      fontSize:      7,
+      fontSize: 11,
       color:         colors.textMuted,
       letterSpacing: 1.5,
     },
@@ -405,7 +405,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     ctaLine: {
       fontFamily:    fonts.mono,
-      fontSize:      9,
+      fontSize: 11,
       color:         colors.scarlet,
       letterSpacing: 0.5,
       marginBottom:  2,
@@ -429,13 +429,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     footerTagline: {
       fontFamily:    fonts.mono,
-      fontSize:      7,
+      fontSize: 11,
       color:         colors.textMuted,
       letterSpacing: 1,
     },
     footerUrl: {
       fontFamily:    fonts.mono,
-      fontSize:      8,
+      fontSize: 11,
       color:         colors.textPrimary,
       letterSpacing: 0.5,
     },

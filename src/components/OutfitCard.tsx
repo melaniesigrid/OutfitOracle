@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { OutfitItem } from '../services/oracle';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 const NONE_NEEDED_RE = /\bnone\b|not needed|no outer|skip the|universe has gifted|weather permits|too warm|unnecessary/i;
@@ -31,19 +31,20 @@ function splitItems(raw: string): string[] {
 }
 
 export function OutfitCard({ item, index, city, vibe, weather }: Props) {
-  const { colors, fonts } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, metrics, flags } = useTheme();
   const { savedCtx } = useAppData();
 
   const accentMap = useMemo(() => ({
-    mint:     { color: colors.mint },
-    lavender: { color: colors.lavender },
-    coral:    { color: colors.coral },
-    lemon:    { color: colors.lemon },
-    iris:     { color: colors.iris },
+    mint:     { color: colors.mint, text: colors.mintText },
+    lavender: { color: colors.lavender, text: colors.lavenderText },
+    coral:    { color: colors.coral, text: colors.coralText },
+    lemon:    { color: colors.lemon, text: colors.lemonText },
+    iris:     { color: colors.iris, text: colors.irisText },
   }), [colors]);
 
   const accent = accentMap[item.accentColor as keyof typeof accentMap] ?? accentMap.mint;
+  const styles = useMemo(() => makeStyles(colors, fonts, metrics, flags, accent), [colors, fonts, metrics, flags, accent]);
+
   const num = String(index + 1).padStart(2, '0');
   const isNoneNeeded = NONE_NEEDED_RE.test(item.item);
   const shopItems = splitItems(item.item);
@@ -60,7 +61,7 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   }, []);
 
   const toggleSave = () => {
-    Haptics.selectionAsync();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (hearted) {
       savedCtx.removeOutfit(item, city);
     } else {
@@ -87,7 +88,7 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
               <MaterialCommunityIcons
                 name={hearted ? 'heart' : 'heart-outline'}
                 size={16}
-                color={hearted ? colors.scarlet : colors.border}
+                color={hearted ? colors.scarletFg : colors.border}
               />
             </Pressable>
           </View>
@@ -109,13 +110,13 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
                   accessibilityLabel={`Shop ${piece}`}
                   accessibilityHint="Opens Google Shopping in your browser"
                 >
-                  <Text style={[styles.shopText, { color: accent.color }]}>
+                  <Text style={[styles.shopText, { color: flags.solidCardBackgrounds ? accent.text : accent.color }]}>
                     {shopItems.length > 1 ? `SHOP ${piece.toUpperCase()}` : 'SHOP THIS PIECE'}
                   </Text>
                   <MaterialCommunityIcons
                     name="open-in-new"
                     size={10}
-                    color={accent.color}
+                    color={flags.solidCardBackgrounds ? accent.text : accent.color}
                     style={styles.shopIcon}
                   />
                 </Pressable>
@@ -128,15 +129,34 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) {
+function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, flags: any, accent: any) {
+  const isSolid = flags.solidCardBackgrounds;
+  const cardBg = isSolid ? accent.color : colors.bgCard;
+  const textColor = isSolid ? accent.text : colors.textPrimary;
+  const textMuted = isSolid ? accent.text : colors.textSecondary;
+
   return StyleSheet.create({
     card: {
-      marginBottom: spacing.lg,
+      marginBottom: metrics.cardGap === 32 ? spacing.xl : spacing.lg,
+      ...(metrics.borderWidth > 1 ? {
+        backgroundColor: cardBg,
+        borderWidth: metrics.borderWidth,
+        borderColor: colors.borderHard,
+        padding: spacing.md,
+        borderRadius: metrics.radius,
+      } : {}),
+      ...(metrics.shadowOpacity > 0 ? {
+        shadowColor: metrics.shadowColor,
+        shadowOffset: { width: metrics.shadowOffset, height: metrics.shadowOffset },
+        shadowOpacity: metrics.shadowOpacity,
+        shadowRadius: 0,
+      } : {}),
     },
     rule: {
       height: 1,
       backgroundColor: colors.border,
       marginBottom: spacing.md,
+      display: metrics.borderWidth >= 3 ? 'none' : 'flex',
     },
     inner: {
       flexDirection: 'row',
@@ -146,8 +166,8 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     num: {
       fontFamily: fonts.displayLight,
       fontSize: 52,
-      color: colors.textPrimary,
-      opacity: 0.10,
+      color: textColor,
+      opacity: isSolid ? 0.25 : 0.10,
       lineHeight: 54,
       width: 52,
       textAlign: 'right',
@@ -164,13 +184,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     category: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       letterSpacing: 2.5,
     },
     itemName: {
       fontFamily: fonts.display,
       fontSize: 22,
-      color: colors.textPrimary,
+      color: textColor,
       lineHeight: 26,
       marginBottom: spacing.xs,
       letterSpacing: -0.3,
@@ -178,7 +198,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     detail: {
       fontFamily: fonts.mono,
       fontSize: 11,
-      color: colors.textSecondary,
+      color: textMuted,
       lineHeight: 17,
       marginBottom: spacing.sm,
     },
@@ -197,7 +217,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     shopText: {
       fontFamily: fonts.mono,
-      fontSize: 10,
+      fontSize: 12,
       letterSpacing: 2,
     },
     shopIcon: {
@@ -205,10 +225,11 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     blessingNote: {
       fontFamily: fonts.mono,
-      fontSize: 10,
-      color: colors.textMuted,
+      fontSize: 12,
+      color: isSolid ? textColor : colors.textMuted,
       fontStyle: 'italic',
       letterSpacing: 0.2,
+      opacity: isSolid ? 0.7 : 1,
     },
   });
 }

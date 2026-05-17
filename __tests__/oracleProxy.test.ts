@@ -163,12 +163,25 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
     await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle has spoken enough today');
   });
 
-  it('throws with fallback message when proxy returns non-ok with no error field', async () => {
+  it('retries transient proxy failures before throwing overloaded message', async () => {
+    const { oracle, asyncStorage } = loadOracleModule('https://fake-proxy.example.com/api');
+    asyncStorage.getItem.mockResolvedValueOnce(null);
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: () => Promise.resolve({}),
+    });
+
+    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle is momentarily overwhelmed');
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('throws with fallback message when proxy returns non-retryable server error with no error field', async () => {
     const { oracle, asyncStorage } = loadOracleModule('https://fake-proxy.example.com/api');
     asyncStorage.getItem.mockResolvedValueOnce(null);
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      status: 503,
+      status: 500,
       json: () => Promise.resolve({}),
     });
 
@@ -211,6 +224,34 @@ describe('fetchOracleVerdict() — routing (PROXY_URL set vs unset)', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url] = mockFetch.mock.calls[0];
     expect(url).toBe('https://api.anthropic.com/v1/messages');
+  });
+
+  it('viaDirect treats budget as guidance and prohibits brand names by default', async () => {
+    const { oracle } = loadOracleModule('');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        content: [{ type: 'text', text: JSON.stringify(fakeVerdict) }],
+      }),
+    });
+
+    await oracle.fetchOracleVerdict(
+      fakeWeather,
+      'female',
+      'sk-direct-key',
+      { keywords: ['minimal'], budget: 'contemporary', personality: 'editorial' },
+      'Work',
+    );
+
+    const [_url, init] = mockFetch.mock.calls[0];
+    const body = JSON.parse(init.body);
+    const prompt = body.messages[0].content;
+
+    expect(prompt).toContain('BRAND RULE');
+    expect(prompt).toContain('default to zero brand names');
+    expect(prompt).toContain('Budget tier: contemporary');
+    expect(prompt).toContain('mid-range investment pieces');
+    expect(prompt).not.toMatch(/\b(ASOS|Zara|Reiss|AllSaints|COS|Bottega|The Row)\b/);
   });
 
   it('viaDirect parses JSON from Claude content blocks', async () => {

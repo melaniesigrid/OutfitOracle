@@ -1,0 +1,306 @@
+/*
+  Outfit Oracle docs theming
+
+  Root class toggle contract:
+  - <html class="theme-light"> forces the light theme.
+  - <html class="theme-dark"> forces the dark theme.
+  - With no theme class, the page follows prefers-color-scheme.
+
+  New themes should only add a new root block, for example:
+  :root.theme-high-contrast { ...semantic token overrides... }
+*/
+
+:root {
+  color-scheme: light;
+
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-sans: 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, monospace;
+
+  --page-max-width: 680px;
+  --page-max-width-wide: 760px;
+  --space-page-block: 48px 24px 80px;
+  --space-page-block-compact: 32px 20px 64px;
+
+  --color-bg-page: #FAF9F6;
+  --color-bg-surface: #F3EEE5;
+  --color-bg-code: #FFFFFF;
+
+  --color-text-primary: #1A1714;
+  --color-text-secondary: #4F463D;
+  --color-text-muted: #6A625A;
+  --color-text-on-accent: #FFFFFF;
+
+  --color-border-subtle: #DDD7CE;
+  --color-border-strong: #B8AEA0;
+
+  --color-accent: #A30F28;
+  --color-accent-hover: #7F0B1F;
+  --color-focus-ring: #A30F28;
+}
+
+:root.theme-dark {
+  color-scheme: dark;
+
+  --color-bg-page: #11100E;
+  --color-bg-surface: #211E1A;
+  --color-bg-code: #181613;
+
+  --color-text-primary: #F7F1E8;
+  --color-text-secondary: #D8CFC2;
+  --color-text-muted: #B8AA9B;
+  --color-text-on-accent: #1A080C;
+
+  --color-border-subtle: #3E3831;
+  --color-border-strong: #62584D;
+
+  --color-accent: #FF7A8D;
+  --color-accent-hover: #FF9CAA;
+  --color-focus-ring: #FF9CAA;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.theme-light):not(.theme-dark) {
+    color-scheme: dark;
+
+    --color-bg-page: #11100E;
+    --color-bg-surface: #211E1A;
+    --color-bg-code: #181613;
+
+    --color-text-primary: #F7F1E8;
+    --color-text-secondary: #D8CFC2;
+    --color-text-muted: #B8AA9B;
+    --color-text-on-accent: #1A080C;
+
+    --color-border-subtle: #3E3831;
+    --color-border-strong: #62584D;
+
+    --color-accent: #FF7A8D;
+    --color-accent-hover: #FF9CAA;
+    --color-focus-ring: #FF9CAA;
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg-page);
+  color: var(--color-text-primary);
+  font-family: var(--font-serif);
+  line-height: 1.7;
+  padding: var(--space-page-block);
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}
+
+a:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+.wrap {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+}
+
+.wrap--wide {
+  max-width: var(--page-max-width-wide);
+}
+
+.page-header {
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 32px;
+  margin-bottom: 40px;
+}
+
+.page-nav {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.wordmark {
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+h1 {
+  color: var(--color-text-primary);
+  font-size: 32px;
+  font-weight: normal;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.page-title--wide {
+  font-size: 34px;
+}
+
+.page-dek {
+  color: var(--color-text-secondary);
+  font-size: 17px;
+  max-width: 620px;
+}
+
+.updated,
+time {
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+h2 {
+  color: var(--color-accent);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+h3 {
+  color: var(--color-text-primary);
+  font-size: 16px;
+  font-weight: normal;
+}
+
+p,
+li {
+  color: var(--color-text-secondary);
+}
+
+p {
+  margin-bottom: 16px;
+}
+
+ul {
+  margin: 0 0 16px 24px;
+}
+
+ul li {
+  margin-bottom: 6px;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border-subtle);
+  margin: 40px 0;
+}
+
+.section-title {
+  margin: 40px 0 12px;
+}
+
+.subsection-title {
+  margin: 24px 0 8px;
+}
+
+.month {
+  margin-bottom: 48px;
+}
+
+.month-title {
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.release-list {
+  list-style: none;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.release {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.release time {
+  display: block;
+  padding-top: 3px;
+  text-transform: uppercase;
+}
+
+.release-title {
+  font-size: 21px;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+
+.release p {
+  margin-bottom: 12px;
+}
+
+.release p:last-child {
+  margin-bottom: 0;
+}
+
+.format {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  padding: 24px;
+  margin-top: 56px;
+}
+
+.format h2 {
+  margin-bottom: 12px;
+}
+
+code {
+  background: var(--color-bg-code);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  padding: 16px;
+  white-space: pre;
+}
+
+.page-footer {
+  margin-top: 60px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 640px) {
+  body {
+    padding: var(--space-page-block-compact);
+  }
+
+  .release {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  h1,
+  .page-title--wide {
+    font-size: 30px;
+  }
+}

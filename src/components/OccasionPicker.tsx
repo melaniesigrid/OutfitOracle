@@ -52,7 +52,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     label: {
       fontFamily: fonts.mono,
-      fontSize: 9,
+      fontSize: 11,
       letterSpacing: 2.5,
       color: colors.textMuted,
       marginBottom: spacing.sm,
