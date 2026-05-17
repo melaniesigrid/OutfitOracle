@@ -62,10 +62,14 @@ function makeId(): string {
   return `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// In React Native/Hermes, 'crypto' is not accessible as a bare identifier
+// in module scope even when the engine supports it — must use globalThis.
+const _crypto: Crypto = globalThis.crypto;
+
 // 16 cryptographically random bytes encoded as hex
 function makeSalt(): string {
   const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
+  _crypto.getRandomValues(bytes);
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -74,14 +78,14 @@ function makeSalt(): string {
 // Local-device auth only — replace with server-side auth before account sync.
 async function hashPassword(password: string, salt: string): Promise<string> {
   const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
+  const keyMaterial = await _crypto.subtle.importKey(
     'raw',
     enc.encode(password),
     'PBKDF2',
     false,
     ['deriveBits'],
   );
-  const bits = await crypto.subtle.deriveBits(
+  const bits = await _crypto.subtle.deriveBits(
     { name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode(salt), iterations: 100_000 },
     keyMaterial,
     256,
