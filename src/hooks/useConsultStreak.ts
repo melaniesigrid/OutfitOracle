@@ -38,6 +38,7 @@ export function useConsultStreak() {
   const [totalConsults, setTotalConsults] = useState(0);
   const [newMilestone, setNewMilestone] = useState<number | null>(null);
   const [newRank, setNewRank] = useState<string | null>(null);
+  const [streakLoaded, setStreakLoaded] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(KEY).then(raw => {
@@ -53,7 +54,7 @@ export function useConsultStreak() {
       } catch {
         AsyncStorage.removeItem(KEY);
       }
-    });
+    }).finally(() => setStreakLoaded(true));
   }, []);
 
   const recordConsult = useCallback(async () => {
@@ -101,6 +102,7 @@ export function useConsultStreak() {
 
   return {
     streak,
+    streakLoaded,
     totalConsults,
     rankTitle: getRankTitle(totalConsults),
     newMilestone,

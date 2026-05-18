@@ -122,6 +122,9 @@ function buildPrompt(weather, gender, styleProfile, occasion) {
     ? `\nUser style profile:\n- Name: ${styleProfile.name ?? 'The Devotee'}\n- Aesthetic: ${styleProfile.keywords.join(', ')}\n- Budget tier: ${styleProfile.budget} (${BUDGET_NOTES[styleProfile.budget] ?? ''})\n\nThe verdict must speak to what this specific weather means for this specific aesthetic. A "quiet luxury minimalist" in 12°C overcast hears something different from a "vintage eclectic maximalist" in the same conditions. Tailor the vibe, verdict, and every pick to their profile.\n`
     : '';
   const occasionSection = buildOccasionSection(occasion);
+  const sizeNote = styleProfile?.size
+    ? `- Clothing size: ${styleProfile.size} — recommend fits and proportions suited to this size. An oversized silhouette reads differently on XS vs L; tailor cut and volume accordingly.\n`
+    : '';
   const tempNote = styleProfile?.tempSensitivity === 'runs-cold'
     ? `- Temperature sensitivity: This person runs cold — lean toward warmer layers and heavier fabrics than the thermometer alone might suggest.\n`
     : styleProfile?.tempSensitivity === 'runs-hot'
@@ -134,6 +137,19 @@ function buildPrompt(weather, gender, styleProfile, occasion) {
   const season = getSeason(new Date().getMonth(), weather.latitude);
   const timeContext = getTimeContext();
 
+  const uvNote = weather.uvIndex !== undefined
+    ? `- UV Index: ${weather.uvIndex}${weather.uvIndex >= 8 ? ' — VERY HIGH: sun protection is non-negotiable; recommend sunglasses and SPF-rated layers' : weather.uvIndex >= 6 ? ' — High: sunglasses and a hat are wise' : ''}\n`
+    : '';
+
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const windNote = weather.windDirection !== undefined
+    ? `- Wind: ${weather.windSpeed} km/h from the ${dirs[Math.round(weather.windDirection / 22.5) % 16]}\n`
+    : `- Wind: ${weather.windSpeed} km/h\n`;
+
+  const alertNote = weather.alerts?.length
+    ? `- Active weather alerts: ${weather.alerts.map(a => a.event).join(', ')} — incorporate any relevant safety or comfort adjustments\n`
+    : '';
+
   return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
 ${profileSection}
 Weather right now:
@@ -143,16 +159,16 @@ Weather right now:
 - Temperature: ${weather.temp}°C (feels like ${weather.feelsLike}°C)
 - Condition: ${weather.conditionLabel} — ${weather.description}
 - Humidity: ${weather.humidity}%
-- Wind: ${weather.windSpeed} km/h
-- Dressing for: ${gender}
-${occasionSection}${tempNote}${colorNote}
-TEMPERATURE RULES — non-negotiable, override aesthetic instincts:
-- Below 5°C: A coat is mandatory. No exceptions.
-- 5–12°C: A jacket or substantial mid-layer is required.
-- 13–19°C: Transitional — smart layers that can be added or removed.
-- 20–26°C: Light fabrics only. No heavy wool or thick knits as a primary layer.
-- Above 27°C: Summer weight only. Do not recommend coats or layered looks.
-- Rain: Footwear must be waterproof or at least water-resistant. Mention an umbrella in accessories.
+${windNote}${uvNote}${alertNote}- Dressing for: ${gender}
+${occasionSection}${sizeNote}${tempNote}${colorNote}
+TEMPERATURE RULES — non-negotiable, override aesthetic instincts. Base all layering decisions on the FEELS LIKE temperature (${weather.feelsLike}°C), not the raw temperature:
+- Feels like below 5°C: A coat is mandatory. No exceptions.
+- Feels like 5–12°C: A jacket or substantial mid-layer is required.
+- Feels like 13–19°C: Transitional — smart layers that can be added or removed.
+- Feels like 20–26°C: Light fabrics only. No heavy wool or thick knits as a primary layer.
+- Feels like above 27°C: Summer weight only. Do not recommend coats or layered looks.
+- Rain or freezing precipitation: Footwear must be waterproof or at least water-resistant. Mention an umbrella in accessories.
+- Freezing rain or ice: Warn explicitly — grippy, waterproof boots are required for safety.
 
 VARIETY MANDATE: Avoid predictable defaults. Every pick must feel specific to this city, this aesthetic, this exact weather — not a generic outfit for any day. Do not default to: plain white t-shirt, straight-leg jeans, black coat, white sneakers unless there is a strong specific reason. Make personality-driven, unexpected-but-correct choices.
 
@@ -167,14 +183,14 @@ Respond ONLY with valid JSON — no markdown, no backticks, no preamble:
   "outfits": [
     { "category": "Top", "item": "specific, personality-appropriate daytime top for this weather and occasion — not a default", "detail": "why it is the right call for the temperature and the occasion", "accentColor": "mint" },
     { "category": "Bottom", "item": "specific daytime bottom that works for the weather and occasion", "detail": "styling and weather rationale", "accentColor": "lavender" },
-    { "category": "Outer Layer", "item": "weather-appropriate outer layer — if above 21°C and not raining, use exactly: 'None needed — the temperature is the look'", "detail": "why this is the correct outer decision for this temperature", "accentColor": "coral" },
+    { "category": "Outer Layer", "item": "weather-appropriate outer layer — if feels-like above 21°C and not raining, use exactly: 'None needed — ${weather.feelsLike}°C is the look'", "detail": "why this is the correct outer decision for ${weather.feelsLike}°C feels-like", "accentColor": "coral" },
     { "category": "Footwear", "item": "occasion- and weather-correct footwear — waterproof if raining, breathable if warm", "detail": "why this footwear suits both the weather and the occasion", "accentColor": "lemon" },
     { "category": "Accessories", "item": "weather-informed accessories — umbrella if rain, scarf if cold, sunglasses if sunny", "detail": "how this completes and protects the look", "accentColor": "iris" }
   ],
   "outfitsAlt": [
     { "category": "Top", "item": "evening top — shift the energy for after dark, don't just swap one piece", "detail": "what changes and why for the evening context", "accentColor": "mint" },
     { "category": "Bottom", "item": "evening bottom — may be the same or elevated", "detail": "styling note", "accentColor": "lavender" },
-    { "category": "Outer Layer", "item": "evening outer — the same temperature rules apply; evenings can feel cooler", "detail": "evening outer reasoning", "accentColor": "coral" },
+    { "category": "Outer Layer", "item": "evening outer — remember: ${weather.feelsLike}°C feels cooler after sunset; apply the same feels-like temperature rules", "detail": "evening outer reasoning", "accentColor": "coral" },
     { "category": "Footwear", "item": "elevated evening footwear appropriate for the occasion and weather", "detail": "how it shifts the mood for night", "accentColor": "lemon" },
     { "category": "Accessories", "item": "evening accessories — differ from daytime where possible", "detail": "finish the night look", "accentColor": "iris" }
   ],
@@ -188,11 +204,41 @@ export default {
       return new Response(null, { headers: CORS });
     }
 
+    const { pathname } = new URL(request.url);
+
+    // Diagnostic: test Anthropic reachability from this Worker's data center
+    if (pathname === '/ping' && request.method === 'GET') {
+      const t0 = Date.now();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      let status, ms, error;
+      try {
+        const r = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 5, messages: [{ role: 'user', content: 'hi' }] }),
+        });
+        status = r.status;
+        ms = Date.now() - t0;
+      } catch (e) {
+        error = e && e.name === 'AbortError' ? 'timeout >8s' : String(e);
+        ms = Date.now() - t0;
+      } finally {
+        clearTimeout(timer);
+      }
+      return new Response(JSON.stringify({ status, ms, error: error ?? null }), {
+        headers: { 'Content-Type': 'application/json', ...CORS },
+      });
+    }
+
     if (request.method !== 'POST') {
       return json({ error: 'Method not allowed' }, 405);
     }
-
-    const { pathname } = new URL(request.url);
 
     // ── /image route: proxy fal.ai requests server-side so the key never ships in the bundle ──
     if (pathname === '/image') {
@@ -279,19 +325,32 @@ export default {
       if (Array.isArray(styleProfile.colorAvoids)) styleProfile.colorAvoids = styleProfile.colorAvoids.slice(0, 20).map(c => String(c).slice(0, 50));
     }
 
-    const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1800,
-        messages: [{ role: 'user', content: buildPrompt(weather, gender, styleProfile, occasion) }],
-      }),
-    });
+    const claudeController = new AbortController();
+    const claudeTimer = setTimeout(() => claudeController.abort(), 40_000);
+    let claudeResp;
+    try {
+      claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: claudeController.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1800,
+          messages: [{ role: 'user', content: buildPrompt(weather, gender, styleProfile, occasion) }],
+        }),
+      });
+    } catch (e) {
+      if (e && e.name === 'AbortError') {
+        return json({ error: 'Anthropic API timed out. Please try again in a moment.' }, 504);
+      }
+      throw e;
+    } finally {
+      clearTimeout(claudeTimer);
+    }
 
     if (!claudeResp.ok) {
       const err = await claudeResp.json().catch(() => ({}));
@@ -308,9 +367,16 @@ export default {
       .join('')
       .trim();
 
+    if (data.stop_reason === 'max_tokens') {
+      return json({ error: 'Response truncated — Anthropic hit the token limit. Try again.' }, 502);
+    }
+
+    // Claude sometimes wraps the JSON in markdown code fences despite instructions — strip them
+    const cleanText = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+
     let verdict;
     try {
-      verdict = JSON.parse(text);
+      verdict = JSON.parse(cleanText);
     } catch {
       return json({ error: 'The Oracle returned an unreadable response. Please try again.' }, 502);
     }

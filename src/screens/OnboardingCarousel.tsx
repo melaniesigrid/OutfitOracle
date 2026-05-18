@@ -3,7 +3,7 @@ import {
   View, Text, Pressable, StyleSheet, Platform,
   StatusBar, ScrollView, Dimensions,
 } from 'react-native';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -32,8 +32,8 @@ interface Props {
 }
 
 export function OnboardingCarousel({ onContinue, onSkip }: Props) {
-  const { colors, fonts, isDark } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, isDark, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const scrollRef = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
   const isLast = page === SLIDES.length - 1;
@@ -102,7 +102,10 @@ export function OnboardingCarousel({ onContinue, onSkip }: Props) {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isY2K = isY2KTheme(themeName);
+
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -135,7 +138,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     top: spacing.sm,
     fontFamily: fonts.displayLight,
     fontSize: 200,
-    lineHeight: 200,
+    lineHeight: isY2K ? 240 : 200,
     color: colors.textPrimary,
     opacity: 0.05,
   },
@@ -150,7 +153,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.displayBold,
     fontSize: 60,
     color: colors.textPrimary,
-    lineHeight: 64,
+    lineHeight: isY2K ? 78 : 64,
     letterSpacing: -1.5,
     marginBottom: spacing.lg,
   },
@@ -163,7 +166,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.serif,
     fontSize: 16,
     color: colors.textSecondary,
-    lineHeight: 26,
+    lineHeight: isY2K ? 30 : 26,
   },
   footer: {
     paddingHorizontal: spacing.lg,
@@ -198,4 +201,5 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     letterSpacing: 1.5,
     color: '#FAF9F6',
   },
-}); }
+  });
+}

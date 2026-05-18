@@ -23,7 +23,7 @@ A weather-powered AI fashion advisor with the energy of a Y2K fashion editor who
 
 | Layer | Technology |
 |---|---|
-| Framework | Expo SDK 51 (bare workflow), React Native 0.74 |
+| Framework | Expo SDK 54, React Native 0.81.5 |
 | Language | TypeScript |
 | Navigation | React Navigation v6 (3 tabs: Today / Oracle / You) |
 | AI | Claude Sonnet 4.6 via Cloudflare Worker proxy |
@@ -43,6 +43,9 @@ A weather-powered AI fashion advisor with the energy of a Y2K fashion editor who
 ```bash
 npm install
 
+# Expo Go
+npm run go
+
 # iOS simulator (requires Xcode + CocoaPods)
 npx expo run:ios
 
@@ -55,7 +58,9 @@ npx expo run:android
 
 TypeScript check: `npx tsc --noEmit`
 
-Run tests: `npm test` (Jest + ts-jest, 61 tests across 6 suites)
+Run tests: `npm test` (Jest + ts-jest, 66 tests across 6 suites)
+
+SDK 54 requires Node 20.19.0 or newer. Use an even-numbered LTS release such as Node 22 or Node 24 for the cleanest local tooling support.
 
 After changing `.env`, fully restart the bundler — `EXPO_PUBLIC_*` vars are baked in at build time.
 
@@ -82,28 +87,20 @@ EXPO_PUBLIC_POSTHOG_KEY=
 
 ## Architecture
 
+See **[ARCHITECTURE.md](ARCHITECTURE.md)** for the full codebase guide: entry points, module map, multi-theme routing, proxy flow, environment rules, and what to read before changing code.
+
+At a glance:
+
 ```
-App.tsx
-  └── AppDataProvider          (shared context: profile, history, streak, saved)
-        └── HomeScreen         (font loading gate — blank until fonts resolve)
-              ├── TodayScreen  (weather dashboard: hourly, 7-day, AQI, UV, moon phase,
-              │                 Word of the Day — editorial fashion vocabulary widget)
-              ├── OracleScreen (city input → outfit verdict)
-              │     ├── useOracle          (state machine: idle → weather → verdict → done)
-              │     ├── ChallengeCard      (weekly editorial challenge, ISO week rotation)
-              │     └── OutfitCard × N     (each item: shop link, heart/save, accent colour)
-              └── YouScreen    (rank, passport, achievements, saved looks, history)
-                    ├── useWeatherBadges   (127 achievements, 15 categories)
-                    ├── useConsultStreak   (consecutive-day tracking + Oracle Rank)
-                    └── MapScreen          (Apple Maps, visited cities, fashion capitals)
+App.tsx (fonts, providers)
+  └── AppNavigator (auth → onboarding → MainStack)
+        └── TabNavigator
+              ├── TodayScreen   (weather dashboard)
+              ├── OracleScreen  (consult → useOracle → Worker → OracleVerdict)
+              └── YouScreen       (badges, saved looks, passport)
 ```
 
-### Data flow
-
-1. `OracleScreen` calls `useOracle.consult(city, occasion)`
-2. `useOracle` fetches weather (Open-Meteo geocoding + conditions), then POSTs `{ weather, gender, occasion, styleProfile }` to the Cloudflare Worker
-3. Worker calls `claude-sonnet-4-6` server-side, returns pure JSON matching `OracleVerdict`
-4. Results render as staggered animated `OutfitCard` components; history, streak, and passport update via context
+Data flow: `OracleScreen` → `useOracle.consult()` → Open-Meteo weather → Cloudflare Worker → Claude Sonnet 4.6 → JSON verdict → presentational cards. All oracle state lives in `useOracle`; UI components are props-only.
 
 ### Style profile
 
@@ -188,9 +185,9 @@ Do not use emoji in `Text` components with a custom `fontFamily` — IBM Plex Mo
 
 Before archiving in Xcode:
 
-1. Set `EXPO_PUBLIC_SENTRY_DSN` in `.env` and rebuild
+1. Confirm `EXPO_PUBLIC_SENTRY_DSN` is set in `.env` and rebuild after any value change
 2. Enable GitHub Pages for the privacy policy: repo Settings → Pages → Source → main → /docs → Save
-3. In Xcode, drag `ios/OutfitOracle/PrivacyInfo.xcprivacy` into the project navigator (File → Add Files to OutfitOracle) — the file exists on disk but must be referenced in the `.xcodeproj`
+3. Confirm `ios/OutfitOracle/PrivacyInfo.xcprivacy` remains referenced in `ios/OutfitOracle.xcodeproj/project.pbxproj`
 4. Create the App Store Connect record (name: Outfit Oracle, category: Lifestyle, age rating: 4+, privacy policy URL: `https://melaniesigrid.github.io/OutfitOracle/`)
 5. Capture 6.5" (1284×2778) and 5.5" (1242×2208) screenshots — minimum 3 per device class
 6. Run a 15-minute VoiceOver audit on a real device
@@ -205,9 +202,11 @@ Hosted at `https://melaniesigrid.github.io/OutfitOracle/` (GitHub Pages from `/d
 
 ## More docs
 
+- [ARCHITECTURE.md](ARCHITECTURE.md) — codebase guide: entry points, modules, data flow, pre-change reading list
 - [Roadmap.md](Roadmap.md) — feature backlog and launch checklist
 - [CHANGELOG.md](CHANGELOG.md) — release history
 - [TODOS.md](TODOS.md) — open design/engineering debt
 - [BEST_PRACTICES.md](BEST_PRACTICES.md) — coding conventions
+- [DESIGN.md](DESIGN.md) — design system and theme specs
 - [CLAUDE.md](CLAUDE.md) — AI assistant guidance
 - [docs/agent-workflows](docs/agent-workflows/README.md) — agent orchestration and verification workflows

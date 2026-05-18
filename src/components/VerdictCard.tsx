@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { OracleVerdict } from '../services/oracle';
 import { AppColors, AppFonts, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
@@ -15,11 +15,24 @@ export function VerdictCard({ verdict }: Props) {
 
   const opacity    = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
+  const dashOpacities = useRef(
+    Array.from({ length: 5 }, () => new Animated.Value(0))
+  ).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 500, useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      // Stagger each dash after card entrance settles (400ms head-start + 75ms per dash)
+      ...dashOpacities.map((anim, i) =>
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 200,
+          delay: 400 + i * 75,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        })
+      ),
     ]).start();
   }, []);
 
@@ -48,9 +61,9 @@ export function VerdictCard({ verdict }: Props) {
         <Text style={styles.ratingLabel}>EFFORT</Text>
         <View style={styles.ratingDashes}>
           {Array.from({ length: 5 }, (_, i) => (
-            <View
+            <Animated.View
               key={i}
-              style={[styles.dash, i < filled ? styles.dashFilled : styles.dashEmpty]}
+              style={[styles.dash, i < filled ? styles.dashFilled : styles.dashEmpty, { opacity: dashOpacities[i] }]}
             />
           ))}
         </View>

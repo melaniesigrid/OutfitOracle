@@ -183,7 +183,7 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 - [x] **Occasion input** — Any / Work / Date / Event / Weekend / Active picker below gender toggle; threads through `useOracle` → `fetchOracleVerdict` → `buildPrompt` in both app and Worker ✅ 2026/05/11
 
 ### Content Depth
-- [ ] **Item imagery on OutfitCard** — Pexels API (free, 200 req/hr, fashion-quality photography); search with `{category} {simplified descriptor}`; cache per session in a Map keyed by item ID; thumbnail renders in OutfitCard as an 80×80 bordered image beside the item name. API key is non-sensitive (public search) and can live in `.env` as `EXPO_PUBLIC_PEXELS_KEY`. Fetches run in parallel after verdict arrives. *Medium effort, high delight.*
+- [x] **Item imagery on OutfitCard** — `fetchPexelsImage(category, itemName)` in `src/services/pexels.ts`; session-level Map cache; 76×76 bordered thumbnail beside item name in OutfitCard; prefers second Pexels result for specificity; silently disabled when `EXPO_PUBLIC_PEXELS_KEY` unset. ✅ 2026/05/18
 - [x] **Seasonal prompt tuning** — `getSeason(month, lat)` added to both app and Worker `buildPrompt`; hemisphere-aware (southern hemisphere shifts by 6 months); "Season: Spring/Summer/Autumn/Winter" injected into weather context. ✅ 2026/05/14
 - [x] **"Oracle of the Week" in TodayScreen** — curated editorial card surfaces this week's strongest saved vibe, falling back to most-consulted vibe when nothing has been saved; no AI call, pure local aggregation from saved looks and `useOutfitHistory`. ✅ 2026/05/15
 - [x] **Skeleton loading UI** — shimmer placeholder during fetch ✅ 2026/05/11
@@ -221,8 +221,8 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 ### Wardrobe
 - [x] **Saved outfits** — heart icon on each OutfitCard; `useSavedOutfits` hook (AsyncStorage, 50-item cap, dedup); SAVED LOOKS section in YouScreen with unsave tap; key included in Settings clear flows ✅ 2026/05/12
 - [x] **"Wear this again"** — after results load, OracleScreen checks saved looks for the same city within ±5°C; shows a scarlet-accented banner when matches found; weather context stored on save via `SavedOutfitWeather` ✅ 2026/05/12
-- [ ] **Saved looks filter + sort** — currently SAVED LOOKS renders as a flat reverse-chronological list; add filter chips (by occasion, by city, by category) and a sort toggle (recent vs. most-worn); becomes essential once a user has 20+ saves.
-- [ ] **Outfit notes** — after saving a look, allow the user to add a short free-text note ("wore to Sarah's wedding, got three compliments"); rendered as an italic caption under the saved item in YouScreen; passed to Claude as context when "wear this again" is triggered so the Oracle can reference it.
+- [x] **Saved looks filter + sort** — sort toggle (RECENT ↕ OLDEST) in SAVED LOOKS header; horizontal filter chips (All, Liked ♥, dynamic occasion chips); `archiveFilter`, `archiveSort`, `archiveOccasionFilter` state in YouScreen; `filteredLooks` useMemo. ✅ 2026/05/18
+- [x] **Outfit notes** — `note?: string` on `ArchiveEntry`; `setNote()` in `useArchive`; TextInput with auto-save in `ArchiveDetailModal`; italic caption shown in look card list; banner in OracleScreen and MondrianOracleScreen surfaces note when wear-again match has one. ✅ 2026/05/18
 - [ ] **Wardrobe photo upload** *(Phase 3 stretch)* — photograph individual pieces; Claude Vision identifies the item; the Oracle then references "your navy blazer" or "the linen shirt you own" in verdicts. This is the long-term moat — no other weather-to-outfit app does this.
 
 ---
@@ -251,9 +251,8 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 > Non-negotiable groundwork. Affiliate networks check domain age, professional email, and brand presence before approving applications. Set this up while the app is in TestFlight — it takes 2–4 weeks to get approved by networks.
 
 ### Domain & Email (Week 1 of Phase 3.8)
-- [ ] **Register outfitoracle.app** — Namecheap or Google Domains (~$15/yr). If already done in the TestFlight checklist, verify DNS is resolving correctly.
-- [ ] **Set up Google Workspace** — Business Starter ($6/user/month). Creates `@outfitoracle.app` email with Google Drive for contracts and a professional presence for brand outreach.
-- [ ] **Create `hello@outfitoracle.app`** — primary address; use for affiliate applications, all brand correspondence, and App Store contact email. Never use personal Gmail for business accounts.
+- [x] **Register outfitoracle.fashion** — Namecheap or Google Domains (~$15/yr). If already done in the TestFlight checklist, verify DNS is resolving correctly.
+- [x] **Create `hello@outfitoracle.app` on Zoho** — primary address; use for affiliate applications, all brand correspondence, and App Store contact email. 
 - [ ] **Create `partnerships@outfitoracle.app`** — for brand deals, PR pitches, and collaboration inquiries.
 - [ ] **Create `affiliate@outfitoracle.app`** — dedicated address for affiliate network applications and approval emails. Keeps approval correspondence separate and searchable.
 - [ ] **Create `support@outfitoracle.app`** — for user support and App Store review responses.

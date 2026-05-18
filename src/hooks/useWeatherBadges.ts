@@ -1064,6 +1064,1323 @@ const BADGE_DEFS: BadgeDef[] = [
     evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getDate() === 1, 3),
   },
 
+    {
+    id: 'oracle_apprentice',
+    title: 'Oracle Apprentice',
+    desc: '15 total consults. The visions are becoming clearer.',
+    icon: 'crystal-ball',
+    category: 'first_steps',
+    evaluate: (h, _f, ex) => ex.totalConsults >= 15 ? (h[0]?.consultedAt ?? Date.now()) : false,
+  },
+  {
+    id: 'oracle_regular',
+    title: 'Oracle Regular',
+    desc: '75 total consults. At this point, it knows your closet.',
+    icon: 'eye-check-outline',
+    category: 'first_steps',
+    evaluate: (h, _f, ex) => ex.totalConsults >= 75 ? (h[0]?.consultedAt ?? Date.now()) : false,
+  },
+  {
+    id: 'cult_following',
+    title: 'Cult Following',
+    desc: '300 total consults. The Oracle has become a lifestyle.',
+    icon: 'account-group-outline',
+    category: 'first_steps',
+    evaluate: (h, _f, ex) => ex.totalConsults >= 300 ? (h[0]?.consultedAt ?? Date.now()) : false,
+  },
+  {
+    id: 'thousand_verdicts',
+    title: 'A Thousand Verdicts',
+    desc: '1,000 total consults. The Oracle is no longer optional.',
+    icon: 'all-inclusive',
+    category: 'first_steps',
+    evaluate: (h, _f, ex) => ex.totalConsults >= 1000 ? (h[0]?.consultedAt ?? Date.now()) : false,
+  },
+
+  {
+    id: 'workweek_warrior',
+    title: 'Workweek Warrior',
+    desc: 'Consulted Monday through Friday in the same week.',
+    icon: 'calendar-range',
+    category: 'calendar',
+    evaluate: h => {
+      const weeks = new Map<string, Set<number>>();
+
+      for (const e of h) {
+        const d = new Date(e.consultedAt);
+        const day = d.getDay();
+        if (day < 1 || day > 5) continue;
+
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - ((day + 6) % 7));
+        const key = weekStart.toISOString().slice(0, 10);
+
+        if (!weeks.has(key)) weeks.set(key, new Set());
+        weeks.get(key)!.add(day);
+      }
+
+      for (const [, days] of weeks) {
+        if ([1, 2, 3, 4, 5].every(day => days.has(day))) {
+          return h[0]?.consultedAt ?? Date.now();
+        }
+      }
+
+      return false;
+    },
+  },
+  {
+    id: 'friday_finale',
+    title: 'Friday Finale',
+    desc: '5 Friday consults. The weekend outfit discourse begins.',
+    icon: 'calendar-heart',
+    category: 'calendar',
+    evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getDay() === 5, 5),
+  },
+  {
+    id: 'midnight_muse',
+    title: 'Midnight Muse',
+    desc: '3 consults exactly at midnight. Dramatic, but correct.',
+    icon: 'clock-time-twelve',
+    category: 'timing',
+    evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getHours() === 0, 3),
+  },
+  {
+    id: 'breakfast_verdict',
+    title: 'Breakfast Verdict',
+    desc: '5 consults before 9am. The outfit is decided before coffee.',
+    icon: 'coffee',
+    category: 'timing',
+    evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getHours() < 9, 5),
+  },
+  {
+    id: 'after_dark_archive',
+    title: 'After-Dark Archive',
+    desc: '10 consults after 8pm. Night styling has a paper trail.',
+    icon: 'weather-night',
+    category: 'timing',
+    evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getHours() >= 20, 10),
+  },
+
+  {
+    id: 'temperature_swing',
+    title: 'Temperature Swing',
+    desc: 'Consulted at both 30°C+ and 0°C or below.',
+    icon: 'thermometer-chevron-up',
+    category: 'atmosphere',
+    evaluate: h => {
+      const hasHot = h.some(e => e.weather.temp >= 30);
+      const hasCold = h.some(e => e.weather.temp <= 0);
+      return hasHot && hasCold ? (h[0]?.consultedAt ?? Date.now()) : false;
+    },
+  },
+  {
+    id: 'climate_chameleon',
+    title: 'Climate Chameleon',
+    desc: 'Consulted in heat, cold, rain, snow, and clear skies.',
+    icon: 'weather-partly-snowy-rainy',
+    category: 'atmosphere',
+    evaluate: h => {
+      const hasHeat = h.some(e => e.weather.temp >= 30);
+      const hasCold = h.some(e => e.weather.temp <= 0);
+      const hasRain = h.some(e => isRainy(e.weather.conditionLabel));
+      const hasSnow = h.some(e => isSnow(e.weather.conditionLabel));
+      const hasClear = h.some(e => isClear(e.weather.conditionLabel));
+
+      return hasHeat && hasCold && hasRain && hasSnow && hasClear
+        ? (h[0]?.consultedAt ?? Date.now())
+        : false;
+    },
+  },
+  {
+    id: 'cloudy_with_opinions',
+    title: 'Cloudy With Opinions',
+    desc: 'First cloudy or overcast consult. The sky is undecided.',
+    icon: 'weather-cloudy',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(h, e => isCloud(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'gray_area',
+    title: 'The Gray Area',
+    desc: '25 cloudy or overcast consults. Minimalism wins.',
+    icon: 'cloud-outline',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(h, e => isCloud(e.weather.conditionLabel), 25),
+  },
+  {
+    id: 'humidity_humbled',
+    title: 'Humidity Humbled',
+    desc: '5 consults with humidity ≥ 85%. The fabric must breathe.',
+    icon: 'water-percent-alert',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(h, e => e.weather.humidity >= 85, 5),
+  },
+  {
+    id: 'windproof_wardrobe',
+    title: 'Windproof Wardrobe',
+    desc: '5 consults with wind ≥ 40 km/h.',
+    icon: 'weather-windy',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(h, e => e.weather.windSpeed >= 40, 5),
+  },
+
+  {
+    id: 'soft_launch_summer',
+    title: 'Soft Launch Summer',
+    desc: '5 consults at 28°C or above with clear skies.',
+    icon: 'sun-snowflake',
+    category: 'heat',
+    evaluate: h => nthMatch(h, e => e.weather.temp >= 28 && isClear(e.weather.conditionLabel), 5),
+  },
+  {
+    id: 'city_heat',
+    title: 'City Heat',
+    desc: 'Hot consult in New York, Paris, London, Milan, or Tokyo.',
+    icon: 'city-variant-outline',
+    category: 'heat',
+    evaluate: h => nthMatch(
+      h,
+      e => e.weather.temp >= 30 &&
+        FASHION_CAPITALS.some(c => e.city.toLowerCase().includes(c)),
+      1,
+    ),
+  },
+  {
+    id: 'linen_emergency',
+    title: 'Linen Emergency',
+    desc: 'Feels like 35°C or above with humidity ≥ 70%.',
+    icon: 'hanger',
+    category: 'heat',
+    evaluate: h => nthMatch(
+      h,
+      e => (e.weather.feelsLike ?? e.weather.temp) >= 35 && e.weather.humidity >= 70,
+      1,
+    ),
+  },
+
+  {
+    id: 'coat_check',
+    title: 'Coat Check',
+    desc: '5 consults at 0°C or below.',
+    icon: 'coat-rack',
+    category: 'cold',
+    evaluate: h => nthMatch(h, e => e.weather.temp <= 0, 5),
+  },
+  {
+    id: 'frostbite_but_make_it_fashion',
+    title: 'Frostbite, But Make It Fashion',
+    desc: 'Consulted when it feels like −25°C or colder.',
+    icon: 'snowflake-alert',
+    category: 'cold',
+    evaluate: h => nthMatch(h, e => (e.weather.feelsLike ?? e.weather.temp) <= -25, 1),
+  },
+  {
+    id: 'arctic_archive',
+    title: 'Arctic Archive',
+    desc: '10 consults at −5°C or below.',
+    icon: 'snowflake-alert',
+    category: 'cold',
+    evaluate: h => nthMatch(h, e => e.weather.temp <= -5, 10),
+  },
+
+  {
+    id: 'umbrella_optional',
+    title: 'Umbrella Optional',
+    desc: 'Rain consult with wind under 10 km/h. Manageable drama.',
+    icon: 'umbrella-outline',
+    category: 'rain',
+    evaluate: h => nthMatch(h, e => isRainy(e.weather.conditionLabel) && e.weather.windSpeed < 10, 1),
+  },
+  {
+    id: 'cinematic_rain',
+    title: 'Cinematic Rain',
+    desc: 'Rain consult after 8pm. Main character weather.',
+    icon: 'weather-night-partly-cloudy',
+    category: 'rain',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return isRainy(e.weather.conditionLabel) && hr >= 20;
+    }, 1),
+  },
+  {
+    id: 'raincoat_regular',
+    title: 'Raincoat Regular',
+    desc: '15 rainy-day consults. Practicality has entered the chat.',
+    icon: 'umbrella',
+    category: 'rain',
+    evaluate: h => nthMatch(h, e => isRainy(e.weather.conditionLabel), 15),
+  },
+
+  {
+    id: 'first_flurry',
+    title: 'First Flurry',
+    desc: 'Snow consult with temp above −2°C. Pretty, but suspicious.',
+    icon: 'weather-snowy-rainy',
+    category: 'snow',
+    evaluate: h => nthMatch(h, e => isSnow(e.weather.conditionLabel) && e.weather.temp > -2, 1),
+  },
+  {
+    id: 'snow_after_dark',
+    title: 'Snow After Dark',
+    desc: 'Snow consult after 8pm. The city becomes a film set.',
+    icon: 'weather-night',
+    category: 'snow',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return isSnow(e.weather.conditionLabel) && hr >= 20;
+    }, 1),
+  },
+  {
+    id: 'powder_room',
+    title: 'Powder Room',
+    desc: 'Snow consult in a fashion capital.',
+    icon: 'snowflake-variant',
+    category: 'snow',
+    evaluate: h => nthMatch(
+      h,
+      e => isSnow(e.weather.conditionLabel) &&
+        FASHION_CAPITALS.some(c => e.city.toLowerCase().includes(c)),
+      1,
+    ),
+  },
+
+  {
+    id: 'clear_morning',
+    title: 'Clear Morning',
+    desc: 'Clear-sky consult before 9am.',
+    icon: 'weather-sunset-up',
+    category: 'sunshine',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return isClear(e.weather.conditionLabel) && hr < 9;
+    }, 1),
+  },
+  {
+    id: 'sunny_workday',
+    title: 'Sunny Workday',
+    desc: 'Work consult under clear skies. Corporate optimism.',
+    icon: 'briefcase-variant-outline',
+    category: 'sunshine',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Work' && isClear(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'blue_sky_archive',
+    title: 'Blue-Sky Archive',
+    desc: '50 clear-sky consults. The forecast is becoming smug.',
+    icon: 'weather-sunny',
+    category: 'sunshine',
+    evaluate: h => nthMatch(h, e => isClear(e.weather.conditionLabel), 50),
+  },
+
+  {
+    id: 'date_in_the_rain',
+    title: 'Date in the Rain',
+    desc: 'Date occasion during rain. Romantic, inconvenient, iconic.',
+    icon: 'heart-multiple',
+    category: 'occasions',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Date' && isRainy(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'event_in_extremes',
+    title: 'Event in Extremes',
+    desc: 'Event occasion at 35°C+ or 0°C and below.',
+    icon: 'star-shooting-outline',
+    category: 'occasions',
+    evaluate: h => nthMatch(
+      h,
+      e => e.occasion === 'Event' && (e.weather.temp >= 35 || e.weather.temp <= 0),
+      1,
+    ),
+  },
+  {
+    id: 'active_in_weather',
+    title: 'Active in Weather',
+    desc: 'Active occasion during rain, snow, or wind ≥ 40 km/h.',
+    icon: 'run-fast',
+    category: 'occasions',
+    evaluate: h => nthMatch(
+      h,
+      e => e.occasion === 'Active' &&
+        (isRainy(e.weather.conditionLabel) || isSnow(e.weather.conditionLabel) || e.weather.windSpeed >= 40),
+      1,
+    ),
+  },
+  {
+    id: 'weekend_in_the_sun',
+    title: 'Weekend in the Sun',
+    desc: 'Weekend occasion under clear skies.',
+    icon: 'beach',
+    category: 'occasions',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Weekend' && isClear(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'work_under_pressure',
+    title: 'Work Under Pressure',
+    desc: 'Work consult in rain, snow, storm, or wind ≥ 40 km/h.',
+    icon: 'briefcase-outline',
+    category: 'occasions',
+    evaluate: h => nthMatch(
+      h,
+      e => e.occasion === 'Work' &&
+        (isRainy(e.weather.conditionLabel) || isSnow(e.weather.conditionLabel) || isStorm(e.weather.conditionLabel) || e.weather.windSpeed >= 40),
+      1,
+    ),
+  },
+
+  {
+    id: 'city_sampler',
+    title: 'City Sampler',
+    desc: 'Consulted for 5 unique cities.',
+    icon: 'map-marker-radius-outline',
+    category: 'cities',
+    evaluate: h => {
+      const cities = new Set(h.map(e => e.city.toLowerCase()));
+      return cities.size >= 5 ? (h[0]?.consultedAt ?? Date.now()) : false;
+    },
+  },
+  {
+    id: 'urban_obsession',
+    title: 'Urban Obsession',
+    desc: 'Consulted for the same city 25 times.',
+    icon: 'home-city-outline',
+    category: 'cities',
+    evaluate: h => {
+      const counts = new Map<string, number>();
+      for (const e of h) {
+        const key = e.city.toLowerCase();
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+      return [...counts.values()].some(v => v >= 25) ? (h[0]?.consultedAt ?? Date.now()) : false;
+    },
+  },
+  {
+    id: 'three_city_day',
+    title: 'Three Cities, One Day',
+    desc: 'Consulted for 3 different cities on the same calendar day.',
+    icon: 'map-marker-path',
+    category: 'cities',
+    evaluate: h => {
+      const byDay = new Map<string, Set<string>>();
+      for (const e of h) {
+        const day = new Date(e.consultedAt).toISOString().slice(0, 10);
+        if (!byDay.has(day)) byDay.set(day, new Set());
+        byDay.get(day)!.add(e.city.toLowerCase());
+      }
+
+      for (const [, cities] of byDay) {
+        if (cities.size >= 3) return h[0]?.consultedAt ?? Date.now();
+      }
+
+      return false;
+    },
+  },
+  {
+    id: 'capital_repeat',
+    title: 'Capital Repeat',
+    desc: '5 consults in any fashion capital.',
+    icon: 'city-variant',
+    category: 'cities',
+    evaluate: h => nthMatch(
+      h,
+      e => FASHION_CAPITALS.some(c => e.city.toLowerCase().includes(c)),
+      5,
+    ),
+  },
+
+  {
+    id: 'saved_50',
+    title: 'Fifty Saved Looks',
+    desc: '50 saved outfits. The wardrobe has lore now.',
+    icon: 'heart-multiple',
+    category: 'collection',
+    evaluate: (_h, _f, ex) => ex.savedCount >= 50 ? Date.now() : false,
+  },
+  {
+    id: 'saved_100',
+    title: 'The Archive',
+    desc: '100 saved outfits. A private fashion museum.',
+    icon: 'wardrobe-outline',
+    category: 'collection',
+    evaluate: (_h, _f, ex) => ex.savedCount >= 100 ? Date.now() : false,
+  },
+  {
+    id: 'saved_250',
+    title: 'Museum Collection',
+    desc: '250 saved outfits. The curator is unavailable for comment.',
+    icon: 'bank-outline',
+    category: 'collection',
+    evaluate: (_h, _f, ex) => ex.savedCount >= 250 ? Date.now() : false,
+  },
+
+  {
+    id: 'camp_met_gala',
+    title: 'Camp: Notes on Weather',
+    desc: 'Event consult in New York after 6pm.',
+    icon: 'star-four-points-outline',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return e.occasion === 'Event' && e.city.toLowerCase().includes('new york') && hr >= 18;
+    }, 1),
+  },
+  {
+    id: 'sabrina_carpenter_hour',
+    title: 'Espresso Hour',
+    desc: 'Morning consult under clear skies. That’s that me, styled.',
+    icon: 'coffee-outline',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return hr >= 6 && hr < 11 && isClear(e.weather.conditionLabel);
+    }, 1),
+  },
+  {
+    id: 'blade_runner_weather',
+    title: 'Blade Runner Weather',
+    desc: 'Rainy night consult in a major city.',
+    icon: 'weather-night-partly-cloudy',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      const city = e.city.toLowerCase();
+      const majorCity =
+        FASHION_CAPITALS.some(c => city.includes(c)) ||
+        ['seoul', 'hong kong', 'shanghai', 'berlin', 'toronto', 'los angeles'].some(c => city.includes(c));
+
+      return isRainy(e.weather.conditionLabel) && majorCity && (hr >= 20 || hr < 5);
+    }, 1),
+  },
+  {
+    id: 'breakfast_at_tiffanys',
+    title: "Breakfast at Tiffany's",
+    desc: 'New York consult before 9am.',
+    icon: 'diamond-stone',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return e.city.toLowerCase().includes('new york') && hr < 9;
+    }, 1),
+  },
+  {
+    id: 'milanese_minimalist',
+    title: 'Milanese Minimalist',
+    desc: '5 Milan consults. Quiet luxury has entered the forecast.',
+    icon: 'sunglasses',
+    category: 'culture',
+    evaluate: h => {
+      const milan = h.filter(e => e.city.toLowerCase().includes('milan'));
+      return milan.length >= 5 ? milan[4].consultedAt : false;
+    },
+  },
+  {
+    id: 'parisian_repeat',
+    title: 'Parisian Repeat',
+    desc: '5 Paris consults. The Oracle has become insufferable.',
+    icon: 'bag-personal-outline',
+    category: 'culture',
+    evaluate: h => {
+      const paris = h.filter(e => e.city.toLowerCase().includes('paris'));
+      return paris.length >= 5 ? paris[4].consultedAt : false;
+    },
+  },
+
+    {
+    id: 'oracle_initiate',
+    title: 'Oracle Initiate',
+    desc: '35 total consults. The ritual is working.',
+    icon: 'eye-circle-outline',
+    category: 'first_steps',
+    evaluate: (h, _f, ex) => ex.totalConsults >= 35 ? (h[0]?.consultedAt ?? Date.now()) : false,
+  },
+  {
+    id: 'oracle_inner_circle',
+    title: 'Inner Circle',
+    desc: '150 total consults. The Oracle now expects loyalty.',
+    icon: 'account-star-outline',
+    category: 'first_steps',
+    evaluate: (h, _f, ex) => ex.totalConsults >= 150 ? (h[0]?.consultedAt ?? Date.now()) : false,
+  },
+  {
+    id: 'oracle_high_priestess',
+    title: 'High Priestess',
+    desc: '750 total consults. Fashion prophecy has a spokesperson.',
+    icon: 'account-cowboy-hat-outline',
+    category: 'first_steps',
+    evaluate: (h, _f, ex) => ex.totalConsults >= 750 ? (h[0]?.consultedAt ?? Date.now()) : false,
+  },
+
+  {
+    id: 'streak_21',
+    title: 'Habit Formed',
+    desc: '21-day consult streak. The Oracle has entered the routine.',
+    icon: 'calendar-sync',
+    category: 'streak',
+    evaluate: (_h, _f, ex) => ex.streak >= 21 ? Date.now() : false,
+  },
+  {
+    id: 'streak_60',
+    title: 'Sixty Days Styled',
+    desc: '60-day consult streak. Commitment looks good on you.',
+    icon: 'fire-circle',
+    category: 'streak',
+    evaluate: (_h, _f, ex) => ex.streak >= 60 ? Date.now() : false,
+  },
+  {
+    id: 'streak_180',
+    title: 'Half-Year Ritual',
+    desc: '180-day consult streak. The Oracle is family now.',
+    icon: 'calendar-star',
+    category: 'streak',
+    evaluate: (_h, _f, ex) => ex.streak >= 180 ? Date.now() : false,
+  },
+
+  {
+    id: 'freezing_rain',
+    title: 'Freezing Rain Couture',
+    desc: 'Rain consult at 0°C or below. Treacherous, but considered.',
+    icon: 'weather-snowy-rainy',
+    category: 'cold',
+    evaluate: h => nthMatch(h, e => isRainy(e.weather.conditionLabel) && e.weather.temp <= 0, 1),
+  },
+  {
+    id: 'cold_morning',
+    title: 'Cold Morning',
+    desc: 'Consulted before 9am at 0°C or below.',
+    icon: 'weather-sunset-up',
+    category: 'cold',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return hr < 9 && e.weather.temp <= 0;
+    }, 1),
+  },
+  {
+    id: 'icy_workday',
+    title: 'Icy Workday',
+    desc: 'Work consult at −5°C or below. Corporate suffering, styled.',
+    icon: 'briefcase-variant-outline',
+    category: 'cold',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Work' && e.weather.temp <= -5, 1),
+  },
+  {
+    id: 'frozen_weekend',
+    title: 'Frozen Weekend',
+    desc: 'Weekend consult at −10°C or below. Staying in was an option.',
+    icon: 'sofa-outline',
+    category: 'cold',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Weekend' && e.weather.temp <= -10, 1),
+  },
+  {
+    id: 'cold_snap',
+    title: 'Cold Snap',
+    desc: '3 consecutive days at 0°C or below.',
+    icon: 'snowflake-thermometer',
+    category: 'cold',
+    evaluate: h => consecutiveDayStreak(h, e => e.weather.temp <= 0, 3),
+  },
+  {
+    id: 'polar_week',
+    title: 'Polar Week',
+    desc: '7 consecutive days at 0°C or below.',
+    icon: 'snowflake-alert',
+    category: 'cold',
+    evaluate: h => consecutiveDayStreak(h, e => e.weather.temp <= 0, 7),
+  },
+
+  {
+    id: 'hot_morning',
+    title: 'Hot Morning',
+    desc: 'Consulted before 9am at 25°C or above. Already? Rude.',
+    icon: 'weather-sunset-up',
+    category: 'heat',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return hr < 9 && e.weather.temp >= 25;
+    }, 1),
+  },
+  {
+    id: 'hot_night',
+    title: 'Hot Night',
+    desc: 'Consulted after 9pm at 25°C or above.',
+    icon: 'weather-night',
+    category: 'heat',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return hr >= 21 && e.weather.temp >= 25;
+    }, 1),
+  },
+  {
+    id: 'sweaty_commute',
+    title: 'Sweaty Commute',
+    desc: 'Work consult at 30°C or above. Professionalism has limits.',
+    icon: 'briefcase-clock-outline',
+    category: 'heat',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Work' && e.weather.temp >= 30, 1),
+  },
+  {
+    id: 'heat_streak',
+    title: 'Heat Streak',
+    desc: '3 consecutive days at 30°C or above.',
+    icon: 'fire',
+    category: 'heat',
+    evaluate: h => consecutiveDayStreak(h, e => e.weather.temp >= 30, 3),
+  },
+  {
+    id: 'summer_survivor',
+    title: 'Summer Survivor',
+    desc: '7 consecutive days at 28°C or above.',
+    icon: 'weather-sunny-alert',
+    category: 'heat',
+    evaluate: h => consecutiveDayStreak(h, e => e.weather.temp >= 28, 7),
+  },
+  {
+    id: 'dry_heat',
+    title: 'Dry Heat',
+    desc: '30°C or above with humidity under 30%. Chic, but dehydrating.',
+    icon: 'water-off',
+    category: 'heat',
+    evaluate: h => nthMatch(h, e => e.weather.temp >= 30 && e.weather.humidity < 30, 1),
+  },
+
+  {
+    id: 'rainy_workweek',
+    title: 'Rainy Workweek',
+    desc: '5 Work consults in the rain.',
+    icon: 'briefcase-variant-outline',
+    category: 'rain',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Work' && isRainy(e.weather.conditionLabel), 5),
+  },
+  {
+    id: 'rainy_weekend',
+    title: 'Rainy Weekend',
+    desc: 'Weekend consult in the rain. Cozy plans require styling too.',
+    icon: 'sofa-outline',
+    category: 'rain',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Weekend' && isRainy(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'rainy_date_repeat',
+    title: 'Rainy Romance',
+    desc: '3 Date consults in the rain.',
+    icon: 'heart-outline',
+    category: 'rain',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Date' && isRainy(e.weather.conditionLabel), 3),
+  },
+  {
+    id: 'stormy_night',
+    title: 'Stormy Night',
+    desc: 'Thunderstorm consult after 8pm.',
+    icon: 'weather-lightning',
+    category: 'rain',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return isStorm(e.weather.conditionLabel) && hr >= 20;
+    }, 1),
+  },
+  {
+    id: 'wet_and_windy',
+    title: 'Wet and Windy',
+    desc: 'Rain with wind ≥ 45 km/h. The umbrella has left the chat.',
+    icon: 'weather-pouring',
+    category: 'rain',
+    evaluate: h => nthMatch(h, e => isRainy(e.weather.conditionLabel) && e.weather.windSpeed >= 45, 1),
+  },
+  {
+    id: 'rain_world_tour',
+    title: 'Rain World Tour',
+    desc: 'Rain consults in 5 different cities.',
+    icon: 'map-marker-multiple-outline',
+    category: 'rain',
+    evaluate: h => {
+      const rainy = h.filter(e => isRainy(e.weather.conditionLabel));
+      const cities = new Set(rainy.map(e => e.city.toLowerCase()));
+      return cities.size >= 5 ? (rainy[0]?.consultedAt ?? Date.now()) : false;
+    },
+  },
+
+  {
+    id: 'snowy_workday',
+    title: 'Snowy Workday',
+    desc: 'Work consult during snowfall. The commute is a character test.',
+    icon: 'briefcase-outline',
+    category: 'snow',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Work' && isSnow(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'snowy_date',
+    title: 'Snowy Date',
+    desc: 'Date consult during snowfall. Romantic, but slippery.',
+    icon: 'snowflake-variant',
+    category: 'snow',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Date' && isSnow(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'snowy_morning',
+    title: 'Snowy Morning',
+    desc: 'Snow consult before 9am.',
+    icon: 'weather-sunset-up',
+    category: 'snow',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return isSnow(e.weather.conditionLabel) && hr < 9;
+    }, 1),
+  },
+  {
+    id: 'snow_city_repeat',
+    title: 'Snow City Regular',
+    desc: '5 snow consults in the same city.',
+    icon: 'home-city-outline',
+    category: 'snow',
+    evaluate: h => {
+      const snowy = h.filter(e => isSnow(e.weather.conditionLabel));
+      const counts = new Map<string, number>();
+
+      for (const e of snowy) {
+        const key = e.city.toLowerCase();
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+
+      return [...counts.values()].some(v => v >= 5) ? (snowy[0]?.consultedAt ?? Date.now()) : false;
+    },
+  },
+  {
+    id: 'snowbound',
+    title: 'Snowbound',
+    desc: '25 consults during snowfall. The boots have tenure.',
+    icon: 'weather-snowy-heavy',
+    category: 'snow',
+    evaluate: h => nthMatch(h, e => isSnow(e.weather.conditionLabel), 25),
+  },
+
+  {
+    id: 'sunny_date',
+    title: 'Sunny Date',
+    desc: 'Date consult under clear skies. Suspiciously promising.',
+    icon: 'heart-outline',
+    category: 'sunshine',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Date' && isClear(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'sunny_event',
+    title: 'Sunny Event',
+    desc: 'Event consult under clear skies. The lighting understood the assignment.',
+    icon: 'star-outline',
+    category: 'sunshine',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Event' && isClear(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'clear_weekend_repeat',
+    title: 'Clear Weekend Repeat',
+    desc: '5 Weekend consults under clear skies.',
+    icon: 'beach',
+    category: 'sunshine',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Weekend' && isClear(e.weather.conditionLabel), 5),
+  },
+  {
+    id: 'uv_regular',
+    title: 'UV Regular',
+    desc: '5 consults with UV index ≥ 8.',
+    icon: 'sun-wireless-outline',
+    category: 'sunshine',
+    evaluate: h => nthMatch(h, e => (e.weather.uvIndex ?? 0) >= 8, 5),
+  },
+  {
+    id: 'sunny_capital',
+    title: 'Sunny Capital',
+    desc: 'Clear-sky consult in a fashion capital.',
+    icon: 'city-variant-outline',
+    category: 'sunshine',
+    evaluate: h => nthMatch(
+      h,
+      e => isClear(e.weather.conditionLabel) &&
+        FASHION_CAPITALS.some(c => e.city.toLowerCase().includes(c)),
+      1,
+    ),
+  },
+
+  {
+    id: 'foggy_morning',
+    title: 'Foggy Morning',
+    desc: 'Fog, mist, or haze before 9am. Very cinematic.',
+    icon: 'weather-fog',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return isFoggy(e.weather.conditionLabel) && hr < 9;
+    }, 1),
+  },
+  {
+    id: 'fog_devotee',
+    title: 'Fog Devotee',
+    desc: '5 consults in fog, mist, or haze.',
+    icon: 'weather-fog',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(h, e => isFoggy(e.weather.conditionLabel), 5),
+  },
+  {
+    id: 'overcast_workday',
+    title: 'Overcast Workday',
+    desc: 'Work consult under clouds. Office lighting, but outdoors.',
+    icon: 'briefcase-outline',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Work' && isCloud(e.weather.conditionLabel), 1),
+  },
+  {
+    id: 'pressure_system',
+    title: 'Pressure System',
+    desc: 'Storm, wind ≥ 50 km/h, and humidity ≥ 80% all at once.',
+    icon: 'weather-hurricane',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(
+      h,
+      e => isStorm(e.weather.conditionLabel) && e.weather.windSpeed >= 50 && e.weather.humidity >= 80,
+      1,
+    ),
+  },
+  {
+    id: 'muggy_morning',
+    title: 'Muggy Morning',
+    desc: 'Before 9am with humidity ≥ 85%. The day started personally.',
+    icon: 'water-percent',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return hr < 9 && e.weather.humidity >= 85;
+    }, 1),
+  },
+  {
+    id: 'windy_city',
+    title: 'Windy City',
+    desc: 'Consulted for Chicago with wind ≥ 30 km/h.',
+    icon: 'weather-windy',
+    category: 'atmosphere',
+    evaluate: h => nthMatch(
+      h,
+      e => e.city.toLowerCase().includes('chicago') && e.weather.windSpeed >= 30,
+      1,
+    ),
+  },
+
+  {
+    id: 'morning_person_lie',
+    title: 'Morning Person, Allegedly',
+    desc: '10 consults before 8am.',
+    icon: 'weather-sunset-up',
+    category: 'timing',
+    evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getHours() < 8, 10),
+  },
+  {
+    id: 'office_hours',
+    title: 'Office Hours',
+    desc: '10 consults between 9am and 5pm.',
+    icon: 'clock-outline',
+    category: 'timing',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return hr >= 9 && hr < 17;
+    }, 10),
+  },
+  {
+    id: 'twilight_oracle',
+    title: 'Twilight Oracle',
+    desc: 'Consulted between 5pm and 7pm.',
+    icon: 'weather-sunset-down',
+    category: 'timing',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return hr >= 17 && hr < 19;
+    }, 1),
+  },
+  {
+    id: 'ungodly_hour',
+    title: 'Ungodly Hour',
+    desc: 'Consulted between 2am and 4am. Questions remain.',
+    icon: 'moon-new',
+    category: 'timing',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return hr >= 2 && hr < 4;
+    }, 1),
+  },
+  {
+    id: 'all_day_oracle',
+    title: 'All-Day Oracle',
+    desc: 'Consulted in morning, afternoon, evening, and night.',
+    icon: 'clock-time-four-outline',
+    category: 'timing',
+    evaluate: h => {
+      const hasMorning = h.some(e => {
+        const hr = new Date(e.consultedAt).getHours();
+        return hr >= 5 && hr < 12;
+      });
+      const hasAfternoon = h.some(e => {
+        const hr = new Date(e.consultedAt).getHours();
+        return hr >= 12 && hr < 17;
+      });
+      const hasEvening = h.some(e => {
+        const hr = new Date(e.consultedAt).getHours();
+        return hr >= 17 && hr < 22;
+      });
+      const hasNight = h.some(e => {
+        const hr = new Date(e.consultedAt).getHours();
+        return hr >= 22 || hr < 5;
+      });
+
+      return hasMorning && hasAfternoon && hasEvening && hasNight
+        ? (h[0]?.consultedAt ?? Date.now())
+        : false;
+    },
+  },
+
+  {
+    id: 'tuesday_taste',
+    title: 'Tuesday Taste',
+    desc: '5 Tuesday consults.',
+    icon: 'calendar-week',
+    category: 'calendar',
+    evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getDay() === 2, 5),
+  },
+  {
+    id: 'thursday_thesis',
+    title: 'Thursday Thesis',
+    desc: '5 Thursday consults. The outfit has supporting arguments.',
+    icon: 'calendar-text',
+    category: 'calendar',
+    evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getDay() === 4, 5),
+  },
+  {
+    id: 'saturday_statement',
+    title: 'Saturday Statement',
+    desc: '5 Saturday consults.',
+    icon: 'calendar-weekend',
+    category: 'calendar',
+    evaluate: h => nthMatch(h, e => new Date(e.consultedAt).getDay() === 6, 5),
+  },
+  {
+    id: 'month_end_mood',
+    title: 'Month-End Mood',
+    desc: 'Consulted on the last day of a month.',
+    icon: 'calendar-end',
+    category: 'calendar',
+    evaluate: h => nthMatch(h, e => {
+      const d = new Date(e.consultedAt);
+      const nextDay = new Date(d);
+      nextDay.setDate(d.getDate() + 1);
+      return nextDay.getDate() === 1;
+    }, 1),
+  },
+  {
+    id: 'valentines_oracle',
+    title: "Valentine's Oracle",
+    desc: 'Consulted on February 14th.',
+    icon: 'heart',
+    category: 'calendar',
+    evaluate: h => nthMatch(h, e => {
+      const d = new Date(e.consultedAt);
+      return d.getMonth() === 1 && d.getDate() === 14;
+    }, 1),
+  },
+  {
+    id: 'halloween_oracle',
+    title: 'Halloween Oracle',
+    desc: 'Consulted on October 31st. Costume or not, it counts.',
+    icon: 'ghost-outline',
+    category: 'calendar',
+    evaluate: h => nthMatch(h, e => {
+      const d = new Date(e.consultedAt);
+      return d.getMonth() === 9 && d.getDate() === 31;
+    }, 1),
+  },
+  {
+    id: 'birthday_energy',
+    title: 'Main Character Day',
+    desc: 'Consulted on the same calendar date in two different years.',
+    icon: 'cake-variant-outline',
+    category: 'calendar',
+    evaluate: h => {
+      const dates = new Map<string, Set<number>>();
+
+      for (const e of h) {
+        const d = new Date(e.consultedAt);
+        const key = `${d.getMonth() + 1}-${d.getDate()}`;
+        if (!dates.has(key)) dates.set(key, new Set());
+        dates.get(key)!.add(d.getFullYear());
+      }
+
+      return [...dates.values()].some(years => years.size >= 2)
+        ? (h[0]?.consultedAt ?? Date.now())
+        : false;
+    },
+  },
+
+  {
+    id: 'toronto_oracle',
+    title: 'Toronto Oracle',
+    desc: 'Consulted for Toronto. Practical layers, emotional complexity.',
+    icon: 'city',
+    category: 'cities',
+    evaluate: h => nthMatch(h, e => e.city.toLowerCase().includes('toronto'), 1),
+  },
+  {
+    id: 'los_angeles_oracle',
+    title: 'Los Angeles Oracle',
+    desc: 'Consulted for Los Angeles. Sunglasses are not optional.',
+    icon: 'palm-tree',
+    category: 'cities',
+    evaluate: h => nthMatch(h, e => e.city.toLowerCase().includes('los angeles'), 1),
+  },
+  {
+    id: 'berlin_oracle',
+    title: 'Berlin Oracle',
+    desc: 'Consulted for Berlin. Black was always the answer.',
+    icon: 'wall',
+    category: 'cities',
+    evaluate: h => nthMatch(h, e => e.city.toLowerCase().includes('berlin'), 1),
+  },
+  {
+    id: 'city_hopper',
+    title: 'City Hopper',
+    desc: 'Consulted for 15 unique cities.',
+    icon: 'airplane-marker',
+    category: 'cities',
+    evaluate: h => {
+      const cities = new Set(h.map(e => e.city.toLowerCase()));
+      return cities.size >= 15 ? (h[0]?.consultedAt ?? Date.now()) : false;
+    },
+  },
+  {
+    id: 'continental_drift',
+    title: 'Continental Drift',
+    desc: 'Consulted from 15+ different countries.',
+    icon: 'earth-box',
+    category: 'cities',
+    evaluate: h => {
+      const countries = new Set(h.map(e => e.weather.country?.toLowerCase()).filter(Boolean));
+      return countries.size >= 15 ? (h[0]?.consultedAt ?? Date.now()) : false;
+    },
+  },
+  {
+    id: 'one_city_one_week',
+    title: 'One City, One Week',
+    desc: 'Consulted for the same city across 7 consecutive days.',
+    icon: 'home-clock-outline',
+    category: 'cities',
+    evaluate: h => {
+      const cities = new Set(h.map(e => e.city.toLowerCase()));
+
+      for (const city of cities) {
+        const result = consecutiveDayStreak(h, e => e.city.toLowerCase() === city, 7);
+        if (result) return result;
+      }
+
+      return false;
+    },
+  },
+
+  {
+    id: 'date_night_regular',
+    title: 'Date Night Regular',
+    desc: '10 Date occasion consults.',
+    icon: 'heart-multiple-outline',
+    category: 'occasions',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Date', 10),
+  },
+  {
+    id: 'event_season',
+    title: 'Event Season',
+    desc: '10 Event occasion consults.',
+    icon: 'star-circle-outline',
+    category: 'occasions',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Event', 10),
+  },
+  {
+    id: 'weekend_regular',
+    title: 'Weekend Regular',
+    desc: '10 Weekend occasion consults.',
+    icon: 'sofa-single-outline',
+    category: 'occasions',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Weekend', 10),
+  },
+  {
+    id: 'active_repeat',
+    title: 'Active Repeat',
+    desc: '10 Active occasion consults.',
+    icon: 'run-fast',
+    category: 'occasions',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Active', 10),
+  },
+  {
+    id: 'work_lifer',
+    title: 'Work Lifer',
+    desc: '50 Work occasion consults. HR has been notified.',
+    icon: 'account-tie',
+    category: 'occasions',
+    evaluate: h => nthMatch(h, e => e.occasion === 'Work', 50),
+  },
+  {
+    id: 'occasion_maximalist',
+    title: 'Occasion Maximalist',
+    desc: 'Used all occasions at least 3 times each.',
+    icon: 'format-list-checks',
+    category: 'occasions',
+    evaluate: h => {
+      const required = ['Work', 'Date', 'Event', 'Weekend', 'Active'];
+      const counts = new Map<string, number>();
+
+      for (const e of h) {
+        if (!e.occasion) continue;
+        counts.set(e.occasion, (counts.get(e.occasion) ?? 0) + 1);
+      }
+
+      return required.every(o => (counts.get(o) ?? 0) >= 3)
+        ? (h[0]?.consultedAt ?? Date.now())
+        : false;
+    },
+  },
+
+  {
+    id: 'little_black_dress',
+    title: 'Little Black Dress',
+    desc: 'Saved 10 outfits after 8pm. The archive has nightlife.',
+    icon: 'hanger',
+    category: 'collection',
+    evaluate: (_h, _f, ex) => ex.savedCount >= 10 ? Date.now() : false,
+  },
+  {
+    id: 'wardrobe_editor',
+    title: 'Wardrobe Editor',
+    desc: '75 saved outfits. Taste is now a full-time job.',
+    icon: 'clipboard-edit-outline',
+    category: 'collection',
+    evaluate: (_h, _f, ex) => ex.savedCount >= 75 ? Date.now() : false,
+  },
+  {
+    id: 'private_collection',
+    title: 'Private Collection',
+    desc: '150 saved outfits. Invitations are extremely limited.',
+    icon: 'wardrobe-outline',
+    category: 'collection',
+    evaluate: (_h, _f, ex) => ex.savedCount >= 150 ? Date.now() : false,
+  },
+  {
+    id: 'couture_archive',
+    title: 'Couture Archive',
+    desc: '500 saved outfits. The closet has become an institution.',
+    icon: 'bank',
+    category: 'collection',
+    evaluate: (_h, _f, ex) => ex.savedCount >= 500 ? Date.now() : false,
+  },
+
+  {
+    id: 'nine_months',
+    title: 'Nine Months In',
+    desc: '9 months with the Oracle. Aesthetic attachment confirmed.',
+    icon: 'calendar-heart',
+    category: 'anniversary',
+    evaluate: (_h, f) => sinceFirst(f, 9 * MONTH_MS),
+  },
+  {
+    id: 'eighteen_months',
+    title: 'Eighteen Months',
+    desc: '18 months with the Oracle. The relationship has layers.',
+    icon: 'calendar-clock',
+    category: 'anniversary',
+    evaluate: (_h, f) => sinceFirst(f, 18 * MONTH_MS),
+  },
+  {
+    id: 'three_years',
+    title: 'Three Years Styled',
+    desc: '3 full years with the Oracle.',
+    icon: 'calendar-star',
+    category: 'anniversary',
+    evaluate: (_h, f) => sinceFirst(f, 3 * YEAR_MS),
+  },
+
+  {
+    id: 'clueless_closet',
+    title: 'Clueless Closet',
+    desc: 'Consulted for school-day hours before 9am. As if.',
+    icon: 'hanger',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      const day = new Date(e.consultedAt).getDay();
+      return hr < 9 && day >= 1 && day <= 5;
+    }, 1),
+  },
+  {
+    id: 'fleabag_walk',
+    title: 'Fleabag Walk',
+    desc: 'London consult after 9pm. Looking at the camera counts.',
+    icon: 'walk',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return e.city.toLowerCase().includes('london') && hr >= 21;
+    }, 1),
+  },
+  {
+    id: 'roman_holiday',
+    title: 'Roman Holiday',
+    desc: 'Weekend consult in Rome.',
+    icon: 'scooter',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const day = new Date(e.consultedAt).getDay();
+      return e.city.toLowerCase().includes('rome') &&
+        e.occasion === 'Weekend' &&
+        (day === 0 || day === 6);
+    }, 1),
+  },
+  {
+    id: 'prada_in_the_rain',
+    title: 'Prada in the Rain',
+    desc: 'Milan consult in the rain.',
+    icon: 'umbrella',
+    category: 'culture',
+    evaluate: h => nthMatch(
+      h,
+      e => e.city.toLowerCase().includes('milan') && isRainy(e.weather.conditionLabel),
+      1,
+    ),
+  },
+  {
+    id: 'lost_in_translation',
+    title: 'Lost in Translation',
+    desc: 'Tokyo consult after midnight.',
+    icon: 'weather-night',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      return e.city.toLowerCase().includes('tokyo') && hr < 5;
+    }, 1),
+  },
+  {
+    id: 'before_sunrise',
+    title: 'Before Sunrise',
+    desc: 'Early morning consult in a European city.',
+    icon: 'weather-sunset-up',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const hr = new Date(e.consultedAt).getHours();
+      const city = e.city.toLowerCase();
+      const europe = ['paris', 'milan', 'london', 'rome', 'berlin', 'vienna', 'copenhagen', 'warsaw'];
+      return hr < 7 && europe.some(c => city.includes(c));
+    }, 1),
+  },
+  {
+    id: 'quiet_luxury',
+    title: 'Quiet Luxury',
+    desc: 'Clear Work consult in London, Milan, or Paris.',
+    icon: 'diamond-stone',
+    category: 'culture',
+    evaluate: h => nthMatch(h, e => {
+      const city = e.city.toLowerCase();
+      return e.occasion === 'Work' &&
+        isClear(e.weather.conditionLabel) &&
+        ['london', 'milan', 'paris'].some(c => city.includes(c));
+    }, 1),
+  },
+
   // ══ CITIES & TRAVEL ══════════════════════════════════════════════════════
   {
     id: 'globetrotter',

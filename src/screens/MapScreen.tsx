@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
 import { HistoryEntry } from '../hooks/useOutfitHistory';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 // ── Fashion capitals shown as inspiration markers ──────────────────────────
@@ -79,8 +79,8 @@ function formatDate(ts: number): string {
 }
 
 export function MapScreen() {
-  const { colors, fonts } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const navigation  = useNavigation<any>();
   const { historyCtx } = useAppData();
   const { history } = historyCtx;
@@ -164,6 +164,21 @@ export function MapScreen() {
           </Marker>
         ))}
       </MapView>
+
+      {pins.length === 0 && (
+        <View
+          style={styles.emptyHero}
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Text style={styles.emptyHeroKicker}>STYLE PASSPORT</Text>
+          <Text style={styles.emptyHeroTitle}>The map is waiting for its first pin.</Text>
+          <Text style={styles.emptyHeroBody}>
+            Consult the Oracle in any city and your journey will begin here.
+          </Text>
+        </View>
+      )}
 
       {/* ── HEADER ── */}
       <View style={styles.header}>
@@ -275,7 +290,10 @@ export function MapScreen() {
 
 const HEADER_TOP = Platform.OS === 'ios' ? 56 : 40;
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isY2K = isY2KTheme(themeName);
+
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -321,7 +339,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.displayBold,
     fontSize: 18,
     color: '#FAF9F6',
-    lineHeight: 20,
+    lineHeight: isY2K ? 27 : 20,
   },
   countBadgeLabel: {
     fontFamily: fonts.mono,
@@ -429,6 +447,39 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     paddingVertical: 1,
   },
 
+  emptyHero: {
+    position: 'absolute',
+    left: spacing.lg,
+    right: spacing.lg,
+    top: '34%',
+    backgroundColor: 'rgba(13,11,8,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(250,249,246,0.10)',
+    padding: spacing.lg,
+  },
+  emptyHeroKicker: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 2.5,
+    color: 'rgba(250,249,246,0.42)',
+    marginBottom: spacing.sm,
+  },
+  emptyHeroTitle: {
+    fontFamily: fonts.display,
+    fontSize: 34,
+    lineHeight: isY2K ? 46 : 38,
+    color: '#FAF9F6',
+    letterSpacing: -0.5,
+    marginBottom: spacing.sm,
+  },
+  emptyHeroBody: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    lineHeight: 18,
+    color: 'rgba(250,249,246,0.48)',
+    letterSpacing: 0.3,
+  },
+
   /* ── Bottom panel ── */
   panel: {
     position: 'absolute',
@@ -463,7 +514,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontSize: 32,
     color: '#FAF9F6',
     letterSpacing: -0.5,
-    lineHeight: 36,
+    lineHeight: isY2K ? 44 : 36,
   },
   cityCardCountry: {
     fontFamily: fonts.mono,
@@ -488,7 +539,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.displayBold,
     fontSize: 28,
     color: '#FAF9F6',
-    lineHeight: 32,
+    lineHeight: isY2K ? 38 : 32,
   },
   cityCardDate: {
     fontFamily: fonts.mono,
@@ -521,7 +572,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.displayBold,
     fontSize: 36,
     color: '#FAF9F6',
-    lineHeight: 40,
+    lineHeight: isY2K ? 48 : 40,
     letterSpacing: -0.5,
   },
   statLabel: {
@@ -555,4 +606,5 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     lineHeight: 16,
     maxWidth: 240,
   },
-}); }
+  });
+}

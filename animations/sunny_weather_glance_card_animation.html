@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OutfitOracle Sunny WeatherGlanceCard</title>
+  <style>
+    :root {
+      --ink: #17120c;
+      --sun: #ffd166;
+      --sun-core: #fff6b8;
+      --shadow: rgba(61, 42, 9, 0.28);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 18% 10%, rgba(255, 214, 102, 0.34), transparent 42%),
+        radial-gradient(circle at 84% 88%, rgba(255, 143, 112, 0.26), transparent 44%),
+        #f0ebe0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+    }
+
+    .stage {
+      width: min(92vw, 430px);
+      padding: 20px;
+    }
+
+    /* ── CARD ──────────────────────────────────────────── */
+
+    .weather-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 590px;
+      border-radius: 38px;
+      padding: 24px;
+      background: linear-gradient(
+        188deg,
+        #3498e8 0%,
+        #52b8ff 14%,
+        #7eceff 30%,
+        #a6e0ff 48%,
+        #ffd87e 72%,
+        #ffb06e 88%,
+        #f08250 100%
+      );
+      box-shadow:
+        0 40px 110px rgba(23, 18, 12, 0.32),
+        0 10px 28px rgba(23, 18, 12, 0.16),
+        inset 0 2px 0 rgba(255, 255, 255, 0.44),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.05);
+      isolation: isolate;
+    }
+
+    /* Top specular highlight */
+    .weather-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        radial-gradient(ellipse at 70% 7%, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.12) 12%, transparent 26%),
+        radial-gradient(ellipse at 18% 4%, rgba(255,255,255,0.26), transparent 24%),
+        linear-gradient(180deg, rgba(255,255,255,0.20) 0%, transparent 22%);
+      mix-blend-mode: screen;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Landscape / terrain */
+    .weather-card::after {
+      content: "";
+      position: absolute;
+      left: -12%;
+      right: -12%;
+      bottom: -8%;
+      height: 48%;
+      background:
+        radial-gradient(ellipse at 32% 90%, rgba(26, 88, 42, 0.88) 0%, rgba(48, 116, 62, 0.46) 28%, transparent 58%),
+        radial-gradient(ellipse at 74% 96%, rgba(32, 100, 48, 0.74) 0%, rgba(56, 128, 72, 0.26) 36%, transparent 58%),
+        radial-gradient(ellipse at 54% 84%, rgba(20, 72, 36, 0.32) 0%, transparent 40%);
+      filter: blur(1.5px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── ATMOSPHERIC LAYERS ────────────────────────────── */
+
+    /* Golden haze near the horizon */
+    .atm-haze {
+      position: absolute;
+      left: -30%;
+      right: -30%;
+      top: 46%;
+      height: 100px;
+      background: radial-gradient(ellipse at 50% 50%,
+        rgba(255, 218, 120, 0.38) 0%,
+        rgba(255, 232, 160, 0.16) 46%,
+        transparent 72%
+      );
+      filter: blur(24px);
+      z-index: 0;
+      pointer-events: none;
+      animation: hazePulse 8s ease-in-out infinite;
+    }
+
+    /* Thin horizon line */
+    .horizon-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 59%;
+      height: 1.5px;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 234, 160, 0.46) 24%,
+        rgba(255, 248, 204, 0.78) 50%,
+        rgba(255, 234, 160, 0.46) 76%,
+        transparent
+      );
+      filter: blur(0.4px);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Lens flare streak from sun */
+    .lens-flare {
+      position: absolute;
+      top: 98px;
+      right: 32px;
+      width: 130px;
+      height: 1.5px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.7), rgba(255,255,255,0.14) 60%, transparent);
+      border-radius: 999px;
+      transform: rotate(-28deg);
+      filter: blur(0.6px);
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      animation: flareShow 8s ease-in-out infinite 1.4s;
+    }
+
+    .lens-flare-secondary {
+      position: absolute;
+      top: 108px;
+      right: 68px;
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.48), transparent);
+      border-radius: 999px;
+      transform: rotate(-28deg);
+      filter: blur(0.5px);
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      animation: flareShow 8s ease-in-out infinite 1.7s;
+    }
+
+    /* ── SUN ───────────────────────────────────────────── */
+
+    .sun-system {
+      position: absolute;
+      top: 64px;
+      right: 50px;
+      width: 154px;
+      height: 154px;
+      z-index: 1;
+      animation: sunFloat 7.4s ease-in-out infinite;
+    }
+
+    /* Slow outer corona — warm conic spokes */
+    .sun-corona {
+      position: absolute;
+      inset: -62px;
+      border-radius: 999px;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0%,   rgba(255,218,90,0.09) 3%,  transparent 7%,
+        transparent 11%,  rgba(255,208,80,0.06) 14%, transparent 18%,
+        transparent 22%,  rgba(255,218,90,0.08) 25%, transparent 29%,
+        transparent 33%,  rgba(255,208,80,0.06) 36%, transparent 40%,
+        transparent 44%,  rgba(255,218,90,0.09) 47%, transparent 51%,
+        transparent 55%,  rgba(255,208,80,0.05) 58%, transparent 62%,
+        transparent 66%,  rgba(255,218,90,0.07) 69%, transparent 73%,
+        transparent 77%,  rgba(255,208,80,0.06) 80%, transparent 84%,
+        transparent 88%,  rgba(255,218,90,0.08) 91%, transparent 95%,
+        transparent 99%,  rgba(255,208,80,0.05) 100%
+      );
+      animation: raySpin 58s linear infinite;
+      pointer-events: none;
+    }
+
+    /* Soft outer atmospheric glow */
+    .sun-glow-outer {
+      position: absolute;
+      inset: -66px;
+      border-radius: 999px;
+      background: radial-gradient(circle,
+        rgba(255,246,184,0.30) 0%,
+        rgba(255,210,100,0.20) 26%,
+        rgba(255,182,60,0.10) 50%,
+        transparent 70%
+      );
+      filter: blur(10px);
+      animation: glowPulse 5s ease-in-out infinite;
+    }
+
+    /* Inner glow — tight halo */
+    .sun-glow {
+      position: absolute;
+      inset: -38px;
+      border-radius: 999px;
+      background: radial-gradient(circle,
+        rgba(255,246,184,0.90) 0%,
+        rgba(255,210,102,0.50) 38%,
+        transparent 70%
+      );
+      filter: blur(4px);
+      animation: glowPulse 3.8s ease-in-out infinite 0.6s;
+    }
+
+    /* Concentric halo ring */
+    .sun-halo {
+      position: absolute;
+      inset: 8px;
+      border-radius: 999px;
+      box-shadow:
+        0 0 0 5px rgba(255,246,200,0.20),
+        0 0 0 13px rgba(255,236,160,0.10),
+        0 0 0 26px rgba(255,218,100,0.06);
+      pointer-events: none;
+    }
+
+    /* Primary rays — 8 long, clockwise 22s */
+    .ray-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      animation: raySpin 22s linear infinite;
+    }
+
+    .ray {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 3.5px;
+      height: 30px;
+      border-radius: 999px;
+      background: linear-gradient(to top, transparent 0%, rgba(255,246,184,0.94) 100%);
+      transform-origin: 1.75px 76px;
+      box-shadow: 0 0 12px rgba(255,246,184,0.68);
+    }
+
+    .ray:nth-child(1) { transform: translate(-50%, -76px) rotate(  0deg); opacity: 0.90; }
+    .ray:nth-child(2) { transform: translate(-50%, -76px) rotate( 45deg); opacity: 0.68; }
+    .ray:nth-child(3) { transform: translate(-50%, -76px) rotate( 90deg); opacity: 0.90; }
+    .ray:nth-child(4) { transform: translate(-50%, -76px) rotate(135deg); opacity: 0.68; }
+    .ray:nth-child(5) { transform: translate(-50%, -76px) rotate(180deg); opacity: 0.90; }
+    .ray:nth-child(6) { transform: translate(-50%, -76px) rotate(225deg); opacity: 0.68; }
+    .ray:nth-child(7) { transform: translate(-50%, -76px) rotate(270deg); opacity: 0.90; }
+    .ray:nth-child(8) { transform: translate(-50%, -76px) rotate(315deg); opacity: 0.68; }
+
+    /* Secondary rays — 8 shorter, counter-clockwise 30s */
+    .ray-ring-inner {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      animation: raySpin 30s linear infinite reverse;
+    }
+
+    .ray-short {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 2.5px;
+      height: 17px;
+      border-radius: 999px;
+      background: linear-gradient(to top, transparent 0%, rgba(255,246,184,0.64) 100%);
+      transform-origin: 1.25px 68px;
+      opacity: 0.50;
+    }
+
+    .ray-short:nth-child(1) { transform: translate(-50%, -68px) rotate( 22.5deg); }
+    .ray-short:nth-child(2) { transform: translate(-50%, -68px) rotate( 67.5deg); }
+    .ray-short:nth-child(3) { transform: translate(-50%, -68px) rotate(112.5deg); }
+    .ray-short:nth-child(4) { transform: translate(-50%, -68px) rotate(157.5deg); }
+    .ray-short:nth-child(5) { transform: translate(-50%, -68px) rotate(202.5deg); }
+    .ray-short:nth-child(6) { transform: translate(-50%, -68px) rotate(247.5deg); }
+    .ray-short:nth-child(7) { transform: translate(-50%, -68px) rotate(292.5deg); }
+    .ray-short:nth-child(8) { transform: translate(-50%, -68px) rotate(337.5deg); }
+
+    /* Sun core */
+    .sun-core {
+      position: absolute;
+      inset: 40px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 34% 28%,
+        #fffef8 0%,
+        var(--sun-core) 24%,
+        #ffe87c 55%,
+        #f5a420 82%,
+        #e08018 100%
+      );
+      box-shadow:
+        0 0 36px rgba(255,230,140,0.98),
+        0 0 80px rgba(255,196,78,0.72),
+        0 0 140px rgba(255,164,40,0.36),
+        inset 0 2px 5px rgba(255,255,255,0.56);
+      animation: corePulse 4.2s ease-in-out infinite;
+    }
+
+    /* ── CLOUDS ────────────────────────────────────────── */
+
+    .cloud {
+      position: absolute;
+      z-index: 1;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.48);
+      box-shadow:
+        inset 0 7px 22px rgba(255,255,255,0.74),
+        inset 0 -3px 8px rgba(160,205,255,0.12),
+        0 20px 54px rgba(255,255,255,0.28),
+        0 7px 20px rgba(255,255,255,0.16);
+    }
+
+    .cloud::before,
+    .cloud::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      background: inherit;
+    }
+
+    /* Cloud 1 — mid distance, drifts right */
+    .cloud.one {
+      width: 176px;
+      height: 56px;
+      top: 178px;
+      left: -96px;
+      opacity: 0.44;
+      transform: scale(0.84);
+      animation: driftRight 26s linear infinite;
+    }
+    .cloud.one::before { width: 78px; height: 78px; left: 28px; bottom: 20px; }
+    .cloud.one::after  { width: 98px; height: 98px; right: 22px; bottom: 10px; }
+
+    /* Cloud 2 — far/small, drifts left, blurred for depth */
+    .cloud.two {
+      width: 170px;
+      height: 52px;
+      top: 114px;
+      right: -124px;
+      opacity: 0.24;
+      transform: scale(0.60);
+      filter: blur(0.7px);
+      animation: driftLeft 38s linear infinite;
+    }
+    .cloud.two::before { width: 72px; height: 72px; left: 24px; bottom: 16px; }
+    .cloud.two::after  { width: 90px; height: 90px; right: 20px; bottom: 8px; }
+
+    /* Cloud 3 — high altitude, wispy, very slow */
+    .cloud.three {
+      width: 240px;
+      height: 20px;
+      top: 68px;
+      left: -70px;
+      opacity: 0.14;
+      transform: scale(0.72);
+      filter: blur(1.8px);
+      animation: driftRight 52s linear infinite;
+      box-shadow: none;
+    }
+    .cloud.three::before { width: 56px; height: 26px; left: 44px; bottom: 6px; }
+    .cloud.three::after  { width: 66px; height: 22px; right: 36px; bottom: 3px; }
+
+    /* ── ATMOSPHERIC PARTICLES ─────────────────────────── */
+
+    .particle {
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.56);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .particle.a {
+      width: 6px; height: 6px;
+      top: 152px; left: 54px;
+      filter: blur(0.4px);
+      animation: particleDrift 8.2s ease-in-out infinite alternate;
+    }
+    .particle.b {
+      width: 4px; height: 4px;
+      top: 242px; right: 62px;
+      animation: particleDrift 11.4s ease-in-out infinite alternate-reverse;
+      animation-delay: -3.2s;
+      filter: blur(0.3px);
+    }
+    .particle.c {
+      width: 9px; height: 9px;
+      bottom: 192px; left: 40px;
+      opacity: 0.22;
+      filter: blur(0.9px);
+      animation: particleDrift 9.8s ease-in-out infinite alternate;
+      animation-delay: -6.4s;
+    }
+    .particle.d {
+      width: 3px; height: 3px;
+      top: 194px; left: 38%;
+      opacity: 0.36;
+      animation: particleDrift 6.8s ease-in-out infinite alternate;
+      animation-delay: -1.6s;
+    }
+    .particle.e {
+      width: 5px; height: 5px;
+      top: 308px; right: 29%;
+      opacity: 0.20;
+      filter: blur(0.6px);
+      animation: particleDrift 13s ease-in-out infinite alternate-reverse;
+      animation-delay: -7.4s;
+    }
+
+    /* ── TOP BAR ───────────────────────────────────────── */
+
+    .topbar {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: rgba(255,255,255,0.92);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255,255,255,0.44);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      color: white;
+      display: grid;
+      place-items: center;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+
+    .icon-btn:hover { background: rgba(255,255,255,0.28); }
+
+    .brand {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 19px;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      text-shadow: 0 1px 20px rgba(23,18,12,0.16);
+    }
+
+    /* ── GLASS PANEL ───────────────────────────────────── */
+
+    .glass-panel {
+      position: relative;
+      z-index: 4;
+      margin-top: 92px;
+      border: 1px solid rgba(255,255,255,0.64);
+      border-radius: 30px;
+      padding: 22px;
+      background: linear-gradient(148deg, rgba(255,255,255,0.60) 0%, rgba(255,255,255,0.26) 100%);
+      backdrop-filter: blur(30px) saturate(158%) brightness(1.04);
+      -webkit-backdrop-filter: blur(30px) saturate(158%) brightness(1.04);
+      box-shadow:
+        0 30px 96px rgba(89, 54, 10, 0.22),
+        inset 0 1.5px 0 rgba(255,255,255,0.86),
+        inset 0 -1px 0 rgba(255,255,255,0.18);
+      overflow: hidden;
+    }
+
+    /* Diagonal shimmer sweep */
+    .glass-panel::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 56%;
+      background: linear-gradient(
+        108deg,
+        transparent,
+        rgba(255,255,255,0.28) 42%,
+        rgba(255,255,255,0.46) 50%,
+        rgba(255,255,255,0.28) 58%,
+        transparent
+      );
+      animation: shimmerSweep 11s ease-in-out infinite 2s;
+      transform: translateX(-140%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Top edge specular */
+    .glass-panel::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 12%;
+      right: 12%;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(255,255,255,0.88) 36%,
+        rgba(255,255,255,0.96) 50%,
+        rgba(255,255,255,0.88) 64%,
+        transparent
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Ensure panel content floats above ::before */
+    .glass-panel > * { position: relative; z-index: 2; }
+
+    /* ── PANEL CONTENT ─────────────────────────────────── */
+
+    .location-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: rgba(23,18,12,0.80);
+      font-weight: 650;
+      font-size: 13.5px;
+    }
+
+    .location {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .time-pill {
+      padding: 4px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.46);
+      border: 1px solid rgba(255,255,255,0.56);
+      font-size: 11.5px;
+      font-weight: 720;
+      color: rgba(23,18,12,0.68);
+      letter-spacing: 0.04em;
+    }
+
+    .temp-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .temperature {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 96px;
+      line-height: 0.88;
+      letter-spacing: -0.08em;
+      color: rgba(23,18,12,0.90);
+      animation: tempGlow 5s ease-in-out infinite;
+    }
+
+    .feels {
+      padding-top: 14px;
+      text-align: right;
+      color: rgba(23,18,12,0.56);
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .feels strong {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 30px;
+      line-height: 1.05;
+      font-weight: 400;
+      color: rgba(23,18,12,0.84);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .condition-row {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin-top: 14px;
+      color: rgba(23,18,12,0.88);
+    }
+
+    /* Mini sun icon */
+    .mini-sun {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      flex: 0 0 auto;
+      animation: miniPulse 2.8s ease-in-out infinite;
+    }
+
+    .mini-sun::before {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 36% 32%, #fffef2, #ffe87c 50%, #f5a020 100%);
+      box-shadow: 0 0 10px rgba(255,220,100,0.90), 0 0 26px rgba(255,198,60,0.46);
+    }
+
+    .mini-sun::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0 7%, rgba(255,246,184,0.92) 7% 11%, transparent 11% 19%,
+        rgba(255,246,184,0.92) 19% 23%, transparent 23% 31%,
+        rgba(255,246,184,0.92) 31% 35%, transparent 35% 43%,
+        rgba(255,246,184,0.92) 43% 47%, transparent 47% 55%,
+        rgba(255,246,184,0.92) 55% 59%, transparent 59% 67%,
+        rgba(255,246,184,0.92) 67% 71%, transparent 71% 79%,
+        rgba(255,246,184,0.92) 79% 83%, transparent 83% 91%,
+        rgba(255,246,184,0.92) 91% 95%, transparent 95% 100%
+      );
+      mask: radial-gradient(circle, transparent 0 36%, black 38% 100%);
+      -webkit-mask: radial-gradient(circle, transparent 0 36%, black 38% 100%);
+      animation: miniSpin 15s linear infinite;
+    }
+
+    .condition-text strong {
+      display: block;
+      font-size: 17.5px;
+      line-height: 1.15;
+      font-weight: 720;
+    }
+
+    .condition-text span {
+      display: block;
+      margin-top: 3px;
+      font-size: 12px;
+      color: rgba(23,18,12,0.52);
+      font-weight: 620;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 20px 0 15px;
+      background: linear-gradient(90deg,
+        transparent,
+        rgba(23,18,12,0.12) 30%,
+        rgba(23,18,12,0.16) 50%,
+        rgba(23,18,12,0.12) 70%,
+        transparent
+      );
+    }
+
+    .verdict-label {
+      color: rgba(23,18,12,0.42);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .verdict {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 6px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 25px;
+      line-height: 1.08;
+      color: rgba(23,18,12,0.88);
+    }
+
+    .sunglasses {
+      font-size: 24px;
+      display: inline-block;
+      animation: glassesNudge 3.1s ease-in-out infinite;
+      filter: drop-shadow(0 4px 10px rgba(23,18,12,0.14));
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.36);
+      border: 1px solid rgba(255,255,255,0.54);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.52),
+        0 2px 8px rgba(89,54,10,0.05);
+      transition: background 0.22s, transform 0.22s;
+      cursor: default;
+    }
+
+    .stat:hover {
+      background: rgba(255,255,255,0.54);
+      transform: translateY(-1px);
+    }
+
+    .stat-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.46);
+      border: 1px solid rgba(255,255,255,0.38);
+      color: rgba(23,18,12,0.66);
+      flex: 0 0 auto;
+      font-size: 15px;
+    }
+
+    .stat-title {
+      font-size: 10px;
+      color: rgba(23,18,12,0.48);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.10em;
+    }
+
+    .stat-value {
+      margin-top: 2px;
+      font-size: 13.5px;
+      color: rgba(23,18,12,0.86);
+      font-weight: 760;
+    }
+
+    /* ── OUTFIT CHIPS ───────────────────────────────────── */
+
+    .outfit-strip {
+      position: relative;
+      z-index: 4;
+      margin-top: 18px;
+    }
+
+    .strip-title {
+      color: rgba(255,255,255,0.92);
+      font-size: 12px;
+      font-weight: 780;
+      text-transform: uppercase;
+      letter-spacing: 0.10em;
+      text-shadow: 0 1px 14px rgba(23,18,12,0.22);
+    }
+
+    .chips {
+      display: flex;
+      gap: 9px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .chip {
+      flex: 1;
+      min-height: 72px;
+      border-radius: 20px;
+      padding: 12px 10px;
+      background: rgba(255,255,255,0.34);
+      border: 1px solid rgba(255,255,255,0.46);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: rgba(23,18,12,0.82);
+      box-shadow:
+        0 14px 40px rgba(58,42,20,0.12),
+        inset 0 1px 0 rgba(255,255,255,0.48);
+      transition: transform 0.22s, background 0.22s;
+      cursor: default;
+    }
+
+    .chip:hover {
+      transform: translateY(-3px);
+      background: rgba(255,255,255,0.50);
+    }
+
+    .chip strong {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 760;
+    }
+
+    .chip span {
+      display: block;
+      margin-top: 5px;
+      font-size: 10px;
+      color: rgba(23,18,12,0.50);
+      font-weight: 720;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* ── FOOTER ─────────────────────────────────────────── */
+
+    .bottom-note {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 22px;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: rgba(255,255,255,0.88);
+      font-size: 11.5px;
+      font-weight: 700;
+      text-shadow: 0 1px 14px rgba(23,18,12,0.18);
+    }
+
+    .motion-pill {
+      white-space: nowrap;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.20);
+      border: 1px solid rgba(255,255,255,0.36);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      font-size: 10.5px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── KEYFRAMES ──────────────────────────────────────── */
+
+    @keyframes sunFloat {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1.000); }
+      28%       { transform: translate3d(-5px, 8px, 0) scale(1.026); }
+      62%       { transform: translate3d(4px, 5px, 0) scale(1.016); }
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.66; transform: scale(0.92); }
+      50%       { opacity: 1.00; transform: scale(1.13); }
+    }
+
+    @keyframes corePulse {
+      0%, 100% { transform: scale(1.000); filter: brightness(1.00); }
+      50%       { transform: scale(1.044); filter: brightness(1.07); }
+    }
+
+    @keyframes raySpin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes driftRight {
+      from { transform: translateX(-10px) scale(var(--s, 0.84)); }
+      to   { transform: translateX(620px) scale(var(--s, 0.84)); }
+    }
+
+    @keyframes driftLeft {
+      from { transform: translateX(0px) scale(0.60); }
+      to   { transform: translateX(-640px) scale(0.60); }
+    }
+
+    @keyframes hazePulse {
+      0%, 100% { opacity: 0.72; transform: scaleX(1.00); }
+      50%       { opacity: 1.00; transform: scaleX(1.10); }
+    }
+
+    @keyframes shimmerSweep {
+      0%   { transform: translateX(-140%); opacity: 0; }
+      18%  { opacity: 0; }
+      36%  { opacity: 1; transform: translateX(-10%); }
+      56%  { opacity: 0; transform: translateX(300%); }
+      100% { transform: translateX(300%); opacity: 0; }
+    }
+
+    @keyframes particleDrift {
+      0%   { transform: translate3d(-13px,  9px, 0); opacity: 0.20; }
+      100% { transform: translate3d( 15px, -15px, 0); opacity: 0.74; }
+    }
+
+    @keyframes flareShow {
+      0%, 30%, 100% { opacity: 0; transform: rotate(-28deg) scaleX(0.6); }
+      40%, 56%      { opacity: 1; transform: rotate(-28deg) scaleX(1.0); }
+      68%           { opacity: 0; transform: rotate(-28deg) scaleX(1.3); }
+    }
+
+    @keyframes miniPulse {
+      0%, 100% { transform: scale(1.00); filter: drop-shadow(0 0  8px rgba(255,220,100,0.52)); }
+      50%       { transform: scale(1.11); filter: drop-shadow(0 0 20px rgba(255,220,100,0.96)); }
+    }
+
+    @keyframes miniSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes glassesNudge {
+      0%, 100% { transform: rotate(-4deg) translateY( 0px); }
+      50%       { transform: rotate( 3deg) translateY(-3px); }
+    }
+
+    @keyframes tempGlow {
+      0%, 100% { text-shadow: 0 16px 52px rgba(23,18,12,0.10); }
+      50%       { text-shadow: 0 16px 52px rgba(23,18,12,0.18), 0 0 48px rgba(255,200,80,0.09); }
+    }
+
+    /* ── REDUCED MOTION ─────────────────────────────────── */
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .stage { padding: 12px; }
+      .weather-card { min-height: 570px; border-radius: 32px; padding: 20px; }
+      .glass-panel { margin-top: 84px; padding: 18px; }
+      .temperature { font-size: 82px; }
+      .verdict { font-size: 22px; }
+      .sun-system { right: 28px; }
+    }
+  </style>
+  <link rel="stylesheet" href="./glance_card_parity.css" />
+  <script defer src="./glance_card_parity.js"></script>
+</head>
+<body>
+  <main class="stage" aria-label="OutfitOracle sunny weather card animation demo">
+    <section class="weather-card">
+
+      <header class="topbar">
+        <button class="icon-btn" aria-label="Open menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div class="brand">OutfitOracle</div>
+        <button class="icon-btn" aria-label="Save forecast">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 4h12v17l-6-3.5L6 21V4Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </header>
+
+      <!-- Sun -->
+      <div class="sun-system" aria-hidden="true">
+        <div class="sun-corona"></div>
+        <div class="sun-glow-outer"></div>
+        <div class="sun-glow"></div>
+        <div class="ray-ring">
+          <span class="ray"></span><span class="ray"></span>
+          <span class="ray"></span><span class="ray"></span>
+          <span class="ray"></span><span class="ray"></span>
+          <span class="ray"></span><span class="ray"></span>
+        </div>
+        <div class="ray-ring-inner">
+          <span class="ray-short"></span><span class="ray-short"></span>
+          <span class="ray-short"></span><span class="ray-short"></span>
+          <span class="ray-short"></span><span class="ray-short"></span>
+          <span class="ray-short"></span><span class="ray-short"></span>
+        </div>
+        <div class="sun-halo"></div>
+        <div class="sun-core"></div>
+      </div>
+
+      <!-- Atmosphere -->
+      <div class="atm-haze" aria-hidden="true"></div>
+      <div class="horizon-line" aria-hidden="true"></div>
+      <div class="lens-flare" aria-hidden="true"></div>
+      <div class="lens-flare-secondary" aria-hidden="true"></div>
+
+      <!-- Clouds -->
+      <div class="cloud one" aria-hidden="true"></div>
+      <div class="cloud two" aria-hidden="true"></div>
+      <div class="cloud three" aria-hidden="true"></div>
+
+      <!-- Atmospheric dust -->
+      <span class="particle a" aria-hidden="true"></span>
+      <span class="particle b" aria-hidden="true"></span>
+      <span class="particle c" aria-hidden="true"></span>
+      <span class="particle d" aria-hidden="true"></span>
+      <span class="particle e" aria-hidden="true"></span>
+
+      <!-- Glass panel -->
+      <article class="glass-panel">
+        <div class="location-row">
+          <span class="location">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z" stroke="currentColor" stroke-width="1.9"/>
+              <circle cx="12" cy="9" r="2.4" stroke="currentColor" stroke-width="1.9"/>
+            </svg>
+            Toronto, CA
+          </span>
+          <span class="time-pill" id="timeLabel">9:41</span>
+        </div>
+
+        <div class="temp-row">
+          <div class="temperature">22°</div>
+          <div class="feels">Feels like<strong>24°</strong></div>
+        </div>
+
+        <div class="condition-row">
+          <span class="mini-sun" aria-hidden="true"></span>
+          <div class="condition-text">
+            <strong>Sunny</strong>
+            <span>Warm, dry, low wind.</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="verdict-label">Verdict</div>
+        <div class="verdict">
+          <span>Take the sunglasses.</span>
+          <span class="sunglasses" aria-hidden="true">⌐■-■</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">☀︎</div>
+            <div>
+              <div class="stat-title">UV Index</div>
+              <div class="stat-value">High</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">≋</div>
+            <div>
+              <div class="stat-title">Wind</div>
+              <div class="stat-value">6 km/h ↗</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="outfit-strip" aria-label="Outfit context">
+        <div class="strip-title">Outfit logic</div>
+        <div class="chips">
+          <div class="chip"><strong>Linen</strong><span>Breathable</span></div>
+          <div class="chip"><strong>Light layers</strong><span>Dry forecast</span></div>
+          <div class="chip"><strong>Sunglasses</strong><span>Non-negotiable</span></div>
+        </div>
+      </section>
+
+      <footer class="bottom-note">
+        <span>Weather at a glance.</span>
+        <span class="motion-pill">sun · rays · atmosphere</span>
+      </footer>
+
+    </section>
+  </main>
+
+  <script>
+    const timeLabel = document.getElementById("timeLabel");
+    function updateTime() {
+      timeLabel.textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+    updateTime();
+    setInterval(updateTime, 30_000);
+  </script>
+</body>
+</html>

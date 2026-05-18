@@ -2,6 +2,9 @@ name = "outfit-oracle-proxy"
 main = "index.js"
 compatibility_date = "2024-09-23"
 
+[placement]
+mode = "smart"
+
 # Rate limiting via KV — create the namespace once, then paste the id below:
 #   npx wrangler kv:namespace create "RATE_LIMIT_KV"
 #
@@ -11,3 +14,4 @@ compatibility_date = "2024-09-23"
 
 # Secrets — set after deploying:
 #   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put FAL_KEY          ← required for image generation (/image endpoint)

@@ -7,15 +7,15 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
 import {
-  STYLE_KEYWORDS, BUDGET_TIERS, PERSONALITY_OPTIONS, TEMP_SENSITIVITY_OPTIONS, COLOR_OPTIONS,
-  OraclePersonality, BudgetTier, TempSensitivity,
+  STYLE_KEYWORDS, BUDGET_TIERS, SIZE_OPTIONS, PERSONALITY_OPTIONS, TEMP_SENSITIVITY_OPTIONS, COLOR_OPTIONS,
+  OraclePersonality, BudgetTier, TempSensitivity, ClothingSize,
 } from '../hooks/useStyleProfile';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 export function ProfileEditScreen() {
-  const { colors, fonts, isDark } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, isDark, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const navigation = useNavigation();
   const { profileCtx } = useAppData();
   const existing = profileCtx.profile;
@@ -27,6 +27,7 @@ export function ProfileEditScreen() {
   const [tempSensitivity, setTempSensitivity] = useState<TempSensitivity>(existing?.tempSensitivity ?? 'normal');
   const [colorLoves,      setColorLoves]      = useState<string[]>(existing?.colorLoves ?? []);
   const [colorAvoids,     setColorAvoids]     = useState<string[]>(existing?.colorAvoids ?? []);
+  const [size,            setSize]            = useState<ClothingSize | undefined>(existing?.size);
 
   const toggleKeyword = (kw: string) => {
     Haptics.selectionAsync();
@@ -37,7 +38,7 @@ export function ProfileEditScreen() {
 
   const save = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    profileCtx.saveProfile({ keywords, budget, name: name.trim() || undefined, personality, tempSensitivity, colorLoves, colorAvoids });
+    profileCtx.saveProfile({ keywords, budget, name: name.trim() || undefined, personality, tempSensitivity, colorLoves, colorAvoids, size });
     navigation.goBack();
   };
 
@@ -121,6 +122,31 @@ export function ProfileEditScreen() {
               </Pressable>
             );
           })}
+        </View>
+
+        {/* Size */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>CLOTHING SIZE</Text>
+          <Text style={[styles.fieldHint, { marginBottom: spacing.md }]}>
+            Helps the Oracle tailor picks to your proportions and fit.
+          </Text>
+          <View style={styles.chips}>
+            {SIZE_OPTIONS.map(s => {
+              const active = size === s;
+              return (
+                <Pressable
+                  key={s}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => { Haptics.selectionAsync(); setSize(active ? undefined : s); }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={s}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{s}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* Temperature sensitivity */}
@@ -236,7 +262,10 @@ export function ProfileEditScreen() {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isY2K = isY2KTheme(themeName);
+
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
@@ -269,6 +298,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   nameInput: {
     fontFamily: fonts.display,
     fontSize: 26,
+    lineHeight: isY2K ? 36 : 32,
     color: colors.textPrimary,
     letterSpacing: -0.3,
     paddingVertical: spacing.sm,
@@ -293,7 +323,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   budgetRowActive: { backgroundColor: colors.bgSurface },
   budgetLeft: { flex: 1 },
-  budgetLabel: { fontFamily: fonts.displayBold, fontSize: 18, color: colors.textSecondary, letterSpacing: -0.2 },
+  budgetLabel: { fontFamily: fonts.displayBold, fontSize: 18, lineHeight: isY2K ? 27 : 22, color: colors.textSecondary, letterSpacing: -0.2 },
   budgetLabelActive: { color: colors.textPrimary },
   budgetNote: { fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted, letterSpacing: 0.3, marginTop: 2 },
   budgetDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.scarlet },
@@ -305,9 +335,9 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   personalityRowActive: { backgroundColor: colors.bgSurface },
   personalityLeft: { flex: 1 },
-  personalityTitle: { fontFamily: fonts.displayBold, fontSize: 18, color: colors.textSecondary, letterSpacing: -0.2 },
+  personalityTitle: { fontFamily: fonts.displayBold, fontSize: 18, lineHeight: isY2K ? 27 : 22, color: colors.textSecondary, letterSpacing: -0.2 },
   personalityTitleActive: { color: colors.textPrimary },
-  personalityQuote: { fontFamily: fonts.serif, fontSize: 13, color: colors.scarletFg, marginTop: 2, letterSpacing: -0.1 },
+  personalityQuote: { fontFamily: fonts.serif, fontSize: 13, lineHeight: isY2K ? 21 : 18, color: colors.scarletFg, marginTop: 2, letterSpacing: -0.1 },
 
   tempRow: {
     flexDirection: 'row',
@@ -328,6 +358,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   tempBtnLabel: {
     fontFamily: fonts.displayBold,
     fontSize: 14,
+    lineHeight: isY2K ? 21 : 18,
     color: colors.textSecondary,
     letterSpacing: -0.1,
     textAlign: 'center',
@@ -393,4 +424,5 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
   },
   colorLabelLoved:   { color: colors.textPrimary },
   colorLabelAvoided: { color: colors.scarletFg },
-}); }
+  });
+}

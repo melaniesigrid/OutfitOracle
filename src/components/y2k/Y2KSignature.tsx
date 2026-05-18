@@ -23,7 +23,7 @@ export function Y2KSignature({ text, color = y2kTokens.mutedPurple, style }: Pro
   const typo = useMemo(() => getY2KTypography(y2kFontSubtheme), [y2kFontSubtheme]);
 
   return (
-    <Text style={[{ fontFamily: typo.scriptMedium.fontFamily, fontSize: 22, letterSpacing: 0.3, color }, style]}>
+    <Text style={[{ fontFamily: typo.scriptMedium.fontFamily, fontSize: 22, lineHeight: 34, letterSpacing: 0.3, color }, style]}>
       {text ?? DEFAULTS[0]}
     </Text>
   );

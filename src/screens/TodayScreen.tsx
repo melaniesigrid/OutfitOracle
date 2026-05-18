@@ -1,21 +1,23 @@
 import React, { useRef, useMemo, useState, useCallback } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  Platform, StatusBar, Animated, LayoutChangeEvent, ActivityIndicator,
+  Platform, StatusBar, Animated, Easing, LayoutChangeEvent, ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, AppMetrics, AppFlags, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, isWeatherGlanceTheme, isDarkColor, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, AppFlags, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, usesWeatherWidget, isDarkColor, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTempUnit } from '../contexts/TemperatureContext';
 import { HourlyGraph } from '../components/HourlyGraph';
 import { WeatherGlanceCard } from '../components/WeatherGlanceCard';
+import { WeatherAlertBanner } from '../components/WeatherAlertBanner';
 import { Y2KTodayScreen } from './y2k/Y2KTodayScreen';
 import { MondrianTodayScreen } from './mondrian/MondrianTodayScreen';
 import { HistoryEntry } from '../hooks/useOutfitHistory';
 import { SavedOutfit } from '../hooks/useSavedOutfits';
+import { fashionUsageFor } from '../utils/wordUsage';
 
 // ─── Theme icon mapping ───────────────────────────────────────────────────────
 // Each warm theme substitutes a curated set of MCIcons for the base weather icons.
@@ -241,8 +243,8 @@ function StandardTodayScreen() {
       heroOpacity.setValue(0);
       heroY.setValue(12);
       Animated.parallel([
-        Animated.timing(heroOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(heroY,       { toValue: 0, duration: 450, useNativeDriver: true }),
+        Animated.timing(heroOpacity, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(heroY,       { toValue: 0, duration: 450, easing: Easing.out(Easing.ease), useNativeDriver: true }),
       ]).start();
     }, [heroOpacity, heroY])
   );
@@ -251,11 +253,20 @@ function StandardTodayScreen() {
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const hoursAgo   = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
   const word       = getWord();
+  const wordUsage  = fashionUsageFor(word.word);
 
   const isY2K         = themeName === 'y2k';
-  const isWeatherGlance = isWeatherGlanceTheme(themeName);
+  const showWeatherWidget = usesWeatherWidget(themeName);
   const isWarmTheme   = flags.isWarmTheme;
   const isBannerTheme = flags.isBannerTheme;
+
+  const greeting = useMemo(() => {
+    const name = profile?.name?.trim();
+    if (!name) return null;
+    const h = new Date().getHours();
+    const salutation = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    return `${salutation}, ${name}.`;
+  }, [profile?.name]);
   // Widget surface direction: computed from the actual widget background, not flags.
   // This works for every theme automatically — no per-theme checks needed.
   const widgetIsDark  = isDarkColor(colors.widgetBg);
@@ -273,7 +284,11 @@ function StandardTodayScreen() {
       {/* ── COMPACT HEADER ── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.wordmark}>Outfit Oracle</Text>
+          {greeting ? (
+            <Text style={styles.greeting}>{greeting}</Text>
+          ) : (
+            <Text style={styles.wordmark}>Outfit Oracle</Text>
+          )}
           {streak > 0 && (
             <Text style={styles.streakLabel}>{streak}-DAY {(rankTitle ?? '').toUpperCase()}</Text>
           )}
@@ -304,6 +319,7 @@ function StandardTodayScreen() {
                 <Text style={[styles.wotdWord, { paddingHorizontal: 0, paddingTop: 0 }]}>{word.word}</Text>
                 <Text style={[styles.wotdOrigin, { paddingHorizontal: 0 }]}>{word.origin}</Text>
                 <Text style={[styles.wotdDef, { paddingHorizontal: 0, paddingBottom: 0 }]}>{word.definition}</Text>
+                <Text style={[styles.wotdUsage, { paddingHorizontal: 0, paddingBottom: 0 }]}>WEAR IT: {wordUsage}</Text>
               </View>
             </View>
           ) : (
@@ -312,6 +328,7 @@ function StandardTodayScreen() {
               <Text style={styles.wotdWord}>{word.word}</Text>
               <Text style={styles.wotdOrigin}>{word.origin}</Text>
               <Text style={styles.wotdDef}>{word.definition}</Text>
+              <Text style={styles.wotdUsage}>WEAR IT: {wordUsage}</Text>
             </>
           )}
         </Widget>
@@ -344,12 +361,14 @@ function StandardTodayScreen() {
           <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroY }] }}>
 
             {/* ── WEATHER HERO ── */}
-            {isWeatherGlance ? (
+            <WeatherAlertBanner alerts={weather.alerts} />
+            {showWeatherWidget ? (
               <WeatherGlanceCard
                 weather={weather}
                 formatTemp={formatTemp}
                 mode="hero"
                 style={styles.weatherGlanceHero}
+                lastConsultedAt={cachedAt}
               />
             ) : (
               <View style={styles.weatherHero}>
@@ -618,15 +637,20 @@ function StandardTodayScreen() {
         )}
 
         {/* ── GREETING ── */}
-        {profile?.name ? (
-          <View style={styles.greetingRow}>
-            <Text style={styles.greetingSub}>
-              {streak > 0
-                ? `${streak} consecutive days of devotion.`
-                : 'The Oracle is ready when you are.'}
-            </Text>
-          </View>
-        ) : null}
+        {profile?.name ? (() => {
+          const hour = new Date().getHours();
+          const salutation = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+          return (
+            <View style={styles.greetingRow}>
+              <Text style={styles.greetingName}>{salutation}, {profile.name}.</Text>
+              <Text style={styles.greetingSub}>
+                {streak > 0
+                  ? `${streak} consecutive days of devotion.`
+                  : 'The Oracle is ready when you are.'}
+              </Text>
+            </View>
+          );
+        })() : null}
 
       </ScrollView>
     </View>
@@ -717,6 +741,12 @@ return StyleSheet.create({
     fontSize: 22,
     color: '#FAF9F6',
     letterSpacing: -0.3,
+  },
+  greeting: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: '#FAF9F6',
+    letterSpacing: -0.2,
   },
   streakLabel: {
     fontFamily: fonts.mono,
@@ -813,6 +843,15 @@ return StyleSheet.create({
     color: S.low,
     lineHeight: isWarm ? 22 : 18,
     letterSpacing: isWarm ? 0.1 : 0.2,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  wotdUsage: {
+    fontFamily: fonts.monoMedium,
+    fontSize: 11,
+    color: widgetIsDark ? 'rgba(250,249,246,0.62)' : colors.textSecondary,
+    lineHeight: 17,
+    letterSpacing: 0.8,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
@@ -1316,6 +1355,13 @@ return StyleSheet.create({
     paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  greetingName: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+    marginBottom: 4,
   },
   greetingSub: {
     fontFamily: fonts.mono,

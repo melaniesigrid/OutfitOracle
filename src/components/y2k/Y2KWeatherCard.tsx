@@ -6,6 +6,7 @@ import { y2kTokens, spacing } from '../../theme';
 import { Y2KCard } from './Y2KCard';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getY2KTypography, Y2KTypography } from '../../theme/y2kTypography';
+import { WeatherAlertBanner } from '../WeatherAlertBanner';
 
 interface Props {
   weather: WeatherData;
@@ -32,6 +33,7 @@ export function Y2KWeatherCard({ weather, formatTemp }: Props) {
 
   return (
     <Animated.View style={[{ opacity, transform: [{ translateY }] }, styles.wrapper]}>
+      <WeatherAlertBanner alerts={weather.alerts} />
       {/* Full-purple card — override Y2KCard's cream bg */}
       <Y2KCard shadow style={styles.cardOuter} innerStyle={styles.cardInner}>
         <View style={styles.content}>
@@ -121,6 +123,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   cityName: {
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 18,
+    lineHeight: 26,
     color: y2kTokens.cream,
     letterSpacing: typo.displaySmall.letterSpacing,
   },
@@ -143,6 +146,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   tempHero: {
     fontFamily: typo.displayHero.fontFamily,
     fontSize: 80,
+    lineHeight: 98,
     color: y2kTokens.lime,
     letterSpacing: typo.displayHero.letterSpacing,
   },

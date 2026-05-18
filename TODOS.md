@@ -96,13 +96,8 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 
 ---
 
-### Time-aware greeting in TodayScreen header
-**What:** Replace the static wordmark + streak line in the TodayScreen header with a time-sensitive greeting when the user has a name set: "Good morning, [Name]" / "Good afternoon, [Name]" / "Good evening, [Name]". Morning = before 12, Afternoon = 12–17, Evening = 17+. The wordmark ("Outfit Oracle") moves to a smaller label above the greeting or is dropped in favour of the greeting entirely.
-**Why:** StyleScape (design inspo, 2026-05-14) demonstrates how much warmer a personalised time-aware greeting feels vs. a static brand name on the home screen. The TodayScreen already has `profile.name` available via `profileCtx`; this is a one-line conditional.
-**Pros:** High delight, near-zero effort. Makes the app feel alive and personal. Pairs with name collection in onboarding (already in Roadmap Phase 3).
-**Cons:** Falls back gracefully to wordmark if no name is set. No downside once name collection is shipped.
-**Context:** Added 2026-05-14 from StyleScape design reference. Blocked on name collection in onboarding — ship both together. Implementation: `const hour = new Date().getHours(); const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';`
-**Depends on:** Name collection in onboarding (Phase 3 Roadmap).
+### ~~Time-aware greeting in TodayScreen header~~ — RESOLVED 2026-05-18
+`StandardTodayScreen` now derives `greeting` from `new Date().getHours()` and `profile?.name`. Falls back to "Outfit Oracle" wordmark when no name is set. Uses display font at 20px (vs. wordmark's 22px). Streak label unchanged.
 
 ---
 
@@ -121,10 +116,6 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 ### ~~Test coverage for getSeason~~ — RESOLVED in 1.4.0
 `getSeason()` is exported and covered by 22 tests in `__tests__/oracleUtils.test.ts` (northern/southern hemisphere, all months, equator, undefined lat). Also added: `themePredicates.test.ts` (isDarkColor + all 5 isXTheme predicates) and `y2kTypography.test.ts` (font set + typography for both subthemes). Total: 134 tests across 11 suites.
 
-### Test coverage for formatTemp and offline cache fallback
-**What:** Two remaining coverage gaps: (1) `formatTemp()` Celsius/Fahrenheit conversion in `src/contexts/TemperatureContext.tsx`, (2) the network-error-to-cache fallback in `src/hooks/useOracle.ts`.
-**Why:** formatTemp() bugs silently produce wrong temperatures in every UI element. The offline fallback is user-visible: breaking it surfaces an error instead of cached data on a network blip.
-**Pros:** Catches regressions in C/F conversion (32°F edge case, negative temps) and offline UX (most important for launch).
-**Cons:** Offline fallback test requires mocking AsyncStorage + fetch — uses the same pattern as `oracleProxy.test.ts`, so setup is straightforward. ~20 min total.
-**Context:** Added 2026-05-14. `getSeason` resolved in 1.4.0. formatTemp is in TemperatureContext (pure function, easy). oracleProxy.test.ts already shows the mock pattern for fetch + AsyncStorage.
-**Depends on:** Nothing — both are self-contained.
+### ~~Test coverage for formatTemp and offline cache fallback~~ — RESOLVED 2026-05-18
+`__tests__/formatTemp.test.ts` — 12 tests covering C/F conversion, rounding, edge cases (-40 convergence), and return type.
+`__tests__/oracleOffline.test.ts` — 6 tests covering the network-error regex classification and the CachedResult shape/TTL contract. Total: 152 tests across 13 suites.

@@ -24,12 +24,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project docs
 
+- `ARCHITECTURE.md` — codebase guide: entry points, module map, multi-theme routing, proxy flow, what to read before changing code
 - `Roadmap.md` — feature backlog, launch checklist, completed work
 - `CHANGELOG.md` — release history
 - `TODOS.md` — design/engineering debt with context
 - `BEST_PRACTICES.md` — commit conventions, TypeScript rules, RN constraints
 - `PRIVACY_POLICY.md` — privacy policy (also hosted at GitHub Pages)
-- `DESIGN.md` — design system: three themes (Classic / Editorial Light / Editorial Dark), typography, color, spacing, motion spec
+- `DESIGN.md` — design system: all themes (Classic, Editorial, Y2K, Mondrian, weather variants, etc.), typography, color, spacing, motion spec
 
 ## Roadmap Management
 
@@ -70,6 +71,8 @@ The app calls the Cloudflare Worker proxy which holds the Anthropic key server-s
 Development only (no proxy): set `EXPO_PUBLIC_CLAUDE_API_KEY` in `.env` and leave `EXPO_PUBLIC_PROXY_URL` unset. Direct calls will fail without the proxy since `anthropic-dangerous-direct-browser-access` has been removed. Use the proxy for all environments.
 
 ## Architecture
+
+For the full codebase guide (entry points, module map, theme routing, pre-change reading list), read `ARCHITECTURE.md`.
 
 Expo bare workflow app with React Navigation v6 (3 tabs: Today / Oracle / You). Navigation entry point: `src/navigation/AppNavigator.tsx`. Tab navigator: `src/navigation/TabNavigator.tsx`. `App.tsx` wraps `AppDataProvider` (shared context) → `AppNavigator`. `AppNavigator` shows a mandatory onboarding flow (WelcomeScreen → OnboardingCarousel → PersonalityScreen → StyleOnboarding) on first launch; afterwards it mounts `TabNavigator`.
 

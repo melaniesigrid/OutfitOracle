@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { AppColors, AppFonts, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -13,7 +13,7 @@ export function AvoidSection({ items }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(opacity, { toValue: 1, duration: 500, delay: 480, useNativeDriver: true }).start();
+    Animated.timing(opacity, { toValue: 1, duration: 500, delay: 480, easing: Easing.out(Easing.ease), useNativeDriver: true }).start();
   }, []);
 
   return (

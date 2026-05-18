@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OutfitOracle Rainy WeatherGlanceCard</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: rgba(17, 24, 39, 0.64);
+      --glass: rgba(255, 255, 255, 0.28);
+      --glass-strong: rgba(255, 255, 255, 0.44);
+      --glass-border: rgba(255, 255, 255, 0.46);
+      --rain: rgba(221, 238, 255, 0.76);
+      --rain-soft: rgba(221, 238, 255, 0.38);
+      --blue-900: #111827;
+      --blue-800: #1f2937;
+      --blue-600: #475569;
+      --blue-300: #93c5fd;
+      --lilac: #c4b5fd;
+      --shadow: rgba(2, 6, 23, 0.36);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at top left, rgba(147, 197, 253, 0.22), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(196, 181, 253, 0.14), transparent 36%),
+        #eef2f7;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .stage {
+      width: min(92vw, 430px);
+      padding: 20px;
+    }
+
+    .weather-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 560px;
+      border-radius: 38px;
+      padding: 24px;
+      background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.96) 36%, rgba(71, 85, 105, 0.86) 72%, rgba(148, 163, 184, 0.74) 100%);
+      box-shadow:
+        0 34px 90px var(--shadow),
+        inset 0 1px 0 rgba(255,255,255,0.24);
+      isolation: isolate;
+    }
+
+    .weather-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(147,197,253,0.18), transparent 20%),
+        radial-gradient(circle at 84% 22%, rgba(255,255,255,0.12), transparent 18%),
+        linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.08) 42%, transparent 58%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .weather-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -34% -18% -34%;
+      height: 44%;
+      background:
+        radial-gradient(ellipse at 50% 100%, rgba(8, 13, 23, 0.82) 0%, rgba(30, 41, 59, 0.58) 42%, transparent 74%);
+      filter: blur(1px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: rgba(255,255,255,0.9);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .menu-button,
+    .save-button {
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.11);
+      color: white;
+      display: grid;
+      place-items: center;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 19px;
+      letter-spacing: 0.02em;
+      text-transform: none;
+      text-shadow: 0 1px 20px rgba(0,0,0,0.24);
+    }
+
+    .rain-layer,
+    .mist-layer,
+    .ripple-layer {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .rain-drop {
+      position: absolute;
+      top: -18%;
+      width: 1.5px;
+      height: var(--drop-length, 54px);
+      border-radius: 999px;
+      background: linear-gradient(to bottom, transparent, var(--rain));
+      opacity: var(--drop-opacity, 0.58);
+      transform: rotate(13deg);
+      animation: rainFall var(--drop-speed, 1.25s) linear infinite;
+      animation-delay: var(--drop-delay, 0s);
+    }
+
+    .mist {
+      position: absolute;
+      width: 88%;
+      height: 86px;
+      left: -20%;
+      border-radius: 999px;
+      background: radial-gradient(ellipse, rgba(226, 232, 240, 0.2), transparent 68%);
+      filter: blur(14px);
+      opacity: 0.56;
+      animation: mistDrift 18s ease-in-out infinite;
+    }
+
+    .mist.one { top: 118px; animation-delay: -3s; }
+    .mist.two { top: 278px; width: 104%; opacity: 0.38; animation-duration: 24s; animation-delay: -10s; }
+    .mist.three { bottom: 50px; width: 96%; opacity: 0.32; animation-duration: 21s; animation-delay: -7s; }
+
+    .cloud-bank {
+      position: absolute;
+      top: 76px;
+      left: 50%;
+      width: 290px;
+      height: 120px;
+      transform: translateX(-50%);
+      z-index: 1;
+      animation: cloudBob 6.4s ease-in-out infinite;
+      opacity: 0.9;
+    }
+
+    .cloud-part {
+      position: absolute;
+      bottom: 16px;
+      border-radius: 999px;
+      background:
+        linear-gradient(180deg, rgba(203, 213, 225, 0.42), rgba(71, 85, 105, 0.32));
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        0 22px 54px rgba(2,6,23,0.28);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .cloud-part.base { width: 230px; height: 62px; left: 30px; bottom: 8px; }
+    .cloud-part.a { width: 92px; height: 92px; left: 52px; bottom: 36px; }
+    .cloud-part.b { width: 122px; height: 122px; left: 116px; bottom: 26px; }
+    .cloud-part.c { width: 82px; height: 82px; right: 26px; bottom: 34px; }
+
+    .cloud-mini-rain {
+      position: absolute;
+      left: 82px;
+      right: 82px;
+      bottom: -20px;
+      height: 46px;
+      display: flex;
+      justify-content: space-between;
+      opacity: 0.76;
+    }
+
+    .cloud-mini-rain span {
+      width: 2px;
+      height: 34px;
+      border-radius: 999px;
+      background: linear-gradient(to bottom, transparent, rgba(226, 242, 255, 0.9));
+      transform: rotate(10deg);
+      animation: miniRain 1.15s linear infinite;
+    }
+
+    .cloud-mini-rain span:nth-child(2) { animation-delay: -0.3s; }
+    .cloud-mini-rain span:nth-child(3) { animation-delay: -0.7s; }
+    .cloud-mini-rain span:nth-child(4) { animation-delay: -0.1s; }
+
+    .ripple {
+      position: absolute;
+      bottom: var(--bottom, 48px);
+      left: var(--left, 50%);
+      width: 18px;
+      height: 6px;
+      border: 1px solid rgba(226, 232, 240, 0.42);
+      border-radius: 999px;
+      opacity: 0;
+      transform: translateX(-50%) scale(0.45);
+      animation: ripple 2.5s ease-out infinite;
+      animation-delay: var(--delay, 0s);
+    }
+
+    .glass-panel {
+      position: relative;
+      z-index: 6;
+      margin-top: 104px;
+      border: 1px solid var(--glass-border);
+      border-radius: 30px;
+      padding: 22px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.34), rgba(255,255,255,0.14));
+      backdrop-filter: blur(30px) saturate(135%);
+      -webkit-backdrop-filter: blur(30px) saturate(135%);
+      box-shadow:
+        0 24px 80px rgba(2, 6, 23, 0.28),
+        inset 0 1px 0 rgba(255,255,255,0.46),
+        inset 0 -1px 0 rgba(255,255,255,0.13);
+    }
+
+    .glass-panel::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        linear-gradient(108deg, transparent 0 32%, rgba(255,255,255,0.22) 44%, transparent 56% 100%);
+      opacity: 0.5;
+      transform: translateX(-60%);
+      animation: glassSweep 7s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .location-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255,255,255,0.92);
+      text-shadow: 0 1px 14px rgba(0,0,0,0.24);
+      font-weight: 650;
+      font-size: 14px;
+    }
+
+    .location {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .temp-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .temperature {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 92px;
+      line-height: 0.9;
+      letter-spacing: -0.08em;
+      color: rgba(255,255,255,0.97);
+      text-shadow: 0 18px 56px rgba(0,0,0,0.28);
+    }
+
+    .feels {
+      padding-top: 12px;
+      text-align: right;
+      color: rgba(255,255,255,0.86);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .feels strong {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 31px;
+      line-height: 1.05;
+      font-weight: 400;
+    }
+
+    .condition-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      color: rgba(255,255,255,0.96);
+    }
+
+    .mini-rain-icon {
+      width: 34px;
+      height: 34px;
+      position: relative;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .mini-rain-icon::before {
+      content: "";
+      position: absolute;
+      width: 26px;
+      height: 13px;
+      top: 8px;
+      left: 4px;
+      border-radius: 999px;
+      background: rgba(226, 232, 240, 0.86);
+      box-shadow:
+        7px -5px 0 1px rgba(226, 232, 240, 0.86),
+        -2px 1px 0 0 rgba(226, 232, 240, 0.86),
+        0 0 18px rgba(226, 242, 255, 0.46);
+      animation: iconCloudBob 3s ease-in-out infinite;
+    }
+
+    .mini-rain-icon::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 22px;
+      width: 20px;
+      height: 10px;
+      background:
+        linear-gradient(115deg, transparent 0 25%, rgba(147,197,253,0.92) 25% 34%, transparent 34% 50%, rgba(147,197,253,0.92) 50% 59%, transparent 59% 75%, rgba(147,197,253,0.92) 75% 84%, transparent 84% 100%);
+      animation: iconRainFall 0.92s linear infinite;
+    }
+
+    .condition-text strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .condition-text span {
+      display: block;
+      margin-top: 3px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.68);
+      font-weight: 600;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 20px 0 14px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    }
+
+    .verdict-label {
+      color: rgba(255,255,255,0.54);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .verdict {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 5px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 25px;
+      line-height: 1.08;
+      color: rgba(255,255,255,0.94);
+      text-wrap: balance;
+    }
+
+    .umbrella {
+      font-size: 25px;
+      display: inline-block;
+      animation: umbrellaTilt 2.8s ease-in-out infinite;
+      filter: drop-shadow(0 8px 14px rgba(0,0,0,0.2));
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.28);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.22);
+    }
+
+    .stat-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.82);
+      flex: 0 0 auto;
+    }
+
+    .stat-title {
+      font-size: 11px;
+      color: rgba(255,255,255,0.54);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+      margin-top: 1px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.9);
+      font-weight: 760;
+    }
+
+    .outfit-strip {
+      position: relative;
+      z-index: 6;
+      margin-top: 18px;
+    }
+
+    .strip-title {
+      color: rgba(255,255,255,0.88);
+      font-size: 13px;
+      font-weight: 780;
+      text-shadow: 0 1px 18px rgba(0,0,0,0.18);
+    }
+
+    .chips {
+      display: flex;
+      gap: 9px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .chip {
+      flex: 1;
+      min-height: 70px;
+      border-radius: 20px;
+      padding: 10px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.28);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      color: rgba(255,255,255,0.88);
+      box-shadow: 0 12px 36px rgba(2,6,23,0.16), inset 0 1px 0 rgba(255,255,255,0.22);
+    }
+
+    .chip strong {
+      display: block;
+      font-size: 12px;
+    }
+
+    .chip span {
+      display: block;
+      margin-top: 5px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.56);
+      font-weight: 700;
+    }
+
+    .bottom-note {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 24px;
+      z-index: 6;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: rgba(255,255,255,0.78);
+      font-size: 12px;
+      font-weight: 700;
+      text-shadow: 0 1px 18px rgba(0,0,0,0.18);
+    }
+
+    .motion-pill {
+      white-space: nowrap;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.24);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    @keyframes rainFall {
+      from { transform: translate3d(0, -22vh, 0) rotate(13deg); }
+      to { transform: translate3d(-62px, 122vh, 0) rotate(13deg); }
+    }
+
+    @keyframes miniRain {
+      0% { transform: translateY(-10px) rotate(10deg); opacity: 0; }
+      18% { opacity: 0.9; }
+      100% { transform: translateY(28px) rotate(10deg); opacity: 0; }
+    }
+
+    @keyframes cloudBob {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(8px); }
+    }
+
+    @keyframes mistDrift {
+      0%, 100% { transform: translateX(-4%) scaleX(1); }
+      50% { transform: translateX(38%) scaleX(1.12); }
+    }
+
+    @keyframes ripple {
+      0% { opacity: 0; transform: translateX(-50%) scale(0.35); }
+      20% { opacity: 0.48; }
+      100% { opacity: 0; transform: translateX(-50%) scale(2.4); }
+    }
+
+    @keyframes glassSweep {
+      0%, 28% { transform: translateX(-75%); opacity: 0; }
+      44% { opacity: 0.48; }
+      60%, 100% { transform: translateX(75%); opacity: 0; }
+    }
+
+    @keyframes iconCloudBob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(2px); }
+    }
+
+    @keyframes iconRainFall {
+      0% { transform: translateY(-3px); opacity: 0; }
+      30% { opacity: 1; }
+      100% { transform: translateY(8px); opacity: 0; }
+    }
+
+    @keyframes umbrellaTilt {
+      0%, 100% { transform: rotate(-8deg) translateY(0); }
+      50% { transform: rotate(6deg) translateY(-2px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .stage { padding: 12px; }
+      .weather-card { min-height: 540px; border-radius: 32px; padding: 20px; }
+      .glass-panel { margin-top: 96px; padding: 18px; }
+      .temperature { font-size: 78px; }
+      .verdict { font-size: 22px; }
+      .cloud-bank { transform: translateX(-50%) scale(0.92); }
+    }
+  </style>
+  <link rel="stylesheet" href="./glance_card_parity.css" />
+  <script defer src="./glance_card_parity.js"></script>
+</head>
+<body>
+  <main class="stage" aria-label="OutfitOracle rainy weather card animation demo">
+    <section class="weather-card">
+      <header class="topbar">
+        <button class="menu-button" aria-label="Open menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+        <div class="brand">OutfitOracle</div>
+        <button class="save-button" aria-label="Save forecast">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 4h12v17l-6-3.5L6 21V4Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </header>
+
+      <div class="cloud-bank" aria-hidden="true">
+        <span class="cloud-part base"></span>
+        <span class="cloud-part a"></span>
+        <span class="cloud-part b"></span>
+        <span class="cloud-part c"></span>
+        <div class="cloud-mini-rain">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div class="mist-layer" aria-hidden="true">
+        <span class="mist one"></span>
+        <span class="mist two"></span>
+        <span class="mist three"></span>
+      </div>
+
+      <div class="rain-layer" id="rainLayer" aria-hidden="true"></div>
+
+      <div class="ripple-layer" aria-hidden="true">
+        <span class="ripple" style="--left: 18%; --bottom: 78px; --delay: -0.2s"></span>
+        <span class="ripple" style="--left: 38%; --bottom: 42px; --delay: -1.1s"></span>
+        <span class="ripple" style="--left: 66%; --bottom: 62px; --delay: -0.7s"></span>
+        <span class="ripple" style="--left: 84%; --bottom: 96px; --delay: -1.8s"></span>
+      </div>
+
+      <article class="glass-panel">
+        <div class="location-row">
+          <span class="location">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z" stroke="currentColor" stroke-width="1.9" />
+              <circle cx="12" cy="9" r="2.4" stroke="currentColor" stroke-width="1.9" />
+            </svg>
+            Toronto, CA
+          </span>
+          <span id="timeLabel">9:41</span>
+        </div>
+
+        <div class="temp-row">
+          <div class="temperature">56°</div>
+          <div class="feels">Feels like<strong>52°</strong></div>
+        </div>
+
+        <div class="condition-row">
+          <span class="mini-rain-icon" aria-hidden="true"></span>
+          <div class="condition-text">
+            <strong>Rain</strong>
+            <span>Steady drizzle. Low patience.</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="verdict-label">Verdict</div>
+        <div class="verdict">
+          <span>Waterproof the fantasy.</span>
+          <span class="umbrella" aria-hidden="true">☂</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">⌄</div>
+            <div>
+              <div class="stat-title">Precip</div>
+              <div class="stat-value">80%</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">≋</div>
+            <div>
+              <div class="stat-title">Wind</div>
+              <div class="stat-value">12 mph ↗</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="outfit-strip" aria-label="Outfit context">
+        <div class="strip-title">Outfit logic</div>
+        <div class="chips">
+          <div class="chip"><strong>Trench</strong><span>Water resistant</span></div>
+          <div class="chip"><strong>Boots</strong><span>Puddle proof</span></div>
+          <div class="chip"><strong>No suede</strong><span>Self-respect</span></div>
+        </div>
+      </section>
+
+      <footer class="bottom-note">
+        <span>Rain first. Outfit regrets never.</span>
+        <span class="motion-pill">rain: fall · mist: drift</span>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    const timeLabel = document.getElementById("timeLabel");
+    const rainLayer = document.getElementById("rainLayer");
+
+    function updateTime() {
+      const now = new Date();
+      timeLabel.textContent = now.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+
+    function createRainDrops(count = 64) {
+      const fragment = document.createDocumentFragment();
+
+      for (let index = 0; index < count; index += 1) {
+        const drop = document.createElement("span");
+        drop.className = "rain-drop";
+
+        const left = Math.random() * 115 - 8;
+        const length = 28 + Math.random() * 64;
+        const speed = 0.75 + Math.random() * 1.25;
+        const delay = Math.random() * -2.4;
+        const opacity = 0.22 + Math.random() * 0.52;
+
+        drop.style.left = `${left}%`;
+        drop.style.setProperty("--drop-length", `${length}px`);
+        drop.style.setProperty("--drop-speed", `${speed}s`);
+        drop.style.setProperty("--drop-delay", `${delay}s`);
+        drop.style.setProperty("--drop-opacity", opacity.toFixed(2));
+
+        fragment.appendChild(drop);
+      }
+
+      rainLayer.appendChild(fragment);
+    }
+
+    updateTime();
+    setInterval(updateTime, 30_000);
+    createRainDrops();
+  </script>
+</body>
+</html>

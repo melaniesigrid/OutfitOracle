@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, Pressable, ScrollView, StyleSheet, Platform, StatusBar,
+  View, Text, Pressable, ScrollView, StyleSheet, StatusBar, Image, Modal, Linking, TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -9,10 +9,12 @@ import { useAppData } from '../contexts/AppContext';
 import { BUDGET_TIERS, PERSONALITY_OPTIONS } from '../hooks/useStyleProfile';
 import { getRankTitle } from '../hooks/useConsultStreak';
 import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
-import { AppColors, AppFonts, AppMetrics, ThemeName, isEditorialTheme, isMondrianTheme, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, ThemeName, isEditorialTheme, isMondrianTheme, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { MondrianYouScreen } from './mondrian/MondrianYouScreen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTempUnit } from '../contexts/TemperatureContext';
+import type { ArchiveEntry, ArchiveImages, Reaction } from '../hooks/useArchive';
 
 const PASSPORT_MILESTONES = [
   { cities: 50, title: 'The Nomad Oracle',  icon: 'earth' as const },
@@ -28,17 +30,62 @@ const RANK_PROGRESS = [
   { title: 'Initiate',        min: 1 },
 ];
 
+const ARCHIVE_IMAGE_SLOTS: Array<{ key: keyof ArchiveImages; label: string }> = [
+  { key: 'day', label: 'DAY PHOTO' },
+  { key: 'night', label: 'NIGHT PHOTO' },
+  { key: 'daySketch', label: 'DAY SKETCH' },
+  { key: 'nightSketch', label: 'NIGHT SKETCH' },
+];
+
+const NONE_NEEDED_RE = /\bnone\b|not needed|no outer|skip the|universe has gifted|weather permits|too warm|unnecessary/i;
+
+function archiveImageUrl(entry: ArchiveEntry, key: keyof ArchiveImages): string | undefined {
+  if (key === 'daySketch') return entry.images.daySketch ?? entry.images.sketch;
+  return entry.images[key];
+}
+
+function splitShopItems(raw: string): string[] {
+  return raw
+    .split(/,\s*|\s+and\s+|\s*\+\s*/i)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function openShop(itemName: string) {
+  const query = encodeURIComponent(itemName);
+  Linking.openURL(`https://www.google.com/search?tbm=shop&q=${query}`).catch(() => {});
+}
+
 export function YouScreen() {
   const { colors, fonts, metrics, isDark, themeName } = useTheme();
   const styles = useMemo(() => makeStyles(colors, fonts, metrics, themeName), [colors, fonts, metrics, themeName]);
   const { formatTemp } = useTempUnit();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [lockedExpanded, setLockedExpanded] = useState(false);
   const [isFoundingMember, setIsFoundingMember] = useState(false);
-  const { profileCtx, historyCtx, streakCtx, savedCtx, badges } = useAppData();
+  const [selectedArchiveId, setSelectedArchiveId] = useState<string | null>(null);
+  const [archiveSort, setArchiveSort] = useState<'recent' | 'oldest'>('recent');
+  const [archiveFilter, setArchiveFilter] = useState<'all' | 'liked'>('all');
+  const [archiveOccasionFilter, setArchiveOccasionFilter] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    () => new Set(BADGE_CATEGORY_ORDER),
+  );
+  const toggleCategory = useCallback((cat: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
+  }, []);
+  const { profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx, badges } = useAppData();
   const profile   = profileCtx.profile;
   const { history } = historyCtx;
   const { streak, totalConsults } = streakCtx;
+  const selectedArchive = useMemo(
+    () => archiveCtx.entries.find(entry => entry.id === selectedArchiveId) ?? null,
+    [archiveCtx.entries, selectedArchiveId],
+  );
 
   const rankTitle     = getRankTitle(totalConsults);
   const uniqueCities  = [...new Set(history.map(e => e.city.toLowerCase()))];
@@ -54,6 +101,12 @@ export function YouScreen() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (selectedArchiveId && !selectedArchive) {
+      setSelectedArchiveId(null);
+    }
+  }, [selectedArchiveId, selectedArchive]);
+
   const earnedBadges     = useMemo(() => badges.filter(b => b.earned), [badges]);
   const unearnedBadges   = useMemo(() => badges.filter(b => !b.earned), [badges]);
   const badgesByCategory = useMemo(
@@ -61,24 +114,45 @@ export function YouScreen() {
     [earnedBadges],
   );
 
+  const archiveOccasions = useMemo(() => {
+    const set = new Set<string>();
+    archiveCtx.entries.forEach(e => { if (e.occasion && e.occasion !== 'Any') set.add(e.occasion); });
+    return [...set];
+  }, [archiveCtx.entries]);
+
+  const filteredLooks = useMemo(() => {
+    let result = [...archiveCtx.entries];
+    if (archiveFilter === 'liked') result = result.filter(e => e.reaction === 'liked');
+    if (archiveOccasionFilter) result = result.filter(e => e.occasion === archiveOccasionFilter);
+    if (archiveSort === 'oldest') result = result.reverse();
+    return result;
+  }, [archiveCtx.entries, archiveFilter, archiveOccasionFilter, archiveSort]);
+
   if (isMondrianTheme(themeName)) return <MondrianYouScreen />;
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} translucent={false} />
+      <ScrollView
+        style={styles.scrollBg}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
 
         {/* ── RANK HERO ── */}
-        <View style={styles.rankHero}>
+        <View style={[styles.rankHero, { paddingTop: spacing.xl + insets.top }]}>
           <Pressable
-            style={styles.settingsBtn}
+            style={[styles.settingsBtn, { top: insets.top + spacing.md }]}
             onPress={() => navigation.navigate('Settings')}
             accessibilityRole="button"
             accessibilityLabel="Open settings"
           >
-            <MaterialCommunityIcons name="cog-outline" size={20} color="rgba(250,249,246,0.35)" />
+            <MaterialCommunityIcons name="cog-outline" size={22} color="#FAF9F6" />
           </Pressable>
           <Text style={styles.rankEyebrow}>ORACLE RANK</Text>
+          {profile?.name ? (
+            <Text style={styles.rankGreeting}>Welcome back, {profile.name}.</Text>
+          ) : null}
           <Text style={styles.rankTitle}>{rankTitle}</Text>
           <View style={styles.rankMeta}>
             <Text style={styles.rankConsults}>{totalConsults} consults</Text>
@@ -158,18 +232,36 @@ export function YouScreen() {
           {earnedBadges.length > 0 && BADGE_CATEGORY_ORDER.map(cat => {
             const catBadges = badgesByCategory[cat] ?? [];
             if (catBadges.length === 0) return null;
+            const isExpanded = expandedCategories.has(cat);
             return (
               <View key={cat} style={styles.badgeCategory}>
-                <Text style={styles.badgeCategoryLabel}>{BADGE_CATEGORY_LABELS[cat]}</Text>
-                <View style={styles.badgeGrid}>
-                  {catBadges.map(b => (
-                    <View key={b.id} style={styles.badge}>
-                      <MaterialCommunityIcons name={b.icon as any} size={18} color={metrics.cardGap === 32 ? '#000000' : colors.textPrimary} />
-                      <Text style={styles.badgeTitle}>{b.title}</Text>
-                      <Text style={styles.badgeDesc}>{b.desc}</Text>
-                    </View>
-                  ))}
-                </View>
+                <Pressable
+                  style={styles.badgeCategoryHeader}
+                  onPress={() => toggleCategory(cat)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${isExpanded ? 'Collapse' : 'Expand'} ${BADGE_CATEGORY_LABELS[cat]}`}
+                >
+                  <Text style={styles.badgeCategoryLabel}>{BADGE_CATEGORY_LABELS[cat]}</Text>
+                  <View style={styles.badgeCategoryRight}>
+                    <Text style={styles.badgeCategoryCount}>{catBadges.length}</Text>
+                    <MaterialCommunityIcons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={12}
+                      color={colors.textMuted}
+                    />
+                  </View>
+                </Pressable>
+                {isExpanded && (
+                  <View style={styles.badgeGrid}>
+                    {catBadges.map(b => (
+                      <View key={b.id} style={styles.badge}>
+                        <MaterialCommunityIcons name={b.icon as any} size={18} color={metrics.cardGap === 32 ? '#000000' : colors.textPrimary} />
+                        <Text style={styles.badgeTitle}>{b.title}</Text>
+                        <Text style={styles.badgeDesc}>{b.desc}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             );
           })}
@@ -251,14 +343,14 @@ export function YouScreen() {
           )}
         </View>
 
-        {/* ── SAVED LOOKS ── */}
+        {/* ── SAVED ITEMS ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>SAVED LOOKS</Text>
+            <Text style={styles.sectionLabel}>SAVED ITEMS</Text>
             {savedCtx.saved.length > 0 && <Text style={styles.badgeCount}>{savedCtx.saved.length}</Text>}
           </View>
           {savedCtx.saved.length === 0 ? (
-            <Text style={styles.emptyState}>No looks saved. The wardrobe is a blank canvas.</Text>
+            <Text style={styles.emptyState}>No items saved. The wardrobe is a blank canvas.</Text>
           ) : savedCtx.saved.map(s => (
               <View key={`${s.item.item}-${s.savedAt}`} style={styles.savedRow}>
                 <View style={styles.savedLeft}>
@@ -266,16 +358,198 @@ export function YouScreen() {
                   <Text style={styles.savedItem}>{s.item.item}</Text>
                   <Text style={styles.savedMeta}>{s.city} · {s.vibe}</Text>
                 </View>
-                <Pressable
-                  onPress={() => savedCtx.removeOutfit(s.item, s.city)}
-                  hitSlop={12}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove ${s.item.item} from saved looks`}
-                >
-                  <MaterialCommunityIcons name="heart" size={16} color={!isEditorialTheme(themeName) ? colors.scarletFg : colors.textMuted} />
-                </Pressable>
+                <View style={styles.savedRight}>
+                  <View style={styles.savedReactionRow}>
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => savedCtx.setReaction(s.item, s.city, s.reaction === 'liked' ? null : 'liked')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Like item"
+                    >
+                      <MaterialCommunityIcons
+                        name={s.reaction === 'liked' ? 'heart' : 'heart-outline'}
+                        size={16}
+                        color={s.reaction === 'liked' ? colors.scarletFg : colors.textMuted}
+                      />
+                    </Pressable>
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => savedCtx.setReaction(s.item, s.city, s.reaction === 'disliked' ? null : 'disliked')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Dislike item"
+                    >
+                      <MaterialCommunityIcons
+                        name={s.reaction === 'disliked' ? 'thumb-down' : 'thumb-down-outline'}
+                        size={14}
+                        color={s.reaction === 'disliked' ? colors.textSecondary : colors.textMuted}
+                      />
+                    </Pressable>
+                  </View>
+                  <Pressable
+                    onPress={() => savedCtx.removeOutfit(s.item, s.city)}
+                    hitSlop={12}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${s.item.item} from saved items`}
+                  >
+                    <MaterialCommunityIcons name="close" size={14} color={colors.textMuted} />
+                  </Pressable>
+                </View>
               </View>
             ))}
+        </View>
+
+        {/* ── SAVED LOOKS ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>SAVED LOOKS</Text>
+            <View style={styles.archiveSortRow}>
+              {archiveCtx.entries.length > 0 && (
+                <Text style={styles.badgeCount}>{archiveCtx.entries.length}</Text>
+              )}
+              {archiveCtx.entries.length > 1 && (
+                <Pressable
+                  style={styles.archiveSortBtn}
+                  onPress={() => setArchiveSort(s => s === 'recent' ? 'oldest' : 'recent')}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sort ${archiveSort === 'recent' ? 'oldest first' : 'newest first'}`}
+                >
+                  <MaterialCommunityIcons
+                    name={archiveSort === 'recent' ? 'sort-descending' : 'sort-ascending'}
+                    size={13}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={styles.archiveSortBtnText}>
+                    {archiveSort === 'recent' ? 'RECENT' : 'OLDEST'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+          {archiveCtx.entries.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.archiveFilterRow}
+            >
+              <Pressable
+                style={[styles.archiveFilterChip, archiveFilter === 'all' && !archiveOccasionFilter && styles.archiveFilterChipActive]}
+                onPress={() => { setArchiveFilter('all'); setArchiveOccasionFilter(null); }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: archiveFilter === 'all' && !archiveOccasionFilter }}
+                accessibilityLabel="Show all saved looks"
+              >
+                <Text style={[styles.archiveFilterText, archiveFilter === 'all' && !archiveOccasionFilter && styles.archiveFilterTextActive]}>All</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.archiveFilterChip, archiveFilter === 'liked' && styles.archiveFilterChipActive]}
+                onPress={() => { setArchiveFilter(f => f === 'liked' ? 'all' : 'liked'); setArchiveOccasionFilter(null); }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: archiveFilter === 'liked' }}
+                accessibilityLabel="Show liked looks only"
+              >
+                <MaterialCommunityIcons
+                  name="heart"
+                  size={11}
+                  color={archiveFilter === 'liked' ? '#FAF9F6' : colors.textMuted}
+                />
+                <Text style={[styles.archiveFilterText, archiveFilter === 'liked' && styles.archiveFilterTextActive]}>Liked</Text>
+              </Pressable>
+              {archiveOccasions.map(occ => (
+                <Pressable
+                  key={occ}
+                  style={[styles.archiveFilterChip, archiveOccasionFilter === occ && styles.archiveFilterChipActive]}
+                  onPress={() => { setArchiveOccasionFilter(f => f === occ ? null : occ); setArchiveFilter('all'); }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: archiveOccasionFilter === occ }}
+                  accessibilityLabel={`Filter by ${occ}`}
+                >
+                  <Text style={[styles.archiveFilterText, archiveOccasionFilter === occ && styles.archiveFilterTextActive]}>{occ}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+          {archiveCtx.entries.length === 0 ? (
+            <Text style={styles.emptyState}>
+              Like or save an outfit from the Oracle to build your archive.
+            </Text>
+          ) : filteredLooks.length === 0 ? (
+            <Text style={styles.emptyState}>No looks match the current filter.</Text>
+          ) : filteredLooks.map(entry => {
+            const thumb = entry.images.daySketch ?? entry.images.sketch ?? entry.images.day ?? entry.images.night ?? entry.images.nightSketch;
+            const savedDate = new Date(entry.savedAt);
+            const dateStr = savedDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            const timeStr = savedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return (
+              <Pressable
+                key={entry.id}
+                style={({ pressed }) => [styles.lookCard, pressed && styles.lookCardPressed]}
+                onPress={() => setSelectedArchiveId(entry.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Open saved look ${entry.verdict.vibe}`}
+              >
+                {/* Thumbnail */}
+                {thumb ? (
+                  <Image source={{ uri: thumb }} style={styles.lookThumb} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.lookThumb, styles.lookThumbEmpty]}>
+                    <MaterialCommunityIcons name="eye-outline" size={18} color={colors.textMuted} />
+                  </View>
+                )}
+                {/* Info */}
+                <View style={styles.lookInfo}>
+                  <Text style={styles.lookVibe} numberOfLines={1}>{entry.verdict.vibe}</Text>
+                  <Text style={styles.lookMeta}>
+                    {entry.city}
+                    {entry.occasion && entry.occasion !== 'Any' ? ` · ${entry.occasion}` : ''}
+                  </Text>
+                  <Text style={styles.lookDate}>{dateStr} · {timeStr} · {entry.weather.temp}°C · {entry.weather.conditionLabel}</Text>
+                  {entry.note ? (
+                    <Text style={styles.lookNote} numberOfLines={2}>{entry.note}</Text>
+                  ) : null}
+                  <Text style={styles.lookOpen}>OPEN FULL CARD →</Text>
+                  <View style={styles.lookReactionRow}>
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => archiveCtx.setReaction(entry.id, entry.reaction === 'liked' ? null : 'liked')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Like"
+                    >
+                      <MaterialCommunityIcons
+                        name={entry.reaction === 'liked' ? 'heart' : 'heart-outline'}
+                        size={15}
+                        color={entry.reaction === 'liked' ? colors.scarletFg : colors.textMuted}
+                      />
+                    </Pressable>
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => archiveCtx.setReaction(entry.id, entry.reaction === 'disliked' ? null : 'disliked')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Dislike"
+                    >
+                      <MaterialCommunityIcons
+                        name={entry.reaction === 'disliked' ? 'thumb-down' : 'thumb-down-outline'}
+                        size={15}
+                        color={entry.reaction === 'disliked' ? colors.textSecondary : colors.textMuted}
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+                {/* Delete */}
+                <Pressable
+                  hitSlop={12}
+                  onPress={() => {
+                    archiveCtx.removeEntry(entry.id);
+                    if (selectedArchiveId === entry.id) setSelectedArchiveId(null);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove from archive"
+                  style={styles.lookDelete}
+                >
+                  <MaterialCommunityIcons name="close" size={14} color={colors.textMuted} />
+                </Pressable>
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* ── ORACLE ARCHIVES ── */}
@@ -305,14 +579,263 @@ export function YouScreen() {
         </View>
 
       </ScrollView>
+
+      <ArchiveDetailModal
+        visible={!!selectedArchive}
+        entry={selectedArchive}
+        styles={styles}
+        colors={colors}
+        fonts={fonts}
+        formatTemp={formatTemp}
+        topInset={insets.top}
+        onClose={() => setSelectedArchiveId(null)}
+        onRemove={id => {
+          archiveCtx.removeEntry(id);
+          setSelectedArchiveId(null);
+        }}
+        onReact={(id, reaction) => archiveCtx.setReaction(id, reaction)}
+        onSetNote={(id, note) => archiveCtx.setNote(id, note)}
+      />
     </View>
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, themeName: ThemeName) { return StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+interface ArchiveDetailModalProps {
+  visible: boolean;
+  entry: ArchiveEntry | null;
+  styles: ReturnType<typeof makeStyles>;
+  colors: AppColors;
+  fonts: AppFonts;
+  formatTemp: (celsius: number) => string;
+  topInset: number;
+  onClose: () => void;
+  onRemove: (id: string) => void;
+  onReact: (id: string, reaction: Reaction) => void;
+  onSetNote: (id: string, note: string) => void;
+}
+
+function ArchiveDetailModal({
+  visible,
+  entry,
+  styles,
+  colors,
+  fonts,
+  formatTemp,
+  topInset,
+  onClose,
+  onRemove,
+  onReact,
+  onSetNote,
+}: ArchiveDetailModalProps) {
+  const [noteText, setNoteText] = React.useState('');
+
+  React.useEffect(() => {
+    setNoteText(entry?.note ?? '');
+  }, [entry?.id, entry?.note]);
+
+  if (!entry) return null;
+
+  const savedDate = new Date(entry.savedAt);
+  const dayLooks = entry.verdict.outfits;
+  const nightLooks = entry.verdict.outfitsAlt ?? [];
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      <View style={styles.detailRoot}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
+        <View style={[styles.detailHeader, { paddingTop: topInset + spacing.sm }]}>
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close saved look detail"
+            style={styles.detailHeaderBtn}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={22} color="#FAF9F6" />
+          </Pressable>
+          <Text style={styles.detailHeaderTitle}>SAVED LOOK</Text>
+          <Pressable
+            onPress={() => onRemove(entry.id)}
+            accessibilityRole="button"
+            accessibilityLabel="Remove saved look"
+            style={styles.detailHeaderBtn}
+          >
+            <MaterialCommunityIcons name="trash-can-outline" size={18} color="#FAF9F6" />
+          </Pressable>
+        </View>
+
+        <ScrollView
+          style={styles.detailScroll}
+          contentContainerStyle={styles.detailContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.detailCity}>{entry.city}</Text>
+          <Text style={styles.detailVibe}>{entry.verdict.vibe}</Text>
+          <View style={styles.detailMetaRow}>
+            <Text style={styles.detailMetaText}>
+              {formatTemp(entry.weather.temp)}° · {entry.weather.conditionLabel}
+            </Text>
+            <Text style={styles.detailMetaText}>
+              {savedDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} · {savedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </View>
+
+          <View style={styles.detailImageGrid}>
+            {ARCHIVE_IMAGE_SLOTS.map(slot => {
+              const url = archiveImageUrl(entry, slot.key);
+              return (
+                <View key={slot.key} style={styles.detailImageCell}>
+                  {url ? (
+                    <Image source={{ uri: url }} style={styles.detailImage} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.detailImage, styles.detailImageMissing]}>
+                      <MaterialCommunityIcons name="image-outline" size={18} color={colors.textMuted} />
+                      <Text style={styles.detailImageMissingText}>PENDING</Text>
+                    </View>
+                  )}
+                  <Text style={styles.detailImageLabel}>{slot.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={styles.detailVerdictCard}>
+            <View style={styles.detailVerdictTop}>
+              <Text style={styles.detailCardLabel}>VERDICT</Text>
+              <Text style={styles.detailRating}>{'★'.repeat(entry.verdict.rating)}</Text>
+            </View>
+            <Text style={styles.detailVerdictText}>{entry.verdict.verdict}</Text>
+          </View>
+
+          <ArchivedLookSection title="DAY LOOK" items={dayLooks} styles={styles} colors={colors} />
+          {nightLooks.length > 0 ? (
+            <ArchivedLookSection title="NIGHT LOOK" items={nightLooks} styles={styles} colors={colors} />
+          ) : null}
+
+          {entry.verdict.avoid.length > 0 ? (
+            <View style={styles.detailVerdictCard}>
+              <Text style={styles.detailCardLabel}>AVOID</Text>
+              {entry.verdict.avoid.map(item => (
+                <Text key={item} style={styles.detailAvoidText}>• {item}</Text>
+              ))}
+            </View>
+          ) : null}
+
+          {/* Note editor */}
+          <View style={styles.detailNoteWrap}>
+            <Text style={styles.detailNoteLabel}>YOUR NOTE</Text>
+            <TextInput
+              style={[styles.detailNoteInput, { fontFamily: fonts.serif, color: colors.textPrimary }]}
+              value={noteText}
+              onChangeText={setNoteText}
+              onBlur={() => onSetNote(entry.id, noteText)}
+              onSubmitEditing={() => onSetNote(entry.id, noteText)}
+              placeholder="Wore to Sarah's wedding. Got three compliments."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              returnKeyType="done"
+              blurOnSubmit
+              accessibilityLabel="Add a personal note to this saved look"
+            />
+          </View>
+
+          <View style={styles.detailReactionRow}>
+            <Pressable
+              style={styles.detailReactionBtn}
+              onPress={() => onReact(entry.id, entry.reaction === 'liked' ? null : 'liked')}
+              accessibilityRole="button"
+              accessibilityLabel="Like saved look"
+            >
+              <MaterialCommunityIcons
+                name={entry.reaction === 'liked' ? 'heart' : 'heart-outline'}
+                size={18}
+                color={entry.reaction === 'liked' ? colors.scarletFg : colors.textMuted}
+              />
+              <Text style={[styles.detailReactionText, entry.reaction === 'liked' && { color: colors.scarletFg }]}>LIKE</Text>
+            </Pressable>
+            <Pressable
+              style={styles.detailReactionBtn}
+              onPress={() => onReact(entry.id, entry.reaction === 'disliked' ? null : 'disliked')}
+              accessibilityRole="button"
+              accessibilityLabel="Dislike saved look"
+            >
+              <MaterialCommunityIcons
+                name={entry.reaction === 'disliked' ? 'thumb-down' : 'thumb-down-outline'}
+                size={18}
+                color={entry.reaction === 'disliked' ? colors.textSecondary : colors.textMuted}
+              />
+              <Text style={[styles.detailReactionText, entry.reaction === 'disliked' && { color: colors.textSecondary }]}>PASS</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+function ArchivedLookSection({
+  title,
+  items,
+  styles,
+  colors,
+}: {
+  title: string;
+  items: ArchiveEntry['verdict']['outfits'];
+  styles: ReturnType<typeof makeStyles>;
+  colors: AppColors;
+}) {
+  return (
+    <View style={styles.detailVerdictCard}>
+      <Text style={styles.detailCardLabel}>{title}</Text>
+      {items.map(item => {
+        const shopItems = NONE_NEEDED_RE.test(item.item) ? [] : splitShopItems(item.item);
+        return (
+          <View key={`${title}-${item.category}`} style={styles.detailOutfitRow}>
+            <Text style={styles.detailOutfitCategory}>{item.category.toUpperCase()}</Text>
+            <Text style={styles.detailOutfitItem}>{item.item}</Text>
+            <Text style={styles.detailOutfitDetail}>{item.detail}</Text>
+            {shopItems.length > 0 ? (
+              <View style={styles.detailShopRow}>
+                {shopItems.map(piece => (
+                  <Pressable
+                    key={`${title}-${item.category}-${piece}`}
+                    style={({ pressed }) => [styles.detailShopBtn, pressed && styles.detailShopBtnPressed]}
+                    onPress={() => openShop(piece)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Shop similar ${piece}`}
+                    accessibilityHint="Opens Google Shopping in your browser"
+                  >
+                    <Text style={styles.detailShopText} numberOfLines={1}>
+                      {shopItems.length > 1 ? `SHOP ${piece.toUpperCase()}` : 'SHOP SIMILAR'}
+                    </Text>
+                    <MaterialCommunityIcons
+                      name="open-in-new"
+                      size={11}
+                      color={colors.textSecondary}
+                      style={styles.detailShopIcon}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, themeName: ThemeName) {
+  const isY2K = isY2KTheme(themeName);
+
+  return StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bgDark },
+  scrollBg: { backgroundColor: colors.bg },
   content: {
-    paddingTop: Platform.OS === 'ios' ? 16 : 12,
     paddingBottom: 60,
   },
 
@@ -320,14 +843,19 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
   rankHero: {
     backgroundColor: colors.bgDark,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingBottom: spacing.xl,
     marginBottom: spacing.md,
   },
   settingsBtn: {
     position: 'absolute',
-    top: spacing.md,
     right: spacing.md,
-    padding: 8,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(250,249,246,0.22)',
+    backgroundColor: 'rgba(250,249,246,0.10)',
     zIndex: 1,
   },
   rankEyebrow: {
@@ -337,11 +865,18 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
     color: 'rgba(250,249,246,0.40)',
     marginBottom: spacing.sm,
   },
+  rankGreeting: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    letterSpacing: 0.5,
+    color: 'rgba(250,249,246,0.52)',
+    marginBottom: spacing.xs,
+  },
   rankTitle: {
     fontFamily: fonts.display,
     fontSize: 48,
     color: '#FAF9F6',
-    lineHeight: 52,
+    lineHeight: isY2K ? 64 : 52,
     letterSpacing: -1,
   },
   rankMeta: {
@@ -432,6 +967,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
   passportCount: {
     fontFamily: fonts.display,
     fontSize: 52,
+    lineHeight: isY2K ? 68 : 58,
     color: colors.textPrimary,
     letterSpacing: -1,
   },
@@ -490,6 +1026,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
   profileName: {
     fontFamily: fonts.display,
     fontSize: 28,
+    lineHeight: isY2K ? 38 : 34,
     color: colors.textPrimary,
     letterSpacing: -0.3,
     marginBottom: spacing.md,
@@ -539,14 +1076,30 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
 
   /* Achievement categories */
   badgeCategory: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  badgeCategoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  badgeCategoryRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  badgeCategoryCount: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
   },
   badgeCategoryLabel: {
     fontFamily: fonts.mono,
     fontSize: 11,
     letterSpacing: 2,
     color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textMuted,
-    marginBottom: spacing.sm,
   },
 
   /* Weather badges */
@@ -597,12 +1150,14 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
   badgeTitle: {
     fontFamily: fonts.displayBold,
     fontSize: 14,
+    lineHeight: isY2K ? 21 : 18,
     color: metrics.cardGap === 32 ? '#000000' : colors.textPrimary,
     letterSpacing: -0.1,
   },
   badgeTitleLocked: {
     fontFamily: fonts.displayBold,
     fontSize: 14,
+    lineHeight: isY2K ? 21 : 18,
     color: colors.textSecondary,
     letterSpacing: -0.1,
   },
@@ -638,6 +1193,15 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
     gap: spacing.md,
   },
   savedLeft: { flex: 1 },
+  savedRight: {
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+  },
+  savedReactionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   savedCategory: {
     fontFamily: fonts.mono,
     fontSize: 11,
@@ -648,6 +1212,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
   savedItem: {
     fontFamily: fonts.display,
     fontSize: 18,
+    lineHeight: isY2K ? 27 : 22,
     color: colors.textPrimary,
     letterSpacing: -0.2,
   },
@@ -657,6 +1222,361 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
     color: colors.textMuted,
     letterSpacing: 0.3,
     marginTop: 2,
+  },
+
+  /* Look Archive cards */
+  lookCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
+  },
+  lookCardPressed: {
+    backgroundColor: colors.bgSurface,
+  },
+  lookThumb: {
+    width: 60,
+    height: 80,
+    flexShrink: 0,
+  },
+  lookThumbEmpty: {
+    backgroundColor: colors.bgSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lookInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  lookVibe: {
+    fontFamily: fonts.display,
+    fontSize: 18,
+    lineHeight: isY2K ? 27 : 22,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  lookMeta: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+  lookDate: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.2,
+  },
+  lookOpen: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textSecondary,
+    letterSpacing: 1.5,
+    marginTop: 3,
+  },
+  lookNote: {
+    fontFamily: fonts.serif,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+    fontStyle: 'italic',
+    marginTop: 3,
+  },
+  lookReactionRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: 6,
+  },
+  lookDelete: {
+    paddingLeft: spacing.sm,
+    paddingTop: 2,
+  },
+
+  /* Look archive filter / sort controls */
+  archiveSortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  archiveSortBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  archiveSortBtnText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: colors.textSecondary,
+  },
+  archiveFilterRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  archiveFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  archiveFilterChipActive: {
+    borderColor: colors.bgDark,
+    backgroundColor: colors.bgDark,
+  },
+  archiveFilterText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: colors.textSecondary,
+  },
+  archiveFilterTextActive: {
+    color: '#FAF9F6',
+  },
+
+  /* Archive detail */
+  detailRoot: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  detailHeader: {
+    backgroundColor: colors.bgDark,
+    paddingTop: 54,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  detailHeaderBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailHeaderTitle: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    letterSpacing: 2.5,
+    color: 'rgba(250,249,246,0.72)',
+  },
+  detailScroll: {
+    flex: 1,
+  },
+  detailContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: 72,
+  },
+  detailCity: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
+  },
+  detailVibe: {
+    fontFamily: fonts.display,
+    fontSize: 42,
+    color: colors.textPrimary,
+    lineHeight: isY2K ? 56 : 45,
+    letterSpacing: -0.8,
+    marginBottom: spacing.md,
+  },
+  detailMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  detailMetaText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  detailImageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  detailImageCell: {
+    width: '48%',
+  },
+  detailImage: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    backgroundColor: colors.bgSurface,
+  },
+  detailImageMissing: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  detailImageMissingText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: colors.textMuted,
+  },
+  detailImageLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+  detailVerdictCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    backgroundColor: metrics.borderWidth > 1 ? colors.bgCard : 'transparent',
+    borderRadius: metrics.radius,
+  },
+  detailVerdictTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  detailCardLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 2,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
+  },
+  detailRating: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: !isEditorialTheme(themeName) ? colors.scarletFg : colors.textSecondary,
+  },
+  detailVerdictText: {
+    fontFamily: fonts.serif,
+    fontSize: 18,
+    color: colors.textPrimary,
+    lineHeight: 26,
+  },
+  detailOutfitRow: {
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  detailOutfitCategory: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2,
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  detailOutfitItem: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    lineHeight: isY2K ? 30 : 24,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+    marginBottom: 3,
+  },
+  detailOutfitDetail: {
+    fontFamily: fonts.serif,
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  detailShopRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  detailShopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '100%',
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  detailShopBtnPressed: {
+    backgroundColor: colors.bgSurface,
+  },
+  detailShopText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: colors.textSecondary,
+    maxWidth: 210,
+  },
+  detailShopIcon: {
+    marginLeft: 5,
+  },
+  detailAvoidText: {
+    fontFamily: fonts.serif,
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: spacing.xs,
+  },
+  detailNoteWrap: {
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    paddingTop: spacing.md,
+    marginBottom: spacing.md,
+  },
+  detailNoteLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 2.5,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
+  },
+  detailNoteInput: {
+    fontSize: 17,
+    lineHeight: 26,
+    letterSpacing: -0.1,
+    minHeight: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingBottom: spacing.sm,
+  },
+  detailReactionRow: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: spacing.sm,
+  },
+  detailReactionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+  },
+  detailReactionText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2,
+    color: colors.textMuted,
   },
 
   /* Archives */
@@ -671,7 +1591,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
   archiveDateDay: { fontFamily: fonts.mono, fontSize: 12, color: colors.textPrimary, letterSpacing: 0.3 },
   archiveDateTime: { fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted, marginTop: 2 },
   archiveCenter: { flex: 1 },
-  archiveCity: { fontFamily: fonts.display, fontSize: 20, color: colors.textPrimary, letterSpacing: -0.3 },
+  archiveCity: { fontFamily: fonts.display, fontSize: 20, lineHeight: isY2K ? 30 : 24, color: colors.textPrimary, letterSpacing: -0.3 },
   archiveVibe: { fontFamily: fonts.mono, fontSize: 12, color: colors.textMuted, letterSpacing: 0.3, marginTop: 1 },
-  archiveTemp: { fontFamily: fonts.displayBold, fontSize: 20, color: colors.textPrimary, marginLeft: spacing.sm },
+  archiveTemp: { fontFamily: fonts.displayBold, fontSize: 20, lineHeight: isY2K ? 30 : 24, color: colors.textPrimary, marginLeft: spacing.sm },
 }); }

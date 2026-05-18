@@ -10,9 +10,9 @@ export const STYLE_KEYWORDS = [
 ] as const;
 
 export const BUDGET_TIERS = [
-  { id: 'high-street',   label: 'High Street',   note: 'ASOS, Zara, & Other Stories' },
-  { id: 'contemporary', label: 'Contemporary',   note: 'Reiss, AllSaints, COS' },
-  { id: 'luxury',       label: 'Luxury',         note: 'Totême, Bottega, The Row' },
+  { id: 'high-street',   label: 'High Street',   note: 'Accessible everyday retail, resale, and budget finds' },
+  { id: 'contemporary', label: 'Contemporary',   note: 'Better fabrics, construction, and modern labels' },
+  { id: 'luxury',       label: 'Luxury',         note: 'Designer-level materials, longevity, and restraint' },
 ] as const;
 
 export type BudgetTier = typeof BUDGET_TIERS[number]['id'];
@@ -78,6 +78,9 @@ export const COLOR_OPTIONS = [
 
 export type ColorId = typeof COLOR_OPTIONS[number]['id'];
 
+export const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'] as const;
+export type ClothingSize = typeof SIZE_OPTIONS[number];
+
 export interface StyleProfile {
   keywords: string[];
   budget: BudgetTier;
@@ -86,6 +89,7 @@ export interface StyleProfile {
   tempSensitivity?: TempSensitivity;
   colorLoves?: string[];
   colorAvoids?: string[];
+  size?: ClothingSize;
 }
 
 type ProfileState =

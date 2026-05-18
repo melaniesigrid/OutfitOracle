@@ -129,6 +129,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   vibeHeadline: {
     fontFamily: typo.displayLarge.fontFamily,
     fontSize: 44,
+    lineHeight: 58,
     color: y2kTokens.hotPink,
     letterSpacing: typo.displayLarge.letterSpacing,
     marginBottom: spacing.md,

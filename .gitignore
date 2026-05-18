@@ -38,3 +38,5 @@ ios/sentry.properties
 
 # Claude Code local settings — personal IDE config
 .claude/
+
+.compound-engineering/*.local.yaml

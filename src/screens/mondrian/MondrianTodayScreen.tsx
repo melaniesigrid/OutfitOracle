@@ -9,7 +9,9 @@ import * as Haptics from 'expo-haptics';
 import { useAppData } from '../../contexts/AppContext';
 import { useTempUnit } from '../../contexts/TemperatureContext';
 import { HourlyGraph } from '../../components/HourlyGraph';
+import { WeatherAlertBanner } from '../../components/WeatherAlertBanner';
 import { mondrianTokens, spacing } from '../../theme';
+import { fashionUsageFor } from '../../utils/wordUsage';
 
 const { red, blue, yellow, black, white, gridLine } = mondrianTokens;
 
@@ -243,6 +245,7 @@ export function MondrianTodayScreen() {
   const showResult = !!weather && !!verdict;
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const word       = WORDS[dayOfYear() % WORDS.length];
+  const wordUsage  = fashionUsageFor(word.word);
   const today      = new Date().toLocaleDateString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
   }).toUpperCase();
@@ -298,6 +301,7 @@ export function MondrianTodayScreen() {
           <Animated.View style={{ opacity: fadeAnim }}>
 
             {/* ── HERO: Temp (red) + Condition (white) ── */}
+            <WeatherAlertBanner alerts={weather.alerts} />
             <View style={s.heroRow}>
               <Panel bg={red} flex={1} style={{ padding: 16 }}>
                 <Text style={s.heroTemp}>{formatTemp(weather.temp)}</Text>
@@ -561,6 +565,10 @@ export function MondrianTodayScreen() {
           <Panel bg={white} style={{ flex: 1, padding: 16 }}>
             <Text style={s.wotdWord}>{word.word.toUpperCase()}</Text>
             <Text style={s.wotdDef}>{word.definition}</Text>
+            <View style={s.wotdUsageBlock}>
+              <Text style={s.wotdUsageLabel}>WEAR IT</Text>
+              <Text style={s.wotdUsage}>{wordUsage}</Text>
+            </View>
           </Panel>
         </View>
         <GridLine />
@@ -755,6 +763,25 @@ const s = StyleSheet.create({
     fontFamily: 'IBMPlexMono_400Regular',
     fontSize: 11,
     color: '#444444',
+    lineHeight: 17,
+  },
+  wotdUsageBlock: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: gridLine,
+    borderTopColor: black,
+  },
+  wotdUsageLabel: {
+    fontFamily: 'Montserrat_900Black',
+    fontSize: 10,
+    color: red,
+    letterSpacing: 2,
+    marginBottom: 5,
+  },
+  wotdUsage: {
+    fontFamily: 'IBMPlexMono_400Regular',
+    fontSize: 11,
+    color: black,
     lineHeight: 17,
   },
 

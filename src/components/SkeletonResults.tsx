@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Animated, StyleSheet } from 'react-native';
+import { View, Animated, StyleSheet, Easing } from 'react-native';
 import { AppColors, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -8,8 +8,8 @@ function useShimmer() {
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.72, duration: 750, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.35, duration: 750, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.72, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.35, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ])
     );
     anim.start();

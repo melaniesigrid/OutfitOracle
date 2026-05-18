@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Linking, Animated } from 'react-native';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Linking, Animated, Easing, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { OutfitItem } from '../services/oracle';
 import { useAppData } from '../contexts/AppContext';
+import { fetchPexelsImage } from '../services/pexels';
 import { AppColors, AppFonts, AppMetrics, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -50,21 +51,34 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   const shopItems = splitItems(item.item);
   const hearted = savedCtx.isSaved(item, city);
 
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isNoneNeeded) {
+      fetchPexelsImage(item.category, item.item).then(setImageUrl);
+    }
+  }, [item.category, item.item, isNoneNeeded]);
+
   const opacity    = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(16)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
+  const heartScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 420, delay: index * 90, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 420, delay: index * 90, useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 300, delay: index * 80, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 300, delay: index * 80, easing: Easing.out(Easing.ease), useNativeDriver: true }),
     ]).start();
   }, []);
 
   const toggleSave = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Animated.sequence([
+      Animated.timing(heartScale, { toValue: 1.35, duration: 130, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(heartScale, { toValue: 1.0,  duration: 170, easing: Easing.in(Easing.ease),  useNativeDriver: true }),
+    ]).start();
     if (hearted) {
+      Haptics.selectionAsync();
       savedCtx.removeOutfit(item, city);
     } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       savedCtx.saveOutfit(item, city, vibe, weather);
     }
   };
@@ -85,15 +99,29 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
               accessibilityLabel={hearted ? `Remove ${item.item} from saved looks` : `Save ${item.item}`}
               hitSlop={12}
             >
-              <MaterialCommunityIcons
-                name={hearted ? 'heart' : 'heart-outline'}
-                size={16}
-                color={hearted ? colors.scarletFg : colors.border}
-              />
+              <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                <MaterialCommunityIcons
+                  name={hearted ? 'heart' : 'heart-outline'}
+                  size={16}
+                  color={hearted ? colors.scarletFg : colors.border}
+                />
+              </Animated.View>
             </Pressable>
           </View>
-          <Text style={styles.itemName}>{item.item}</Text>
-          <Text style={styles.detail}>{item.detail}</Text>
+          <View style={styles.itemRow}>
+            <View style={styles.itemText}>
+              <Text style={styles.itemName}>{item.item}</Text>
+              <Text style={styles.detail}>{item.detail}</Text>
+            </View>
+            {imageUrl && !isNoneNeeded && (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.itemThumb}
+                resizeMode="cover"
+                accessibilityLabel={item.item}
+              />
+            )}
+          </View>
 
           {isNoneNeeded ? (
             <Text style={styles.blessingNote}>
@@ -186,6 +214,22 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, fla
       fontFamily: fonts.mono,
       fontSize: 12,
       letterSpacing: 2.5,
+    },
+    itemRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    itemText: {
+      flex: 1,
+    },
+    itemThumb: {
+      width: 76,
+      height: 76,
+      flexShrink: 0,
+      borderWidth: 1,
+      borderColor: isSolid ? 'rgba(255,255,255,0.2)' : colors.border,
     },
     itemName: {
       fontFamily: fonts.display,

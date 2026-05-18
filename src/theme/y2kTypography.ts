@@ -62,30 +62,31 @@ export function getY2KTypography(subtheme: Y2KFontSubtheme) {
     displayHero: {
       fontFamily: f.display,
       fontSize: 54,
-      lineHeight: 58,
+      lineHeight: 70,
       letterSpacing: dispLS(subtheme, -1.5, 0),
     },
     displayLarge: {
       fontFamily: f.display,
       fontSize: 40,
-      lineHeight: 44,
+      lineHeight: 52,
       letterSpacing: dispLS(subtheme, -1, 0),
     },
     displayMedium: {
       fontFamily: f.display,
       fontSize: 30,
-      lineHeight: 34,
+      lineHeight: 40,
       letterSpacing: dispLS(subtheme, -0.5, 0),
     },
     displaySmall: {
       fontFamily: f.display,
       fontSize: 20,
-      lineHeight: 24,
+      lineHeight: 28,
       letterSpacing: dispLS(subtheme, -0.3, 0),
     },
     displayMicro: {
       fontFamily: f.display,
       fontSize: 13,
+      lineHeight: 20,
       letterSpacing: dispLS(subtheme, 3, 1),
     },
 
@@ -93,17 +94,17 @@ export function getY2KTypography(subtheme: Y2KFontSubtheme) {
     scriptLarge: {
       fontFamily: f.script,
       fontSize: 32,
-      lineHeight: 38,
+      lineHeight: 46,
     },
     scriptMedium: {
       fontFamily: f.script,
       fontSize: 24,
-      lineHeight: 30,
+      lineHeight: 36,
     },
     scriptSmall: {
       fontFamily: f.script,
       fontSize: 20,
-      lineHeight: 26,
+      lineHeight: 30,
     },
 
     // ── Mono labels / data ────────────────────────────────────────────────
@@ -127,17 +128,17 @@ export function getY2KTypography(subtheme: Y2KFontSubtheme) {
     editorialTitle: {
       fontFamily: f.editorial,
       fontSize: 32,
-      lineHeight: 36,
+      lineHeight: 42,
     },
     editorialItalic: {
       fontFamily: f.editorialItalic,
       fontSize: 20,
-      lineHeight: 26,
+      lineHeight: 32,
     },
     editorialSmall: {
       fontFamily: f.editorialItalic,
       fontSize: 15,
-      lineHeight: 20,
+      lineHeight: 24,
     },
   } as const;
 }

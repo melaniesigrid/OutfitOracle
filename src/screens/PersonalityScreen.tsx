@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { PERSONALITY_OPTIONS, OraclePersonality } from '../hooks/useStyleProfile';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface Props {
@@ -13,8 +13,8 @@ interface Props {
 }
 
 export function PersonalityScreen({ onSelect }: Props) {
-  const { colors, fonts, isDark } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, isDark, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const [selected, setSelected] = useState<OraclePersonality>('editorial');
 
   const confirm = () => {
@@ -79,7 +79,10 @@ export function PersonalityScreen({ onSelect }: Props) {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isY2K = isY2KTheme(themeName);
+
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -100,7 +103,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.display,
     fontSize: 52,
     color: colors.textPrimary,
-    lineHeight: 56,
+    lineHeight: isY2K ? 68 : 56,
     letterSpacing: -1,
     marginBottom: spacing.lg,
   },
@@ -139,6 +142,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.displayBold,
     fontSize: 20,
     color: colors.textSecondary,
+    lineHeight: isY2K ? 28 : 24,
     letterSpacing: -0.3,
   },
   cardTitleActive: {
@@ -154,6 +158,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.serif,
     fontSize: 15,
     color: colors.scarlet,
+    lineHeight: isY2K ? 24 : 20,
     fontStyle: 'italic',
     letterSpacing: -0.2,
   },
@@ -184,4 +189,5 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     letterSpacing: 1.5,
     color: '#FAF9F6',
   },
-}); }
+  });
+}

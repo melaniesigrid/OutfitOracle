@@ -81,6 +81,9 @@ function buildPrompt(weather: WeatherData, gender: string, profile?: StyleProfil
     ? `\nUser style profile:\n- Name: ${profile.name ?? 'The Devotee'}\n- Aesthetic: ${profile.keywords.join(', ')}\n- Budget tier: ${profile.budget} (${BUDGET_NOTES[profile.budget] ?? ''})\n\nThe verdict must speak to what this specific weather means for this specific aesthetic. A "quiet luxury minimalist" in 12°C overcast hears something different from a "vintage eclectic maximalist" in the same conditions. Tailor the vibe, verdict, and every pick to their profile.\n`
     : '';
   const occasionSection = buildOccasionSection(occasion);
+  const sizeNote = profile?.size
+    ? `- Clothing size: ${profile.size} — recommend fits and proportions suited to this size. An oversized silhouette reads differently on XS vs L; tailor cut and volume accordingly.\n`
+    : '';
   const tempNote = profile?.tempSensitivity === 'runs-cold'
     ? `- Temperature sensitivity: This person runs cold — lean toward warmer layers and heavier fabrics than the thermometer alone might suggest.\n`
     : profile?.tempSensitivity === 'runs-hot'
@@ -95,6 +98,21 @@ function buildPrompt(weather: WeatherData, gender: string, profile?: StyleProfil
   const season = getSeason(new Date().getMonth(), weather.latitude);
   const timeContext = getTimeContext();
 
+  const uvNote = weather.uvIndex !== undefined
+    ? `- UV Index: ${weather.uvIndex}${weather.uvIndex >= 8 ? ' — VERY HIGH: sun protection is non-negotiable; recommend sunglasses and SPF-rated layers' : weather.uvIndex >= 6 ? ' — High: sunglasses and a hat are wise' : ''}\n`
+    : '';
+
+  const windNote = (() => {
+    if (!weather.windDirection) return `- Wind: ${weather.windSpeed} km/h\n`;
+    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    const compass = dirs[Math.round(weather.windDirection / 22.5) % 16];
+    return `- Wind: ${weather.windSpeed} km/h from the ${compass}\n`;
+  })();
+
+  const alertNote = weather.alerts?.length
+    ? `- Active weather alerts: ${weather.alerts.map(a => a.event).join(', ')} — incorporate any relevant safety or comfort adjustments\n`
+    : '';
+
   return `You are the Outfit Oracle — a devastatingly chic AI fashion authority. ${voiceInstruction}
 ${profileSection}
 Weather right now:
@@ -104,16 +122,16 @@ Weather right now:
 - Temperature: ${weather.temp}°C (feels like ${weather.feelsLike}°C)
 - Condition: ${weather.conditionLabel} — ${weather.description}
 - Humidity: ${weather.humidity}%
-- Wind: ${weather.windSpeed} km/h
-- Dressing for: ${gender}
-${occasionSection}${tempNote}${colorNote}
-TEMPERATURE RULES — non-negotiable, override aesthetic instincts:
-- Below 5°C: A coat is mandatory. No exceptions.
-- 5–12°C: A jacket or substantial mid-layer is required.
-- 13–19°C: Transitional — smart layers that can be added or removed.
-- 20–26°C: Light fabrics only. No heavy wool or thick knits as a primary layer.
-- Above 27°C: Summer weight only. Do not recommend coats or layered looks.
-- Rain: Footwear must be waterproof or at least water-resistant. Mention an umbrella in accessories.
+${windNote}${uvNote}${alertNote}- Dressing for: ${gender}
+${occasionSection}${sizeNote}${tempNote}${colorNote}
+TEMPERATURE RULES — non-negotiable, override aesthetic instincts. Base all layering decisions on the FEELS LIKE temperature (${weather.feelsLike}°C), not the raw temperature:
+- Feels like below 5°C: A coat is mandatory. No exceptions.
+- Feels like 5–12°C: A jacket or substantial mid-layer is required.
+- Feels like 13–19°C: Transitional — smart layers that can be added or removed.
+- Feels like 20–26°C: Light fabrics only. No heavy wool or thick knits as a primary layer.
+- Feels like above 27°C: Summer weight only. Do not recommend coats or layered looks.
+- Rain or freezing precipitation: Footwear must be waterproof or at least water-resistant. Mention an umbrella in accessories.
+- Freezing rain or ice (codes 56/57/66/67): Warn explicitly — grippy, waterproof boots are required for safety.
 
 VARIETY MANDATE: Avoid predictable defaults. Every pick must feel specific to this city, this aesthetic, this exact weather — not a generic outfit for any day. Do not default to: plain white t-shirt, straight-leg jeans, black coat, white sneakers unless there is a strong specific reason. Make personality-driven, unexpected-but-correct choices.
 
@@ -143,22 +161,43 @@ Respond ONLY with valid JSON — no markdown, no backticks, no preamble:
 }`;
 }
 
+const PROXY_TIMEOUT_MS = 40_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function viaProxy(weather: WeatherData, gender: string, profile?: StyleProfile, occasion?: string, attempt = 0): Promise<OracleVerdict> {
   const deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY).catch(() => null);
 
+  const { pollen: _p, hourly: _h, daily: _d, sunrise: _sr, sunset: _ss, moonPhase: _mp, moonPhaseName: _mpn, moonPhaseIcon: _mpi, ...weatherCore } = weather;
+  const payload = { weather: weatherCore, gender, styleProfile: profile, occasion };
+  console.log('[Oracle] viaProxy attempt', attempt, JSON.stringify(payload, null, 2));
+
   let resp: Response;
   try {
-    resp = await fetch(PROXY_URL, {
+    resp = await fetchWithTimeout(PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(deviceId ? { 'X-Device-ID': deviceId } : {}),
       },
-      body: JSON.stringify({ weather, gender, styleProfile: profile, occasion }),
+      body: JSON.stringify(payload),
     });
-  } catch {
+  } catch (e) {
+    const isTimeout = e instanceof Error && e.name === 'AbortError';
+    console.log('[Oracle] fetch error — timeout:', isTimeout, e);
+    if (isTimeout) throw new Error('The Oracle timed out. Check your connection and try again.');
     throw new Error('The Oracle requires a signal. Check your connection and try again.');
   }
+
+  console.log('[Oracle] response status:', resp.status);
 
   if (!resp.ok) {
     if (resp.status === 429) {
@@ -166,13 +205,20 @@ async function viaProxy(weather: WeatherData, gender: string, profile?: StylePro
       const hours = Math.ceil(retrySeconds / 3600);
       throw new Error(`The Oracle has spoken enough today. Available again in ${hours === 1 ? '1 hour' : `${hours} hours`}.`);
     }
-    // 529 = Cloudflare site overloaded, 503/502 = transient upstream failure — auto-retry
+    // 504 = Anthropic API gateway timeout — don't retry, fail immediately
+    if (resp.status === 504) {
+      throw new Error('The Oracle is unreachable right now. Anthropic may be experiencing issues — try again in a few minutes.');
+    }
+    // 529 = Cloudflare/Anthropic overloaded, 503/502 = transient upstream failure — auto-retry
     if ((resp.status === 529 || resp.status === 503 || resp.status === 502) && attempt < 2) {
       await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
       return viaProxy(weather, gender, profile, occasion, attempt + 1);
     }
     if (resp.status === 529 || resp.status === 503 || resp.status === 502) {
-      throw new Error('The Oracle is momentarily overwhelmed. Please try again in a moment.');
+      // Surface Anthropic's actual message (e.g. "credit limit reached") if present
+      const body = await resp.json().catch(() => ({})) as { error?: string };
+      const detail = typeof body.error === 'string' ? ` ${body.error}` : '';
+      throw new Error(`The Oracle is momentarily overwhelmed.${detail} Please try again in a moment.`);
     }
     if (resp.status >= 500) {
       throw new Error('The Oracle is momentarily unavailable. The fashion world waits.');
@@ -180,9 +226,11 @@ async function viaProxy(weather: WeatherData, gender: string, profile?: StylePro
     throw new Error('The Oracle is displeased. Something went wrong.');
   }
 
-  return resp.json().catch(() => {
+  const verdict = await resp.json().catch(() => {
     throw new Error('The Oracle is displeased. The response was unreadable.');
-  }) as Promise<OracleVerdict>;
+  }) as OracleVerdict;
+  console.log('[Oracle] verdict received:', JSON.stringify(verdict, null, 2));
+  return verdict;
 }
 
 async function viaDirect(weather: WeatherData, gender: string, apiKey: string, profile?: StyleProfile, occasion?: string): Promise<OracleVerdict> {
@@ -212,8 +260,9 @@ async function viaDirect(weather: WeatherData, gender: string, apiKey: string, p
     .join('')
     .trim();
 
+  const cleanText = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
   try {
-    return JSON.parse(text) as OracleVerdict;
+    return JSON.parse(cleanText) as OracleVerdict;
   } catch {
     throw new Error('The Oracle returned an unreadable response. Please try again.');
   }
