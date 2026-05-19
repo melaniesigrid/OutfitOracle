@@ -91,7 +91,6 @@
 
     /* ── ATMOSPHERIC LAYERS ────────────────────────────── */
 
-    /* Golden haze near the horizon */
     .atm-haze {
       position: absolute;
       left: -30%;
@@ -109,7 +108,6 @@
       animation: hazePulse 8s ease-in-out infinite;
     }
 
-    /* Thin horizon line */
     .horizon-line {
       position: absolute;
       left: 0;
@@ -128,7 +126,6 @@
       pointer-events: none;
     }
 
-    /* Lens flare streak from sun */
     .lens-flare {
       position: absolute;
       top: 98px;
@@ -173,7 +170,6 @@
       animation: sunFloat 7.4s ease-in-out infinite;
     }
 
-    /* Slow outer corona — warm conic spokes */
     .sun-corona {
       position: absolute;
       inset: -62px;
@@ -195,7 +191,6 @@
       pointer-events: none;
     }
 
-    /* Soft outer atmospheric glow */
     .sun-glow-outer {
       position: absolute;
       inset: -66px;
@@ -210,7 +205,6 @@
       animation: glowPulse 5s ease-in-out infinite;
     }
 
-    /* Inner glow — tight halo */
     .sun-glow {
       position: absolute;
       inset: -38px;
@@ -224,7 +218,6 @@
       animation: glowPulse 3.8s ease-in-out infinite 0.6s;
     }
 
-    /* Concentric halo ring */
     .sun-halo {
       position: absolute;
       inset: 8px;
@@ -236,7 +229,6 @@
       pointer-events: none;
     }
 
-    /* Primary rays — 8 long, clockwise 22s */
     .ray-ring {
       position: absolute;
       inset: 0;
@@ -265,7 +257,6 @@
     .ray:nth-child(7) { transform: translate(-50%, -76px) rotate(270deg); opacity: 0.90; }
     .ray:nth-child(8) { transform: translate(-50%, -76px) rotate(315deg); opacity: 0.68; }
 
-    /* Secondary rays — 8 shorter, counter-clockwise 30s */
     .ray-ring-inner {
       position: absolute;
       inset: 0;
@@ -294,7 +285,6 @@
     .ray-short:nth-child(7) { transform: translate(-50%, -68px) rotate(292.5deg); }
     .ray-short:nth-child(8) { transform: translate(-50%, -68px) rotate(337.5deg); }
 
-    /* Sun core */
     .sun-core {
       position: absolute;
       inset: 40px;
@@ -336,7 +326,6 @@
       background: inherit;
     }
 
-    /* Cloud 1 — mid distance, drifts right */
     .cloud.one {
       width: 176px;
       height: 56px;
@@ -349,7 +338,6 @@
     .cloud.one::before { width: 78px; height: 78px; left: 28px; bottom: 20px; }
     .cloud.one::after  { width: 98px; height: 98px; right: 22px; bottom: 10px; }
 
-    /* Cloud 2 — far/small, drifts left, blurred for depth */
     .cloud.two {
       width: 170px;
       height: 52px;
@@ -363,7 +351,6 @@
     .cloud.two::before { width: 72px; height: 72px; left: 24px; bottom: 16px; }
     .cloud.two::after  { width: 90px; height: 90px; right: 20px; bottom: 8px; }
 
-    /* Cloud 3 — high altitude, wispy, very slow */
     .cloud.three {
       width: 240px;
       height: 20px;
@@ -388,42 +375,11 @@
       pointer-events: none;
     }
 
-    .particle.a {
-      width: 6px; height: 6px;
-      top: 152px; left: 54px;
-      filter: blur(0.4px);
-      animation: particleDrift 8.2s ease-in-out infinite alternate;
-    }
-    .particle.b {
-      width: 4px; height: 4px;
-      top: 242px; right: 62px;
-      animation: particleDrift 11.4s ease-in-out infinite alternate-reverse;
-      animation-delay: -3.2s;
-      filter: blur(0.3px);
-    }
-    .particle.c {
-      width: 9px; height: 9px;
-      bottom: 192px; left: 40px;
-      opacity: 0.22;
-      filter: blur(0.9px);
-      animation: particleDrift 9.8s ease-in-out infinite alternate;
-      animation-delay: -6.4s;
-    }
-    .particle.d {
-      width: 3px; height: 3px;
-      top: 194px; left: 38%;
-      opacity: 0.36;
-      animation: particleDrift 6.8s ease-in-out infinite alternate;
-      animation-delay: -1.6s;
-    }
-    .particle.e {
-      width: 5px; height: 5px;
-      top: 308px; right: 29%;
-      opacity: 0.20;
-      filter: blur(0.6px);
-      animation: particleDrift 13s ease-in-out infinite alternate-reverse;
-      animation-delay: -7.4s;
-    }
+    .particle.a { width: 6px; height: 6px; top: 152px; left: 54px; filter: blur(0.4px); animation: particleDrift 8.2s ease-in-out infinite alternate; }
+    .particle.b { width: 4px; height: 4px; top: 242px; right: 62px; animation: particleDrift 11.4s ease-in-out infinite alternate-reverse; animation-delay: -3.2s; filter: blur(0.3px); }
+    .particle.c { width: 9px; height: 9px; bottom: 192px; left: 40px; opacity: 0.22; filter: blur(0.9px); animation: particleDrift 9.8s ease-in-out infinite alternate; animation-delay: -6.4s; }
+    .particle.d { width: 3px; height: 3px; top: 194px; left: 38%; opacity: 0.36; animation: particleDrift 6.8s ease-in-out infinite alternate; animation-delay: -1.6s; }
+    .particle.e { width: 5px; height: 5px; top: 308px; right: 29%; opacity: 0.20; filter: blur(0.6px); animation: particleDrift 13s ease-in-out infinite alternate-reverse; animation-delay: -7.4s; }
 
     /* ── TOP BAR ───────────────────────────────────────── */
 
@@ -452,6 +408,7 @@
       -webkit-backdrop-filter: blur(18px);
       cursor: pointer;
       transition: background 0.18s;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.38);
     }
 
     .icon-btn:hover { background: rgba(255,255,255,0.28); }
@@ -524,7 +481,6 @@
       z-index: 1;
     }
 
-    /* Ensure panel content floats above ::before */
     .glass-panel > * { position: relative; z-index: 2; }
 
     /* ── PANEL CONTENT ─────────────────────────────────── */
@@ -602,7 +558,6 @@
       color: rgba(23,18,12,0.88);
     }
 
-    /* Mini sun icon */
     .mini-sun {
       width: 32px;
       height: 32px;
@@ -916,8 +871,6 @@
       0%, 100% { text-shadow: 0 16px 52px rgba(23,18,12,0.10); }
       50%       { text-shadow: 0 16px 52px rgba(23,18,12,0.18), 0 0 48px rgba(255,200,80,0.09); }
     }
-
-    /* ── REDUCED MOTION ─────────────────────────────────── */
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
