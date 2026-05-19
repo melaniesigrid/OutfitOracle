@@ -52,7 +52,7 @@ const USAGE_BY_WORD: Record<string, string> = {
   heritage: 'Wear it through classic fabrics: wool, tweed, trench cloth, denim, or leather.',
   gilded: 'Use it for a controlled gleam, not head-to-toe shine.',
   chromatic: 'Wear it when colour is the strategy, not the accident.',
-  studied: 'Use it when the outfit looks simple but every proportion has been chosen.',
+  studied: 'Use it when the outfit looks simple but every proportion has been selected.',
   verdant: 'Wear it through fresh greens, botanical prints, or a single lively accent.',
   slouchy: 'Balance it with one clean line so relaxed does not become collapsed.',
   laconic: 'Use it for minimal outfits that communicate through precision, not decoration.',

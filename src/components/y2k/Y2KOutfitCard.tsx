@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Linking, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Linking, Animated, Easing } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { OutfitItem } from '../../services/oracle';
+import { buildGoogleShoppingUrl, isNoneNeededItem, resolveShopQueries } from '../../services/shoppingLinks';
 import { useAppData } from '../../contexts/AppContext';
 import { y2kTokens, spacing } from '../../theme';
 import { Y2KCard } from './Y2KCard';
@@ -9,15 +10,8 @@ import { Y2KBadge } from './Y2KBadge';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getY2KTypography, Y2KTypography } from '../../theme/y2kTypography';
 
-const NONE_NEEDED_RE = /\bnone\b|not needed|no outer|skip the|universe has gifted|weather permits|too warm|unnecessary/i;
-
-function splitItems(raw: string): string[] {
-  return raw.split(/,\s*|\s+and\s+|\s*\+\s*/i).map(s => s.trim()).filter(Boolean);
-}
-
 function openShop(itemName: string) {
-  const q = encodeURIComponent(itemName);
-  Linking.openURL(`https://www.google.com/search?tbm=shop&q=${q}`);
+  Linking.openURL(buildGoogleShoppingUrl(itemName));
 }
 
 interface Props {
@@ -47,8 +41,8 @@ export function Y2KOutfitCard({ item, index, city, vibe, weather }: Props) {
   const typo   = useMemo(() => getY2KTypography(y2kFontSubtheme), [y2kFontSubtheme]);
   const styles = useMemo(() => makeStyles(typo), [typo]);
 
-  const isNoneNeeded = NONE_NEEDED_RE.test(item.item);
-  const shopItems    = splitItems(item.item);
+  const isNoneNeeded = isNoneNeededItem(item.item);
+  const shopItems    = resolveShopQueries(item);
   const hearted      = savedCtx.isSaved(item, city);
   const catColor     = categoryColor(item.category);
   const num          = String(index + 1).padStart(2, '0');
@@ -58,8 +52,8 @@ export function Y2KOutfitCard({ item, index, city, vibe, weather }: Props) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 400, delay: index * 80, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 400, delay: index * 80, useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 400, delay: index * 80, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 400, delay: index * 80, easing: Easing.out(Easing.ease), useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -152,7 +146,6 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   heart: {
     fontSize: 18,
-    fontFamily: typo.monoMicro.fontFamily,
   },
   rule: {
     height: 1,

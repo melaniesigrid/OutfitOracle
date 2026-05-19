@@ -5,7 +5,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 const GRAPH_COL_W  = 64;
 const GRAPH_H      = 110;
 const GRAPH_TOP    = 44;
-const GRAPH_BOTTOM = 28;
+const GRAPH_BOTTOM = 36; // extra room so shifted precip never clips
+
+const TIME_LABEL_H = 14; // approx rendered height of 11px mono text
+const TEMP_LABEL_H = 14;
+const ICON_SIZE    = 16;
+const ICON_GAP     = 4;  // min gap between time label bottom and icon top
+const MIN_ICON_TOP = TIME_LABEL_H + ICON_GAP;
 
 export interface HourlyPoint {
   time: string;
@@ -31,6 +37,34 @@ interface HourlyGraphProps {
   dotColor?: string;
   /** Optional border-radius for the dot — set >0 for Y2K bubbly dots */
   dotRadius?: number;
+}
+
+/** Returns a condition-specific icon color, falling back to the theme's iconColor. */
+function conditionIconColor(icon: string, fallback: string): string {
+  switch (icon) {
+    case 'weather-sunny':
+    case 'weather-partly-cloudy':
+      return '#F59E0B'; // amber — sun present
+    case 'weather-lightning-rainy':
+      return '#A78BFA'; // soft purple — thunder
+    case 'weather-hail':
+      return '#67E8F9'; // cyan — hail
+    case 'weather-snowy-heavy':
+    case 'weather-snowy':
+      return '#93C5FD'; // light blue — snow
+    case 'weather-snowy-rainy':
+      return '#7DD3FC'; // sky blue — mixed precipitation
+    case 'weather-pouring':
+      return '#3B82F6'; // blue — heavy rain
+    case 'weather-rainy':
+    case 'weather-partly-rainy':
+      return '#60A5FA'; // lighter blue — light/moderate rain
+    case 'weather-fog':
+      return '#9CA3AF'; // muted gray — fog
+    case 'weather-cloudy':
+    default:
+      return fallback;  // cloudy/overcast/wind — use theme color
+  }
 }
 
 export function HourlyGraph({
@@ -60,10 +94,13 @@ export function HourlyGraph({
   function yFor(t: number) { return GRAPH_TOP + (1 - (t - minT) / range) * GRAPH_H; }
   function xFor(i: number) { return i * GRAPH_COL_W + GRAPH_COL_W / 2; }
 
+  // Natural bottom position for precip labels
+  const precipNatural = totalH - GRAPH_BOTTOM + 4;
+
   const lines = hours.slice(0, -1).map((h, i) => {
-    const x1 = xFor(i);   const y1 = yFor(h.temp);
+    const x1 = xFor(i);     const y1 = yFor(h.temp);
     const x2 = xFor(i + 1); const y2 = yFor(hours[i + 1].temp);
-    const dx = x2 - x1;  const dy = y2 - y1;
+    const dx = x2 - x1;     const dy = y2 - y1;
     const len = Math.sqrt(dx * dx + dy * dy);
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
     return { x1, y1, len, angle, key: i };
@@ -94,20 +131,23 @@ export function HourlyGraph({
         {hours.map((h, i) => {
           const cx = xFor(i);
           const cy = yFor(h.temp);
+
+          // Icon: normally cy-26 above dot, clamped so it never overlaps the time label
+          const iconTop = Math.max(cy - ICON_SIZE - ICON_GAP - 4, MIN_ICON_TOP);
+
+          // Temp label: just below the dot
+          const tempTop = cy + 6;
+
+          // Precip: pinned to the natural bottom row, but pushed down if the temp
+          // label would collide with it (curve is near the bottom of the graph)
+          const precipTop = Math.max(precipNatural, tempTop + TEMP_LABEL_H + 3);
+
+          const ic = conditionIconColor(h.conditionIcon, iconColor);
+
           return (
             <React.Fragment key={i}>
-              {/* Dot */}
-              <View style={{
-                position: 'absolute',
-                left: cx - 3,
-                top: cy - 3,
-                width: 6,
-                height: 6,
-                borderRadius: dotRadius,
-                backgroundColor: dot,
-              }} />
 
-              {/* Time label */}
+              {/* Time label — always at top */}
               <Text style={{
                 position: 'absolute',
                 left: cx - GRAPH_COL_W / 2,
@@ -120,19 +160,30 @@ export function HourlyGraph({
                 letterSpacing: 0.3,
               }}>{h.time}</Text>
 
-              {/* Icon above the curve */}
+              {/* Icon — condition-colored, clamped below the time label */}
               <MaterialCommunityIcons
                 name={iconFn(h.conditionIcon) as any}
-                size={16}
-                color={iconColor}
-                style={{ position: 'absolute', left: cx - 8, top: cy - 26 }}
+                size={ICON_SIZE}
+                color={ic}
+                style={{ position: 'absolute', left: cx - ICON_SIZE / 2, top: iconTop }}
               />
 
-              {/* Temp below the dot */}
+              {/* Dot */}
+              <View style={{
+                position: 'absolute',
+                left: cx - 3,
+                top: cy - 3,
+                width: 6,
+                height: 6,
+                borderRadius: dotRadius,
+                backgroundColor: dot,
+              }} />
+
+              {/* Temp label — just below the dot */}
               <Text style={{
                 position: 'absolute',
                 left: cx - GRAPH_COL_W / 2,
-                top: cy + 6,
+                top: tempTop,
                 width: GRAPH_COL_W,
                 textAlign: 'center',
                 fontFamily: monoFont,
@@ -141,12 +192,12 @@ export function HourlyGraph({
                 letterSpacing: -0.3,
               }}>{fmt(h.temp)}°</Text>
 
-              {/* Precip pinned to bottom */}
+              {/* Precip % — bottom row, shifted down when it would overlap temp */}
               {h.precipProb > 0 && (
                 <Text style={{
                   position: 'absolute',
                   left: cx - GRAPH_COL_W / 2,
-                  top: totalH - GRAPH_BOTTOM + 4,
+                  top: precipTop,
                   width: GRAPH_COL_W,
                   textAlign: 'center',
                   fontFamily: monoFont,
@@ -155,6 +206,7 @@ export function HourlyGraph({
                   letterSpacing: 0.2,
                 }}>{h.precipProb}%</Text>
               )}
+
             </React.Fragment>
           );
         })}

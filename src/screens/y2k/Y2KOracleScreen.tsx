@@ -21,6 +21,8 @@ import { searchCities, CitySuggestion } from '../../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../../services/analytics';
+import { hasNightOutfit, selectOutfitsForLook } from '../../utils/outfitSelection';
+import { formatLocationTimeWithCue } from '../../utils/locationTime';
 import { y2kTokens, spacing } from '../../theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getY2KTypography } from '../../theme/y2kTypography';
@@ -68,6 +70,9 @@ export function Y2KOracleScreen() {
 
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && !!weather && !!verdict;
+  const hasNightLook = hasNightOutfit(verdict);
+  const currentOutfits = selectOutfitsForLook(verdict, lookMode);
+  const cachedAtLabel = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
 
   const { recents, addCity, removeCity } = useRecentCities();
 
@@ -100,6 +105,10 @@ export function Y2KOracleScreen() {
   // Result wipe-in
   useEffect(() => {
     if (status === 'done') {
+      isFirstToggle.current = true;
+      toggleFade.stopAnimation();
+      toggleFade.setValue(1);
+      setLookMode('polished');
       resultTranslateX.setValue(Dimensions.get('window').width);
       Animated.timing(resultTranslateX, {
         toValue: 0, duration: 600,
@@ -107,7 +116,7 @@ export function Y2KOracleScreen() {
         useNativeDriver: true,
       }).start();
     }
-  }, [status]);
+  }, [status, verdict?.vibe, weather?.city]);
 
   // Toggle crossfade
   useEffect(() => {
@@ -228,7 +237,7 @@ export function Y2KOracleScreen() {
               </View>
             </View>
             <View style={styles.headerSubRow}>
-              <Text style={[styles.headerSub, { fontFamily: typo.monoLabel.fontFamily }]}>// submit for judgment ♡</Text>
+              <Text style={[styles.headerSub, { fontFamily: typo.monoLabel.fontFamily }]}>// submit the brief ♡</Text>
               <Text style={[styles.headerDate, { fontFamily: typo.monoData.fontFamily }]}>
                 {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase()}
               </Text>
@@ -361,8 +370,8 @@ export function Y2KOracleScreen() {
                 <View style={styles.cacheBadge}>
                   <Text style={styles.cacheBadgeText}>
                     {isOffline
-                      ? `✕ OFFLINE — CACHED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                      : `// LAST CONSULTED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      ? `✕ OFFLINE — CACHED · ${cachedAtLabel}`
+                      : `// LAST CONSULTED · ${cachedAtLabel}`}
                   </Text>
                   {!isOffline && (
                     <Pressable onPress={() => handleConsult(city)} accessibilityRole="button" accessibilityLabel="Refresh result">
@@ -377,7 +386,7 @@ export function Y2KOracleScreen() {
               <Y2KDecreeCard verdict={verdict} />
 
               {/* Day / Night toggle */}
-              {verdict.outfitsAlt && (
+              {hasNightLook && (
                 <View style={styles.lookToggle}>
                   {([['polished', 'DAY LOOK'], ['casual', 'NIGHT LOOK']] as const).map(([mode, label]) => (
                     <Pressable
@@ -398,9 +407,9 @@ export function Y2KOracleScreen() {
 
               {/* Outfit cards */}
               <Animated.View style={{ opacity: toggleFade }}>
-                {(lookMode === 'casual' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits).map((item, i) => (
+                {currentOutfits.map((item, i) => (
                   <Y2KOutfitCard
-                    key={item.category}
+                    key={`${lookMode}-${item.category}-${i}`}
                     item={item}
                     index={i}
                     city={city}
@@ -418,7 +427,7 @@ export function Y2KOracleScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Share the Oracle's verdict"
               >
-                <Text style={styles.shareBtnText}>✦ SHARE THE LOOK ✦</Text>
+                <Text style={[styles.shareBtnText, { fontFamily: typo.scriptMedium.fontFamily }]}>✦ SHARE THE LOOK ✦</Text>
               </Pressable>
               <Pressable
                 style={styles.resetBtn}

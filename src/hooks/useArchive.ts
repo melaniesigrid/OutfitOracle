@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OracleVerdict } from '../services/oracle';
 import { WeatherData } from '../services/weather';
+import { useAuth } from '../contexts/AuthContext';
+import { cloudGet, cloudPut } from '../services/cloudData';
 
 const KEY = '@outfit_oracle_look_archive_v1';
 const MAX_ENTRIES = 100;
@@ -15,6 +17,7 @@ export interface ArchivedWeather {
   conditionIcon: string;
   city: string;
   country: string;
+  utcOffsetSeconds?: number;
 }
 
 export interface ArchivedVerdict {
@@ -57,6 +60,7 @@ function snapshotWeather(w: WeatherData): ArchivedWeather {
     temp: w.temp, feelsLike: w.feelsLike,
     conditionLabel: w.conditionLabel, conditionIcon: w.conditionIcon,
     city: w.city, country: w.country,
+    utcOffsetSeconds: w.utcOffsetSeconds,
   };
 }
 
@@ -89,6 +93,7 @@ function sameImages(a: ArchiveImages, b: ArchiveImages): boolean {
 }
 
 export function useArchive() {
+  const { token } = useAuth();
   const [entries, setEntries] = useState<ArchiveEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -100,9 +105,20 @@ export function useArchive() {
     }).finally(() => setLoaded(true));
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+    cloudGet<ArchiveEntry[]>('/data/archive', token).then(cloud => {
+      if (cloud && cloud.length > 0) {
+        setEntries(cloud);
+        AsyncStorage.setItem(KEY, JSON.stringify(cloud)).catch(() => {});
+      }
+    });
+  }, [token]);
+
   const persist = useCallback((next: ArchiveEntry[]) => {
     AsyncStorage.setItem(KEY, JSON.stringify(next)).catch(() => {});
-  }, []);
+    cloudPut('/data/archive', token, next);
+  }, [token]);
 
   const addEntry = useCallback((
     city: string,

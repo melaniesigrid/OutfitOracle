@@ -52,6 +52,18 @@ export function ChallengeCard({ state }: Props) {
           )}
         </View>
 
+        {/* Week progress bar — days elapsed this week */}
+        {!completed && (
+          <View style={styles.weekBar}>
+            <View
+              style={[
+                styles.weekBarFill,
+                { width: `${Math.round(((7 - daysLeft) / 7) * 100)}%` as any },
+              ]}
+            />
+          </View>
+        )}
+
         {/* Challenge title */}
         <Text style={[styles.title, completed && styles.titleComplete]}>
           {challenge.title}
@@ -65,7 +77,7 @@ export function ChallengeCard({ state }: Props) {
         {/* Completion message */}
         {completed && (
           <Text style={styles.completedMsg}>
-            The Oracle acknowledges your devotion. Well dressed.
+            The Oracle notes the consistency. Well dressed.
           </Text>
         )}
       </View>
@@ -129,6 +141,15 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     },
     titleComplete: {
       color: colors.scarlet,
+    },
+    weekBar: {
+      height: 2,
+      backgroundColor: colors.border,
+      marginBottom: 8,
+    },
+    weekBarFill: {
+      height: 2,
+      backgroundColor: colors.textMuted,
     },
     brief: {
       fontFamily: fonts.mono,

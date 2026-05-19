@@ -110,7 +110,7 @@ export const ShareCard = forwardRef<View, Props>(({ weather, verdict, occasion }
         {verdict.avoid?.length > 0 && (
           <>
             <View style={styles.rule} />
-            <Text style={styles.avoidLabel}>THE ORACLE FORBIDS</Text>
+            <Text style={styles.avoidLabel}>THE ORACLE VETOES</Text>
             <View style={styles.avoidRow}>
               {verdict.avoid.map(a => (
                 <View key={a} style={styles.avoidChip}>
@@ -130,7 +130,7 @@ export const ShareCard = forwardRef<View, Props>(({ weather, verdict, occasion }
               {Array.from({ length: ratingFull  }).map((_, i) => <View key={`f${i}`} style={styles.dotFull} />)}
               {Array.from({ length: ratingEmpty }).map((_, i) => <View key={`e${i}`} style={styles.dotEmpty} />)}
             </View>
-            <Text style={styles.effortLabel}>{effortLabel} EFFORT</Text>
+            <Text style={styles.effortLabel}>POLISH · {effortLabel}</Text>
           </View>
 
           <View style={styles.cta}>

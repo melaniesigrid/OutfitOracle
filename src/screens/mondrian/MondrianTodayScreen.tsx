@@ -12,6 +12,7 @@ import { HourlyGraph } from '../../components/HourlyGraph';
 import { WeatherAlertBanner } from '../../components/WeatherAlertBanner';
 import { mondrianTokens, spacing } from '../../theme';
 import { fashionUsageFor } from '../../utils/wordUsage';
+import { formatLocationTimeWithCue } from '../../utils/locationTime';
 
 const { red, blue, yellow, black, white, gridLine } = mondrianTokens;
 
@@ -233,6 +234,7 @@ export function MondrianTodayScreen() {
   const profile = profileCtx.profile;
   const { formatTemp } = useTempUnit();
   const hoursAgo = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
+  const lastResultTime = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   useFocusEffect(
@@ -348,10 +350,10 @@ export function MondrianTodayScreen() {
             {(weather.sunrise || weather.sunset || weather.moonPhaseName) && (
               <>
                 <SectionBar label="CONDITIONS" bg={black} textColor={yellow} />
-                <View style={{ flexDirection: 'row', backgroundColor: white }}>
+                <View style={s.conditionsRow}>
                   {weather.sunrise && (
                     <>
-                      <View style={{ flex: 1, padding: 12, alignItems: 'center', gap: 4 }}>
+                      <View style={s.conditionCell}>
                         <MaterialCommunityIcons name="weather-sunset-up" size={20} color={black} />
                         <Text style={s.condValue}>{weather.sunrise}</Text>
                         <Text style={s.condLabel}>SUNRISE</Text>
@@ -361,7 +363,7 @@ export function MondrianTodayScreen() {
                   )}
                   {weather.sunset && (
                     <>
-                      <View style={{ flex: 1, padding: 12, alignItems: 'center', gap: 4 }}>
+                      <View style={s.conditionCell}>
                         <MaterialCommunityIcons name="weather-sunset-down" size={20} color={black} />
                         <Text style={s.condValue}>{weather.sunset}</Text>
                         <Text style={s.condLabel}>SUNSET</Text>
@@ -370,7 +372,7 @@ export function MondrianTodayScreen() {
                     </>
                   )}
                   {weather.moonPhaseName && (
-                    <View style={{ flex: 1, padding: 12, alignItems: 'center', gap: 4 }}>
+                    <View style={s.conditionCell}>
                       <MaterialCommunityIcons
                         name={(weather.moonPhaseIcon ?? 'moon-full') as any}
                         size={20}
@@ -517,7 +519,7 @@ export function MondrianTodayScreen() {
             <View style={s.refreshRow}>
               {hoursAgo !== null && (
                 <Text style={s.refreshMeta}>
-                  {hoursAgo === 0 ? 'Just now' : `${hoursAgo}h ago`} · {cachedCity}
+                  {lastResultTime ? `Last ${lastResultTime}` : hoursAgo === 0 ? 'Just now' : `${hoursAgo}h ago`} · {cachedCity}
                 </Text>
               )}
               <Pressable
@@ -786,6 +788,18 @@ const s = StyleSheet.create({
   },
 
   // Conditions panel
+  conditionsRow: {
+    flexDirection: 'row',
+    backgroundColor: white,
+  },
+  conditionCell: {
+    flex: 1,
+    minHeight: 80,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
   condValue: {
     fontFamily: 'Montserrat_900Black',
     fontSize: 15,

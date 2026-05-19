@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OracleVerdict } from '../services/oracle';
 import { WeatherData } from '../services/weather';
 import { StyleProfile } from './useStyleProfile';
-import { buildImagePrompt, buildSketchPrompt, generateOutfitImage, IMAGE_ENABLED } from '../services/imageGeneration';
+import { buildImagePrompt, buildSketchPrompt, generateOutfitImage, IMAGE_ENABLED, PHOTO_NEGATIVE_PROMPT, SKETCH_NEGATIVE_PROMPT } from '../services/imageGeneration';
 
 export type ImageStatus = 'idle' | 'loading' | 'done' | 'error';
 
@@ -17,9 +17,24 @@ export interface OracleImageState {
 
 export type OracleImageVariant = 'day' | 'night' | 'daySketch' | 'nightSketch';
 
-function storageKey(city: string, vibe: string, occasion?: string, variant: OracleImageVariant = 'day'): string {
+function hashString(input: string): string {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = ((hash << 5) + hash) ^ input.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function storageKey(
+  city: string,
+  vibe: string,
+  gender: string,
+  occasion: string | undefined,
+  variant: OracleImageVariant = 'day',
+  promptHash: string,
+): string {
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  return `@oracle_image_v1_${slug(city)}_${slug(vibe)}_${slug(occasion ?? 'any')}_${variant}`;
+  return `@oracle_image_v2_${slug(city)}_${slug(gender)}_${slug(vibe)}_${slug(occasion ?? 'any')}_${variant}_${promptHash}`;
 }
 
 function imagePromptVariant(variant: OracleImageVariant): 'day' | 'night' {
@@ -46,12 +61,25 @@ export function useOracleImage(
   const [error, setError]       = useState<string | null>(null);
   const cancelledRef            = useRef(false);
 
-  const generate = async (force = false) => {
+  const generate = async (force = false, allowFromCachedVerdict = false) => {
     if (!IMAGE_ENABLED || !verdict || !weather) return;
     const photoVariant = imagePromptVariant(variant);
     if (photoVariant === 'night' && !verdict.outfitsAlt) return;
 
-    const key = storageKey(weather.city, verdict.vibe, occasion, variant);
+    const isSketch = isSketchVariant(variant);
+    const prompt = isSketch
+      ? buildSketchPrompt(verdict, weather, photoVariant, gender, occasion, profile)
+      : buildImagePrompt(verdict, weather, photoVariant, gender, occasion, profile);
+    const negativePrompt = isSketch ? SKETCH_NEGATIVE_PROMPT : PHOTO_NEGATIVE_PROMPT;
+    const key = storageKey(weather.city, verdict.vibe, gender, occasion, variant, hashString(prompt));
+
+    // User-triggered calls set loading synchronously before any async work so
+    // OracleImage's showContainer stays true during look-mode/view switches.
+    if (allowFromCachedVerdict) {
+      setStatus('loading');
+      setError(null);
+      cancelledRef.current = false;
+    }
 
     // Always check cache first, regardless of force flag
     // fal.ai CDN URLs expire ~24h; treat cached entries older than 6h as a miss
@@ -70,21 +98,21 @@ export function useOracleImage(
       } catch { /* ignore cache miss */ }
     }
 
-    // Don't generate for stale cached oracle verdicts that have no image cache
-    if (isFromCache && !force) {
+    // Background auto-generation skips stale cached verdicts that have no image cache.
+    // Explicit user actions (night/sketch/regenerate) can still create the missing asset.
+    if (isFromCache && !force && !allowFromCachedVerdict) {
       setStatus('idle');
       return;
     }
 
-    setStatus('loading');
-    setError(null);
-    cancelledRef.current = false;
+    if (!allowFromCachedVerdict) {
+      setStatus('loading');
+      setError(null);
+      cancelledRef.current = false;
+    }
 
     try {
-      const prompt = isSketchVariant(variant)
-        ? buildSketchPrompt(verdict, weather, photoVariant, gender, occasion, profile)
-        : buildImagePrompt(verdict, weather, photoVariant, gender, occasion, profile);
-      const imageUrl = await generateOutfitImage(prompt);
+      const imageUrl = await generateOutfitImage(prompt, negativePrompt);
 
       if (cancelledRef.current) return;
 
@@ -123,7 +151,7 @@ export function useOracleImage(
     status,
     url,
     error,
-    regenerate: () => generate(true),
-    trigger:    () => generate(false),
+    regenerate: () => generate(true, true),
+    trigger:    () => generate(false, true),
   };
 }

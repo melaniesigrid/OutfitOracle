@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
   Platform, StatusBar, Alert, Linking, Switch,
+  Modal, TextInput, KeyboardAvoidingView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
@@ -20,6 +21,9 @@ import {
   setAnalyticsEnabledPreference,
 } from '../services/analytics';
 import { AUTH_SESSION_KEY, AUTH_USERS_KEY } from '../services/auth';
+import {
+  NOTIF_ENABLED_KEY, NOTIF_HOUR_KEY, useNotifications,
+} from '../hooks/useNotifications';
 
 const ALL_KEYS = [
   '@outfit_oracle_history',
@@ -38,6 +42,8 @@ const ALL_KEYS = [
   ANALYTICS_ENABLED_KEY,
   AUTH_USERS_KEY,
   AUTH_SESSION_KEY,
+  NOTIF_ENABLED_KEY,
+  NOTIF_HOUR_KEY,
 ];
 
 const SOFT_KEYS = [
@@ -62,6 +68,12 @@ const TEMP_OPTIONS: { id: TempUnit; label: string }[] = [
   { id: 'F', label: '°F' },
 ];
 
+const NOTIF_TIME_OPTIONS: { label: string; sub: string; hour: number }[] = [
+  { label: 'Morning', sub: '8 AM',  hour: 8  },
+  { label: 'Noon',    sub: '12 PM', hour: 12 },
+  { label: 'Evening', sub: '6 PM',  hour: 18 },
+];
+
 export function SettingsScreen() {
   const { themeName } = useTheme();
   if (isMondrianTheme(themeName)) return <MondrianSettingsScreen />;
@@ -74,9 +86,17 @@ function EditorialSettingsScreen() {
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation<any>();
   const { historyCtx } = useAppData();
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateProfile } = useAuth();
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editCurrentPass, setEditCurrentPass] = useState('');
+  const [editNewPass, setEditNewPass] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editSuccess, setEditSuccess] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const showY2KFonts = isY2KTheme(themeName);
+  const { enabled: notifsEnabled, hour: notifHour, enable: enableNotifs, disable: disableNotifs, updateHour: updateNotifHour } = useNotifications();
 
   useEffect(() => {
     let mounted = true;
@@ -90,12 +110,63 @@ function EditorialSettingsScreen() {
     return () => { mounted = false; };
   }, []);
 
+  async function toggleNotifications(value: boolean) {
+    if (value) {
+      const granted = await enableNotifs();
+      if (!granted) {
+        Alert.alert(
+          'Permission required',
+          'To enable daily reminders, allow notifications for Outfit Oracle in your device Settings.',
+          [{ text: 'OK' }],
+        );
+      }
+    } else {
+      await disableNotifs();
+    }
+  }
+
   function updateAnalyticsEnabled(enabled: boolean) {
     setAnalyticsEnabled(enabled);
     setAnalyticsEnabledPreference(enabled).catch(() => {
       setAnalyticsEnabled(!enabled);
       Alert.alert('Setting not saved', 'The analytics preference could not be updated. Please try again.');
     });
+  }
+
+  function openEditProfile() {
+    setEditName(user?.name ?? '');
+    setEditCurrentPass('');
+    setEditNewPass('');
+    setEditError(null);
+    setEditSuccess(false);
+    setEditOpen(true);
+  }
+
+  async function saveProfile() {
+    if (editSaving) return;
+    setEditError(null);
+    setEditSuccess(false);
+
+    const nameChanged = editName.trim() !== (user?.name ?? '');
+    const passChanged = editNewPass.length > 0;
+    if (!nameChanged && !passChanged) {
+      setEditOpen(false);
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await updateProfile({
+        ...(nameChanged ? { name: editName.trim() } : {}),
+        ...(passChanged ? { currentPassword: editCurrentPass, newPassword: editNewPass } : {}),
+      });
+      setEditSuccess(true);
+      setTimeout(() => setEditOpen(false), 900);
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Could not save changes.');
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   async function clearHistory() {
@@ -183,7 +254,7 @@ function EditorialSettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>ACCOUNT</Text>
 
-          <View style={styles.row}>
+          <Pressable style={styles.row} onPress={openEditProfile} accessibilityRole="button" accessibilityLabel="Edit profile">
             <View style={styles.rowLeft}>
               <MaterialCommunityIcons name="account-circle-outline" size={16} color="rgba(250,249,246,0.50)" />
               <View>
@@ -191,7 +262,97 @@ function EditorialSettingsScreen() {
                 <Text style={styles.rowSub}>{user?.email ?? 'Local device account'}</Text>
               </View>
             </View>
-          </View>
+            <Text style={styles.editLabel}>EDIT</Text>
+          </Pressable>
+
+          {/* ── Edit Profile Modal ── */}
+          <Modal
+            visible={editOpen}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => setEditOpen(false)}
+          >
+            <KeyboardAvoidingView
+              style={styles.modalRoot}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontFamily: fonts.mono }]}>EDIT PROFILE</Text>
+                <Pressable onPress={() => setEditOpen(false)} accessibilityLabel="Close" style={styles.modalClose}>
+                  <MaterialCommunityIcons name="close" size={20} color="rgba(250,249,246,0.70)" />
+                </Pressable>
+              </View>
+
+              <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
+                <Text style={[styles.modalLabel, { fontFamily: fonts.mono }]}>NAME</Text>
+                <TextInput
+                  style={[styles.modalInput, { fontFamily: fonts.mono }]}
+                  value={editName}
+                  onChangeText={setEditName}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                  textContentType="name"
+                  accessibilityLabel="Name"
+                  placeholderTextColor="rgba(250,249,246,0.30)"
+                />
+
+                <Text style={[styles.modalSectionLabel, { fontFamily: fonts.mono }]}>CHANGE PASSWORD</Text>
+                <Text style={[styles.modalHint, { fontFamily: fonts.mono }]}>Leave blank to keep your current password.</Text>
+
+                <Text style={[styles.modalLabel, { fontFamily: fonts.mono }]}>CURRENT PASSWORD</Text>
+                <TextInput
+                  style={[styles.modalInput, { fontFamily: fonts.mono }]}
+                  value={editCurrentPass}
+                  onChangeText={setEditCurrentPass}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  returnKeyType="next"
+                  textContentType="password"
+                  accessibilityLabel="Current password"
+                  placeholder="Required to change password"
+                  placeholderTextColor="rgba(250,249,246,0.30)"
+                />
+
+                <Text style={[styles.modalLabel, { fontFamily: fonts.mono }]}>NEW PASSWORD</Text>
+                <TextInput
+                  style={[styles.modalInput, { fontFamily: fonts.mono }]}
+                  value={editNewPass}
+                  onChangeText={setEditNewPass}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  textContentType="newPassword"
+                  accessibilityLabel="New password"
+                  placeholder="At least 8 characters"
+                  placeholderTextColor="rgba(250,249,246,0.30)"
+                  onSubmitEditing={saveProfile}
+                />
+
+                {editError ? (
+                  <View style={styles.modalError}>
+                    <MaterialCommunityIcons name="alert-circle-outline" size={14} color={colors.scarletFg} />
+                    <Text style={[styles.modalErrorText, { fontFamily: fonts.mono, color: colors.scarletFg }]}>{editError}</Text>
+                  </View>
+                ) : null}
+
+                {editSuccess ? (
+                  <Text style={[styles.modalSuccess, { fontFamily: fonts.mono }]}>Saved.</Text>
+                ) : null}
+
+                <Pressable
+                  style={({ pressed }) => [styles.modalSave, pressed && { opacity: 0.75 }, editSaving && { opacity: 0.5 }]}
+                  onPress={saveProfile}
+                  disabled={editSaving}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save changes"
+                >
+                  <Text style={[styles.modalSaveText, { fontFamily: fonts.mono }]}>
+                    {editSaving ? 'SAVING...' : 'SAVE CHANGES'}
+                  </Text>
+                </Pressable>
+              </ScrollView>
+            </KeyboardAvoidingView>
+          </Modal>
 
           <View style={styles.rowDivider} />
 
@@ -350,6 +511,57 @@ function EditorialSettingsScreen() {
               thumbColor="#FAF9F6"
             />
           </View>
+        </View>
+
+        {/* ── NOTIFICATIONS ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
+
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              <MaterialCommunityIcons name="bell-outline" size={16} color="rgba(250,249,246,0.50)" />
+              <View>
+                <Text style={styles.rowText}>Daily reminder</Text>
+                <Text style={styles.rowSub}>A gentle prompt to consult the Oracle.</Text>
+              </View>
+            </View>
+            <Switch
+              value={notifsEnabled}
+              onValueChange={toggleNotifications}
+              trackColor={{ false: 'rgba(250,249,246,0.15)', true: colors.scarlet }}
+              thumbColor="#FAF9F6"
+            />
+          </View>
+
+          {notifsEnabled && (
+            <>
+              <View style={styles.rowDivider} />
+              <View style={styles.row}>
+                <View style={styles.rowLeft}>
+                  <MaterialCommunityIcons name="clock-outline" size={16} color="rgba(250,249,246,0.50)" />
+                  <Text style={styles.rowText}>Reminder time</Text>
+                </View>
+              </View>
+              <View style={styles.toggleRow}>
+                {NOTIF_TIME_OPTIONS.map(opt => {
+                  const active = notifHour === opt.hour;
+                  return (
+                    <Pressable
+                      key={opt.hour}
+                      style={[styles.y2kChip, active && styles.y2kChipActive]}
+                      onPress={() => updateNotifHour(opt.hour)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`${opt.label} — ${opt.sub}`}
+                    >
+                      <Text style={[styles.themeChipText, active && styles.themeChipTextActive]}>{opt.label}</Text>
+                      <Text style={[styles.themeChipText, { fontSize: 11, opacity: 0.6, marginTop: 2 }]}>{opt.sub}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          )}
         </View>
 
         {/* ── ABOUT ── */}
@@ -584,6 +796,114 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
   y2kChipActive: {
     borderColor: colors.scarlet,
     backgroundColor: `${colors.scarlet}18`,
+  },
+
+  /* Edit Profile Modal */
+  modalRoot: {
+    flex: 1,
+    backgroundColor: colors.bgDark,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: HEADER_TOP,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: divider,
+  },
+  modalTitle: {
+    fontSize: 11,
+    letterSpacing: 3,
+    color: textSub,
+  },
+  modalClose: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalContent: {
+    padding: spacing.lg,
+    paddingBottom: 48,
+    gap: spacing.xs,
+  },
+  modalLabel: {
+    fontSize: 10,
+    letterSpacing: 2,
+    color: textSub,
+    marginTop: spacing.md,
+    marginBottom: 6,
+  },
+  modalSectionLabel: {
+    fontSize: 11,
+    letterSpacing: 2.5,
+    color: textSub,
+    marginTop: spacing.xl,
+    marginBottom: 4,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: divider,
+  },
+  modalHint: {
+    fontSize: 11,
+    color: `${onDark}0.28)`,
+    letterSpacing: 0.2,
+    lineHeight: 16,
+    marginBottom: spacing.sm,
+  },
+  modalInput: {
+    fontSize: 14,
+    color: text,
+    letterSpacing: 0.3,
+    borderWidth: 1,
+    borderColor: border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 13,
+    backgroundColor: `${onDark}0.04)`,
+  },
+  modalError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    padding: spacing.sm,
+    backgroundColor: `${colors.scarlet}14`,
+    borderWidth: 1,
+    borderColor: `${colors.scarlet}30`,
+  },
+  modalErrorText: {
+    fontSize: 12,
+    letterSpacing: 0.2,
+    flex: 1,
+    lineHeight: 17,
+  },
+  modalSuccess: {
+    fontSize: 12,
+    letterSpacing: 1,
+    color: `${onDark}0.60)`,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  modalSave: {
+    marginTop: spacing.xl,
+    backgroundColor: colors.scarlet,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    fontSize: 12,
+    letterSpacing: 2.5,
+    color: '#FAF9F6',
+  },
+
+  /* Account row edit label */
+  editLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2,
+    color: textSub,
   },
 
   /* Footer */

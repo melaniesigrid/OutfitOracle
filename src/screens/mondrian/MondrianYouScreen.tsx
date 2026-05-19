@@ -11,6 +11,7 @@ import { getRankTitle } from '../../hooks/useConsultStreak';
 import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../../hooks/useWeatherBadges';
 import { mondrianTokens, spacing } from '../../theme';
 import { useTempUnit } from '../../contexts/TemperatureContext';
+import { formatLocationDate, formatLocationTime } from '../../utils/locationTime';
 
 const { red, blue, yellow, black, white, gridLine } = mondrianTokens;
 
@@ -94,11 +95,11 @@ const PASSPORT_MILESTONES = [
 ];
 
 const RANK_PROGRESS = [
-  { title: "Oracle's Chosen", min: 100 },
+  { title: 'Front Row',       min: 100 },
   { title: 'Muse',            min: 50 },
   { title: 'Connoisseur',     min: 20 },
-  { title: 'Devotee',         min: 5 },
-  { title: 'Initiate',        min: 1 },
+  { title: 'Regular',         min: 5 },
+  { title: 'New Arrival',     min: 1 },
 ];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -329,7 +330,7 @@ export function MondrianYouScreen() {
         <View style={{ backgroundColor: white }}>
           {savedCtx.saved.length === 0 ? (
             <View style={s.panel}>
-              <Text style={s.emptyText}>No looks saved. The wardrobe is a blank canvas.</Text>
+              <Text style={s.emptyText}>No looks saved yet. The archive is empty.</Text>
             </View>
           ) : savedCtx.saved.map(sv => (
             <View key={`${sv.item.item}-${sv.savedAt}`}>
@@ -367,10 +368,10 @@ export function MondrianYouScreen() {
                 <View style={{ width: 6, alignSelf: 'stretch', backgroundColor: red, marginRight: 12 }} />
                 <View style={{ width: 52, marginRight: 12 }}>
                   <Text style={s.archiveDay}>
-                    {new Date(entry.consultedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                    {formatLocationDate(entry.consultedAt, entry.weather.utcOffsetSeconds)}
                   </Text>
                   <Text style={s.archiveTime}>
-                    {new Date(entry.consultedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatLocationTime(entry.consultedAt, entry.weather.utcOffsetSeconds)}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>

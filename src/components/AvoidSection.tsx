@@ -20,7 +20,7 @@ export function AvoidSection({ items }: Props) {
     <Animated.View style={[styles.container, { opacity }]}>
       <View style={styles.header}>
         <View style={styles.scarletBar} />
-        <Text style={styles.label}>THE ORACLE FORBIDS</Text>
+        <Text style={styles.label}>THE ORACLE VETOES</Text>
       </View>
       {items.map((item, i) => (
         <View key={i} style={styles.item}>

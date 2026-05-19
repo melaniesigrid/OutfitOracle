@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, Pressable, ScrollView, StyleSheet, StatusBar, Image, Modal, Linking, TextInput,
+  View, Text, Pressable, ScrollView, StyleSheet, StatusBar, Image, Modal, Linking, TextInput, Dimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
@@ -8,13 +8,39 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
 import { BUDGET_TIERS, PERSONALITY_OPTIONS } from '../hooks/useStyleProfile';
 import { getRankTitle } from '../hooks/useConsultStreak';
+import { useOracleAccuracy } from '../hooks/useOracleAccuracy';
 import { BADGE_CATEGORY_LABELS, BADGE_CATEGORY_ORDER } from '../hooks/useWeatherBadges';
 import { AppColors, AppFonts, AppMetrics, ThemeName, isEditorialTheme, isMondrianTheme, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { MondrianYouScreen } from './mondrian/MondrianYouScreen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTempUnit } from '../contexts/TemperatureContext';
+import { buildGoogleShoppingUrl, resolveShopQueries } from '../services/shoppingLinks';
+import { formatLocationDate, formatLocationTime, formatLocationTimeWithCue } from '../utils/locationTime';
 import type { ArchiveEntry, ArchiveImages, Reaction } from '../hooks/useArchive';
+import { STYLE_PASSPORT_LANDMARKS, isStylePassportLandmark } from '../data/fashionCapitals';
+
+const LEGENDARY_BADGE_IDS = new Set([
+  'centurion', 'two_hundred', 'five_hundred',
+  'haileys_era', 'cerulean_moment', 'andrea_journey', 'gossip_girl',
+  'streak_30', 'streak_100',
+]);
+
+const RARE_BADGE_IDS = new Set([
+  'half_century', 'quarter_century', 'carrie_bradshaw',
+  'project_runway', 'succession_dressing', 'devil_prada_devotee',
+  'cher_horowitz', 'sex_and_city', 'vivienne_domain',
+  'streak_7', 'streak_14',
+]);
+
+function getBadgeRarity(id: string): 'legendary' | 'rare' | 'common' {
+  if (LEGENDARY_BADGE_IDS.has(id)) return 'legendary';
+  if (RARE_BADGE_IDS.has(id)) return 'rare';
+  return 'common';
+}
+
+const FEATURED_CAPITALS = STYLE_PASSPORT_LANDMARKS.filter(l => l.featured === true);
+const SCREEN_W = Dimensions.get('window').width;
 
 const PASSPORT_MILESTONES = [
   { cities: 50, title: 'The Nomad Oracle',  icon: 'earth' as const },
@@ -23,11 +49,11 @@ const PASSPORT_MILESTONES = [
 ];
 
 const RANK_PROGRESS = [
-  { title: "Oracle's Chosen", min: 100 },
+  { title: 'Front Row',       min: 100 },
   { title: 'Muse',            min: 50 },
   { title: 'Connoisseur',     min: 20 },
-  { title: 'Devotee',         min: 5 },
-  { title: 'Initiate',        min: 1 },
+  { title: 'Regular',         min: 5 },
+  { title: 'New Arrival',     min: 1 },
 ];
 
 const ARCHIVE_IMAGE_SLOTS: Array<{ key: keyof ArchiveImages; label: string }> = [
@@ -37,23 +63,13 @@ const ARCHIVE_IMAGE_SLOTS: Array<{ key: keyof ArchiveImages; label: string }> = 
   { key: 'nightSketch', label: 'NIGHT SKETCH' },
 ];
 
-const NONE_NEEDED_RE = /\bnone\b|not needed|no outer|skip the|universe has gifted|weather permits|too warm|unnecessary/i;
-
 function archiveImageUrl(entry: ArchiveEntry, key: keyof ArchiveImages): string | undefined {
   if (key === 'daySketch') return entry.images.daySketch ?? entry.images.sketch;
   return entry.images[key];
 }
 
-function splitShopItems(raw: string): string[] {
-  return raw
-    .split(/,\s*|\s+and\s+|\s*\+\s*/i)
-    .map(s => s.trim())
-    .filter(Boolean);
-}
-
 function openShop(itemName: string) {
-  const query = encodeURIComponent(itemName);
-  Linking.openURL(`https://www.google.com/search?tbm=shop&q=${query}`).catch(() => {});
+  Linking.openURL(buildGoogleShoppingUrl(itemName)).catch(() => {});
 }
 
 export function YouScreen() {
@@ -94,6 +110,44 @@ export function YouScreen() {
   const earnedStamps  = PASSPORT_MILESTONES.filter(m => cityCount >= m.cities);
 
   const nextRank = RANK_PROGRESS.find(r => totalConsults < r.min);
+  const oracleAccuracy = useOracleAccuracy(history);
+
+  const [deckExpanded, setDeckExpanded] = useState(false);
+
+  const cityPinsForDeck = useMemo(() => {
+    const map = new Map<string, { city: string; country: string; visitCount: number }>();
+    for (const entry of history) {
+      const key = entry.city.toLowerCase();
+      if (!map.has(key)) map.set(key, { city: entry.city, country: entry.weather.country, visitCount: 1 });
+      else map.get(key)!.visitCount++;
+    }
+    return [...map.values()];
+  }, [history]);
+
+  const visitedCityKeys = useMemo(
+    () => new Set(cityPinsForDeck.map(p => p.city.toLowerCase())),
+    [cityPinsForDeck],
+  );
+
+  const cityArchiveImageMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of archiveCtx.entries) {
+      const key = entry.city.toLowerCase();
+      if (!map.has(key)) {
+        const url = entry.images.day ?? entry.images.night ?? entry.images.daySketch ?? entry.images.nightSketch ?? entry.images.sketch;
+        if (url) map.set(key, url);
+      }
+    }
+    return map;
+  }, [archiveCtx.entries]);
+
+  const lockedCapitals = useMemo(
+    () => FEATURED_CAPITALS.filter(fc => {
+      const allNames = [fc.name, ...(fc.aliases ?? [])].map(n => n.toLowerCase());
+      return !allNames.some(n => visitedCityKeys.has(n));
+    }),
+    [visitedCityKeys],
+  );
   const personalityLabel = PERSONALITY_OPTIONS.find(p => p.id === profile?.personality)?.title ?? 'The Editor';
   useEffect(() => {
     AsyncStorage.getItem('@outfit_oracle_founding_member')
@@ -156,11 +210,34 @@ export function YouScreen() {
           <Text style={styles.rankTitle}>{rankTitle}</Text>
           <View style={styles.rankMeta}>
             <Text style={styles.rankConsults}>{totalConsults} consults</Text>
+            {oracleAccuracy.ratedCount >= 3 && (
+              <Text style={styles.rankConsults}>
+                {oracleAccuracy.accuracy}% accuracy
+              </Text>
+            )}
             {nextRank && (
               <Text style={styles.rankNext}>
                 {nextRank.min - totalConsults} until {nextRank.title}
               </Text>
             )}
+          </View>
+          {/* Rank progress bar */}
+          <View style={styles.rankProgressWrap}>
+            <View style={styles.rankProgressTrack}>
+              <View
+                style={[
+                  styles.rankProgressFill,
+                  {
+                    width: nextRank
+                      ? `${Math.min(100, Math.round(
+                          (totalConsults - (RANK_PROGRESS.find(r => r.title === rankTitle)?.min ?? 0)) /
+                          (nextRank.min - (RANK_PROGRESS.find(r => r.title === rankTitle)?.min ?? 0)) * 100,
+                        ))}%` as any
+                      : '100%',
+                  },
+                ]}
+              />
+            </View>
           </View>
           {isFoundingMember && (
             <View style={styles.foundingChip}>
@@ -214,6 +291,82 @@ export function YouScreen() {
           )}
         </View>
 
+        {/* ── PASSPORT DECK ── */}
+        {(cityPinsForDeck.length > 0 || lockedCapitals.length > 0) && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>PASSPORT DECK</Text>
+              <Text style={styles.badgeCount}>
+                {cityPinsForDeck.length} collected
+              </Text>
+            </View>
+
+            <View style={styles.deckGrid}>
+              {(deckExpanded ? cityPinsForDeck : cityPinsForDeck.slice(0, 6)).map(pin => {
+                const key = pin.city.toLowerCase();
+                const thumbUrl = cityArchiveImageMap.get(key);
+                const isCapital = isStylePassportLandmark(pin.city);
+                return (
+                  <Pressable
+                    key={key}
+                    style={styles.deckCard}
+                    onPress={() => navigation.navigate('Map', { openCity: pin.city })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${pin.city} city dossier`}
+                  >
+                    {thumbUrl ? (
+                      <Image source={{ uri: thumbUrl }} style={styles.deckThumb} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.deckThumb, styles.deckThumbPlaceholder]} />
+                    )}
+                    <View style={styles.deckCardBody}>
+                      <Text style={styles.deckCityName} numberOfLines={1}>{pin.city}</Text>
+                      <View style={styles.deckCardMeta}>
+                        <Text style={styles.deckVisits}>{pin.visitCount}×</Text>
+                        {isCapital && (
+                          <View style={styles.deckCapitalDot} />
+                        )}
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+
+              {/* Locked fashion capitals */}
+              {lockedCapitals.map(fc => (
+                <View
+                  key={fc.name}
+                  style={[styles.deckCard, styles.deckCardLocked]}
+                  accessibilityLabel={`${fc.name} — not yet visited`}
+                >
+                  <View style={[styles.deckThumb, styles.deckThumbLocked]}>
+                    <MaterialCommunityIcons name="lock-outline" size={18} color="rgba(250,249,246,0.20)" />
+                  </View>
+                  <View style={styles.deckCardBody}>
+                    <Text style={[styles.deckCityName, styles.deckCityNameLocked]} numberOfLines={1}>
+                      {fc.name}
+                    </Text>
+                    <Text style={styles.deckUnlockHint}>UNLOCK</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {cityPinsForDeck.length > 6 && (
+              <Pressable
+                style={styles.deckExpandBtn}
+                onPress={() => setDeckExpanded(v => !v)}
+                accessibilityRole="button"
+                accessibilityLabel={deckExpanded ? 'Show fewer cities' : `Show all ${cityPinsForDeck.length} cities`}
+              >
+                <Text style={styles.deckExpandText}>
+                  {deckExpanded ? 'SHOW LESS ↑' : `SHOW ALL ${cityPinsForDeck.length} ↓`}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
         {/* ── ACHIEVEMENTS ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -225,7 +378,7 @@ export function YouScreen() {
 
           {earnedBadges.length === 0 && (
             <Text style={styles.badgeEmpty}>
-              Consult the Oracle to begin earning achievements.
+              {personalityLabel} earns standing here. The Oracle tracks 127 marks of distinction across 15 disciplines — temperature, rainfall, wind, cities, occasions, timing, and eight further style records. Your ledger is empty. Consult a first verdict to open it.
             </Text>
           )}
 
@@ -253,13 +406,27 @@ export function YouScreen() {
                 </Pressable>
                 {isExpanded && (
                   <View style={styles.badgeGrid}>
-                    {catBadges.map(b => (
-                      <View key={b.id} style={styles.badge}>
-                        <MaterialCommunityIcons name={b.icon as any} size={18} color={metrics.cardGap === 32 ? '#000000' : colors.textPrimary} />
-                        <Text style={styles.badgeTitle}>{b.title}</Text>
-                        <Text style={styles.badgeDesc}>{b.desc}</Text>
-                      </View>
-                    ))}
+                    {catBadges.map(b => {
+                      const rarity = getBadgeRarity(b.id);
+                      return (
+                        <View
+                          key={b.id}
+                          style={[
+                            styles.badge,
+                            rarity === 'legendary' && { borderColor: colors.scarlet },
+                          ]}
+                        >
+                          <MaterialCommunityIcons name={b.icon as any} size={18} color={metrics.cardGap === 32 ? '#000000' : colors.textPrimary} />
+                          <Text style={styles.badgeTitle}>{b.title}</Text>
+                          <Text style={styles.badgeDesc}>{b.desc}</Text>
+                          {rarity !== 'common' && (
+                            <Text style={[styles.badgeRarity, rarity === 'legendary' && styles.badgeRarityLegendary]}>
+                              {rarity === 'legendary' ? '★ LEGENDARY' : '◆ RARE'}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })}
                   </View>
                 )}
               </View>
@@ -350,7 +517,7 @@ export function YouScreen() {
             {savedCtx.saved.length > 0 && <Text style={styles.badgeCount}>{savedCtx.saved.length}</Text>}
           </View>
           {savedCtx.saved.length === 0 ? (
-            <Text style={styles.emptyState}>No items saved. The wardrobe is a blank canvas.</Text>
+            <Text style={styles.emptyState}>No looks saved yet. The archive is empty.</Text>
           ) : savedCtx.saved.map(s => (
               <View key={`${s.item.item}-${s.savedAt}`} style={styles.savedRow}>
                 <View style={styles.savedLeft}>
@@ -476,9 +643,8 @@ export function YouScreen() {
             <Text style={styles.emptyState}>No looks match the current filter.</Text>
           ) : filteredLooks.map(entry => {
             const thumb = entry.images.daySketch ?? entry.images.sketch ?? entry.images.day ?? entry.images.night ?? entry.images.nightSketch;
-            const savedDate = new Date(entry.savedAt);
-            const dateStr = savedDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
-            const timeStr = savedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateStr = formatLocationDate(entry.savedAt, entry.weather.utcOffsetSeconds);
+            const timeStr = formatLocationTimeWithCue(entry.savedAt, entry.weather.utcOffsetSeconds);
             return (
               <Pressable
                 key={entry.id}
@@ -563,10 +729,10 @@ export function YouScreen() {
             <View key={entry.id} style={styles.archiveRow}>
               <View style={styles.archiveDate}>
                 <Text style={styles.archiveDateDay}>
-                  {new Date(entry.consultedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  {formatLocationDate(entry.consultedAt, entry.weather.utcOffsetSeconds)}
                 </Text>
                 <Text style={styles.archiveDateTime}>
-                  {new Date(entry.consultedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatLocationTime(entry.consultedAt, entry.weather.utcOffsetSeconds)}
                 </Text>
               </View>
               <View style={styles.archiveCenter}>
@@ -635,7 +801,8 @@ function ArchiveDetailModal({
 
   if (!entry) return null;
 
-  const savedDate = new Date(entry.savedAt);
+  const savedDateLabel = formatLocationDate(entry.savedAt, entry.weather.utcOffsetSeconds);
+  const savedTimeLabel = formatLocationTimeWithCue(entry.savedAt, entry.weather.utcOffsetSeconds);
   const dayLooks = entry.verdict.outfits;
   const nightLooks = entry.verdict.outfitsAlt ?? [];
 
@@ -680,7 +847,7 @@ function ArchiveDetailModal({
               {formatTemp(entry.weather.temp)}° · {entry.weather.conditionLabel}
             </Text>
             <Text style={styles.detailMetaText}>
-              {savedDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} · {savedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {savedDateLabel} · {savedTimeLabel}
             </Text>
           </View>
 
@@ -792,7 +959,7 @@ function ArchivedLookSection({
     <View style={styles.detailVerdictCard}>
       <Text style={styles.detailCardLabel}>{title}</Text>
       {items.map(item => {
-        const shopItems = NONE_NEEDED_RE.test(item.item) ? [] : splitShopItems(item.item);
+        const shopItems = resolveShopQueries(item);
         return (
           <View key={`${title}-${item.category}`} style={styles.detailOutfitRow}>
             <Text style={styles.detailOutfitCategory}>{item.category.toUpperCase()}</Text>
@@ -810,7 +977,7 @@ function ArchivedLookSection({
                     accessibilityHint="Opens Google Shopping in your browser"
                   >
                     <Text style={styles.detailShopText} numberOfLines={1}>
-                      {shopItems.length > 1 ? `SHOP ${piece.toUpperCase()}` : 'SHOP SIMILAR'}
+                      SHOP SIMILAR →
                     </Text>
                     <MaterialCommunityIcons
                       name="open-in-new"
@@ -896,6 +1063,18 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
     fontSize: 12,
     color: 'rgba(250,249,246,0.30)',
     letterSpacing: 0.3,
+  },
+  rankProgressWrap: {
+    marginTop: spacing.md,
+  },
+  rankProgressTrack: {
+    height: 2,
+    backgroundColor: 'rgba(250,249,246,0.12)',
+    overflow: 'hidden',
+  },
+  rankProgressFill: {
+    height: 2,
+    backgroundColor: 'rgba(250,249,246,0.50)',
   },
   streakChip: {
     flexDirection: 'row',
@@ -1020,6 +1199,87 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
     fontSize: 11,
     color: colors.textSecondary,
     letterSpacing: 1,
+  },
+
+  /* Passport Deck */
+  deckGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  deckCard: {
+    width: (SCREEN_W - spacing.lg * 2 - spacing.sm) / 2,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  deckCardLocked: {
+    opacity: 0.5,
+  },
+  deckThumb: {
+    width: '100%',
+    height: 76,
+  },
+  deckThumbPlaceholder: {
+    backgroundColor: colors.bgDark,
+  },
+  deckThumbLocked: {
+    backgroundColor: colors.bgDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deckCardBody: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  deckCityName: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  deckCityNameLocked: {
+    color: colors.textMuted,
+  },
+  deckCardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deckVisits: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
+  },
+  deckCapitalDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.scarlet,
+  },
+  deckUnlockHint: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    color: colors.textMuted,
+    letterSpacing: 1.5,
+  },
+  deckExpandBtn: {
+    marginTop: spacing.md,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  deckExpandText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.textMuted,
+    letterSpacing: 2,
   },
 
   /* Style profile */
@@ -1167,6 +1427,16 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, the
     color: metrics.cardGap === 32 ? '#000000' : colors.textMuted,
     letterSpacing: 0.3,
     lineHeight: 14,
+  },
+  badgeRarity: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
+    color: metrics.cardGap === 32 ? '#000000' : colors.textMuted,
+    marginTop: 2,
+  },
+  badgeRarityLegendary: {
+    color: metrics.cardGap === 32 ? '#000000' : colors.scarlet,
   },
   badgeEmpty: {
     fontFamily: fonts.mono,

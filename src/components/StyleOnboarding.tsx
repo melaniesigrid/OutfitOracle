@@ -9,7 +9,7 @@ import {
   StatusBar,
   TextInput,
 } from 'react-native';
-import { StyleProfile, STYLE_KEYWORDS, BUDGET_TIERS, SIZE_OPTIONS, BudgetTier, ClothingSize } from '../hooks/useStyleProfile';
+import { StyleProfile, STYLE_KEYWORDS, BUDGET_TIERS, SIZE_OPTIONS, CLOTHING_CATEGORIES, BudgetTier, ClothingSize } from '../hooks/useStyleProfile';
 import { AppColors, AppFonts, ThemeName, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -25,6 +25,11 @@ export function StyleOnboarding({ onSave }: Props) {
   const [budget, setBudget] = useState<BudgetTier | null>(null);
   const [name, setName] = useState('');
   const [size, setSize] = useState<ClothingSize | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  const toggleCategory = (cat: string) => {
+    setCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  };
 
   const toggleKeyword = (kw: string) => {
     setKeywords(prev =>
@@ -36,7 +41,7 @@ export function StyleOnboarding({ onSave }: Props) {
 
   const handleSave = () => {
     if (!budget) return;
-    onSave({ keywords, budget, name: name.trim() || undefined, size: size ?? undefined });
+    onSave({ keywords, budget, name: name.trim() || undefined, size: size ?? undefined, categories: categories.length ? categories : undefined });
   };
 
   return (
@@ -62,7 +67,7 @@ export function StyleOnboarding({ onSave }: Props) {
             <Text style={styles.stepLabel}>YOUR AESTHETIC</Text>
             <Text style={styles.stepTitle}>Pick up to 3 styles</Text>
             <Text style={styles.stepNote}>
-              The Oracle will tailor every recommendation to your taste.
+              The Oracle will tailor every verdict to your taste.
             </Text>
 
             <View style={styles.keywordGrid}>
@@ -102,7 +107,7 @@ export function StyleOnboarding({ onSave }: Props) {
             <Text style={styles.stepLabel}>YOUR BUDGET</Text>
             <Text style={styles.stepTitle}>Choose your tier</Text>
             <Text style={styles.stepNote}>
-              The Oracle sources suggestions that fit your investment level.
+              The Oracle shops your tier — not above it without saying so.
             </Text>
 
             <View style={styles.budgetList}>
@@ -173,6 +178,30 @@ export function StyleOnboarding({ onSave }: Props) {
                   >
                     <Text style={[styles.sizeChipText, selected && styles.sizeChipTextSelected]}>
                       {s}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.stepLabel, { marginTop: 28 }]}>WHAT DO YOU WEAR?</Text>
+            <Text style={styles.stepNote}>
+              Optional. Select the pieces you actually wear — the Oracle will favour these categories.
+            </Text>
+            <View style={styles.categoryGrid}>
+              {CLOTHING_CATEGORIES.map(cat => {
+                const selected = categories.includes(cat);
+                return (
+                  <Pressable
+                    key={cat}
+                    style={[styles.categoryChip, selected && styles.categoryChipSelected]}
+                    onPress={() => toggleCategory(cat)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={cat}
+                  >
+                    <Text style={[styles.categoryChipText, selected && styles.categoryChipTextSelected]}>
+                      {cat}
                     </Text>
                   </Pressable>
                 );
@@ -359,6 +388,32 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
     letterSpacing: 0.5,
   },
   sizeChipTextSelected: {
+    color: '#FAF9F6',
+  },
+
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  categoryChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  categoryChipSelected: {
+    backgroundColor: colors.bgDark,
+    borderColor: colors.bgDark,
+  },
+  categoryChipText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+  categoryChipTextSelected: {
     color: '#FAF9F6',
   },
 

@@ -26,6 +26,8 @@ import { searchCities, CitySuggestion } from '../../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../../services/analytics';
+import { hasNightOutfit, selectOutfitsForLook } from '../../utils/outfitSelection';
+import { formatLocationTimeWithCue } from '../../utils/locationTime';
 import { mondrianTokens, spacing } from '../../theme';
 import { useTempUnit } from '../../contexts/TemperatureContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -187,6 +189,8 @@ export function MondrianOracleScreen() {
 
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && !!weather && !!verdict;
+  const hasNightLook = hasNightOutfit(verdict);
+  const cachedAtLabel = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
 
   const { recents, addCity, removeCity } = useRecentCities();
   const weeklyChallenge = useWeeklyChallenge(historyCtx.history);
@@ -236,6 +240,10 @@ export function MondrianOracleScreen() {
 
   useEffect(() => {
     if (status === 'done') {
+      isFirstToggle.current = true;
+      toggleFade.stopAnimation();
+      toggleFade.setValue(1);
+      setLookMode('polished');
       resultTranslateX.setValue(Dimensions.get('window').width);
       Animated.timing(resultTranslateX, {
         toValue: 0, duration: 500,
@@ -243,7 +251,7 @@ export function MondrianOracleScreen() {
         useNativeDriver: true,
       }).start();
     }
-  }, [status]);
+  }, [status, verdict?.vibe, weather?.city]);
 
   useEffect(() => {
     if (isFirstToggle.current) { isFirstToggle.current = false; return; }
@@ -326,7 +334,7 @@ export function MondrianOracleScreen() {
   };
 
   const currentOutfits = useMemo(
-    () => lookMode === 'casual' && verdict?.outfitsAlt?.length ? verdict.outfitsAlt : verdict?.outfits ?? [],
+    () => selectOutfitsForLook(verdict, lookMode),
     [lookMode, verdict],
   );
 
@@ -356,7 +364,7 @@ export function MondrianOracleScreen() {
           <View style={s.header}>
             <View style={{ flex: 1 }}>
               <Text style={s.headerTitle}>THE ORACLE.</Text>
-              <Text style={s.headerSub}>SUBMIT FOR JUDGMENT</Text>
+              <Text style={s.headerSub}>SUBMIT THE BRIEF</Text>
             </View>
             <Pressable
               onPress={() => navigation.navigate('Settings')}
@@ -503,7 +511,7 @@ export function MondrianOracleScreen() {
                     <Text style={s.challengeBrief}>{weeklyChallenge.challenge.brief}</Text>
                   )}
                   {weeklyChallenge.completed && (
-                    <Text style={s.challengeDone}>The Oracle acknowledges your devotion.</Text>
+                    <Text style={s.challengeDone}>The Oracle notes the consistency.</Text>
                   )}
                 </View>
                 <Text style={[s.challengeDays, weeklyChallenge.completed && { color: red }]}>
@@ -558,8 +566,8 @@ export function MondrianOracleScreen() {
                 <View style={s.cacheBadge}>
                   <Text style={s.cacheBadgeText}>
                     {isOffline
-                      ? `OFFLINE — CACHED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                      : `LAST CONSULTED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      ? `OFFLINE — CACHED · ${cachedAtLabel}`
+                      : `LAST CONSULTED · ${cachedAtLabel}`}
                   </Text>
                   {!isOffline && (
                     <Pressable onPress={() => handleConsult(city)}>
@@ -630,7 +638,7 @@ export function MondrianOracleScreen() {
               </View>
 
               {/* Look toggle */}
-              {verdict.outfitsAlt?.length ? (
+              {hasNightLook ? (
                 <>
                   <GridLine />
                   <View style={{ flexDirection: 'row' }}>

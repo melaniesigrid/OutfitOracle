@@ -9,8 +9,6 @@ import { useWeatherBadges, WeatherBadge } from '../hooks/useWeatherBadges';
 import { useOracleImage, OracleImageState } from '../hooks/useOracleImage';
 import { useArchive } from '../hooks/useArchive';
 
-const CLAUDE_API_KEY = process.env.EXPO_PUBLIC_CLAUDE_API_KEY ?? '';
-
 type AppContextValue = {
   oracle: ReturnType<typeof useOracle>;
   profileCtx: ReturnType<typeof useStyleProfile>;
@@ -32,7 +30,7 @@ type AppContextValue = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
-  const oracle     = useOracle(CLAUDE_API_KEY);
+  const oracle     = useOracle();
   const profileCtx = useStyleProfile();
   const historyCtx = useOutfitHistory();
   const streakCtx  = useConsultStreak();

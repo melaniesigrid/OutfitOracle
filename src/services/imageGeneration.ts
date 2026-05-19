@@ -9,8 +9,10 @@ const PROXY_URL  = process.env.EXPO_PUBLIC_PROXY_URL ?? '';
 const FAL_KEY_DEV = process.env.EXPO_PUBLIC_FAL_KEY ?? '';
 
 export const IMAGE_ENABLED = PROXY_URL.length > 0 || FAL_KEY_DEV.length > 0;
+const IS_DEV = typeof __DEV__ !== 'undefined' && __DEV__;
+const MAX_IMAGE_PROMPT_CHARS = 4800;
 
-if (__DEV__) {
+if (IS_DEV) {
   if (PROXY_URL) {
     console.log('[OracleImage] image generation via proxy — fal.ai key stays server-side');
   } else if (FAL_KEY_DEV) {
@@ -103,6 +105,28 @@ function compositionType(outfits: OracleVerdict['outfits']): string {
     : 'medium portrait framing, 3/4 body, naturally composed with environmental context visible';
 }
 
+function truncateText(value: string, maxChars: number): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxChars) return normalized;
+  const clipped = normalized.slice(0, maxChars - 1);
+  const lastSpace = clipped.lastIndexOf(' ');
+  return `${clipped.slice(0, lastSpace > 40 ? lastSpace : clipped.length).trim()}…`;
+}
+
+function sketchOutfitManifest(outfits: OracleVerdict['outfits']): string {
+  return outfits.map((outfit, index) => {
+    const item = truncateText(outfit.item, 180);
+    const detail = outfit.detail ? ` Detail: ${truncateText(outfit.detail, 90)}` : '';
+    return `${index + 1}. ${outfit.category}: ${item}.${detail}`;
+  }).join('\n');
+}
+
+function fitPrompt(prompt: string): string {
+  if (prompt.length <= MAX_IMAGE_PROMPT_CHARS) return prompt;
+  const tail = '\n\nFinal rules: draw the listed outfit exactly. No extra garments, no missing pieces, no logos, no realistic face.';
+  return `${prompt.slice(0, MAX_IMAGE_PROMPT_CHARS - tail.length).trim()}${tail}`;
+}
+
 function getLightingContext(variant: 'day' | 'night'): string {
   if (variant === 'night') {
     return 'The scene takes place in the evening or night. Use warm, ambient, intimate lighting — candlelight, warm lamp glow, restaurant light, neon reflections on wet streets. The sky is dark. Do not use daytime outdoor light.';
@@ -120,6 +144,127 @@ function occasionContext(occasion?: string, pronoun = 'her'): string {
   return occasion.toLowerCase();
 }
 
+function countryModelHint(country: string, isMale: boolean): string {
+  const c = country.trim().toLowerCase();
+
+  // South Asia
+  if (/india|pakistan|bangladesh|sri lanka|nepal|bhutan/.test(c))
+    return isMale
+      ? 'South Asian man — warm brown to deep brown complexion, dark hair, naturally expressive features'
+      : 'South Asian woman — warm brown to deep brown complexion, dark hair, naturally expressive features';
+
+  // East Asia
+  if (/china|japan|korea|taiwan|hong kong|mongolia/.test(c))
+    return isMale
+      ? 'East Asian man — fair to medium complexion, dark straight hair, refined natural features'
+      : 'East Asian woman — fair to medium complexion, dark straight hair, refined natural features';
+
+  // Southeast Asia
+  if (/thailand|vietnam|indonesia|malaysia|philippines|singapore|myanmar|cambodia|laos/.test(c))
+    return isMale
+      ? 'Southeast Asian man — medium golden-brown complexion, dark hair, natural features'
+      : 'Southeast Asian woman — medium golden-brown complexion, dark hair, natural features';
+
+  // Middle East
+  if (/saudi|arab emirates|qatar|kuwait|bahrain|oman|jordan|lebanon|syria|iraq|iran|israel|turkey/.test(c))
+    return isMale
+      ? 'Middle Eastern man — olive to warm brown complexion, dark hair, strong natural features'
+      : 'Middle Eastern woman — olive to warm brown complexion, dark hair, strong natural features';
+
+  // North Africa
+  if (/egypt|morocco|algeria|tunisia|libya/.test(c))
+    return isMale
+      ? 'North African man — olive to medium brown complexion, dark hair, natural Mediterranean-North African features'
+      : 'North African woman — olive to medium brown complexion, dark hair, natural Mediterranean-North African features';
+
+  // West Africa
+  if (/nigeria|ghana|senegal|cameroon|ivory coast|côte d'ivoire|mali|guinea/.test(c))
+    return isMale
+      ? 'West African man — deep brown complexion, dark hair, proud natural features'
+      : 'West African woman — deep brown complexion, dark hair, proud natural features';
+
+  // East Africa
+  if (/kenya|ethiopia|tanzania|uganda|rwanda|somalia/.test(c))
+    return isMale
+      ? 'East African man — rich dark complexion, dark hair, elegant natural features'
+      : 'East African woman — rich dark complexion, dark hair, elegant natural features';
+
+  // Southern Africa
+  if (/south africa|zimbabwe|zambia|botswana|namibia/.test(c))
+    return isMale
+      ? 'Southern African man — warm brown to deep brown complexion, dark hair, natural features'
+      : 'Southern African woman — warm brown to deep brown complexion, dark hair, natural features';
+
+  // Brazil
+  if (/brazil|brasil/.test(c))
+    return isMale
+      ? 'Brazilian man — diverse complexion ranging from light olive to warm brown, natural expressive features'
+      : 'Brazilian woman — diverse complexion ranging from light olive to warm brown, natural expressive features';
+
+  // Latin America
+  if (/mexico|colombia|argentina|peru|chile|venezuela|ecuador|bolivia|uruguay|paraguay|costa rica|panama|guatemala|honduras|el salvador|nicaragua/.test(c))
+    return isMale
+      ? 'Latin American man — warm olive to medium brown complexion, dark hair, natural features'
+      : 'Latin American woman — warm olive to medium brown complexion, dark hair, natural features';
+
+  // Caribbean
+  if (/cuba|jamaica|haiti|dominican|trinidad|barbados|bahamas/.test(c))
+    return isMale
+      ? 'Caribbean man — warm brown to deep brown complexion, dark hair, natural features'
+      : 'Caribbean woman — warm brown to deep brown complexion, dark hair, natural features';
+
+  // Scandinavia
+  if (/sweden|norway|denmark|finland|iceland/.test(c))
+    return isMale
+      ? 'Scandinavian man — fair complexion, light hair (blonde to light brown), natural Nordic features'
+      : 'Scandinavian woman — fair complexion, light hair (blonde to light brown), natural Nordic features';
+
+  // Southern Europe
+  if (/italy|spain|portugal|greece/.test(c))
+    return isMale
+      ? 'Southern European man — light olive to warm complexion, dark hair, natural Mediterranean features'
+      : 'Southern European woman — light olive to warm complexion, dark hair, natural Mediterranean features';
+
+  // Western Europe (after Southern to avoid false match on Germany → "many")
+  if (/france|germany|netherlands|belgium|switzerland|austria|luxembourg/.test(c))
+    return isMale
+      ? 'Western European man — fair to light complexion, natural European features'
+      : 'Western European woman — fair to light complexion, natural European features';
+
+  // Eastern Europe
+  if (/russia|poland|ukraine|czech|hungary|romania|bulgaria|serbia|croatia|slovakia/.test(c))
+    return isMale
+      ? 'Eastern European man — fair complexion, dark or light hair, natural Slavic features'
+      : 'Eastern European woman — fair complexion, dark or light hair, natural Slavic features';
+
+  // UK / Ireland
+  if (/united kingdom|england|scotland|wales|ireland/.test(c))
+    return isMale
+      ? 'British man — naturally diverse British look, fair complexion, natural features'
+      : 'British woman — naturally diverse British look, fair complexion, natural features';
+
+  // United States
+  if (/united states|usa/.test(c))
+    return isMale
+      ? 'American man — naturally diverse, real-world American look, not idealized'
+      : 'American woman — naturally diverse, real-world American look, not idealized';
+
+  // Canada
+  if (/canada/.test(c))
+    return isMale
+      ? 'Canadian man — naturally diverse, fair to medium complexion, natural features'
+      : 'Canadian woman — naturally diverse, fair to medium complexion, natural features';
+
+  // Australia / New Zealand
+  if (/australia|new zealand/.test(c))
+    return isMale
+      ? 'Australian man — fair to medium complexion, natural features'
+      : 'Australian woman — fair to medium complexion, natural features';
+
+  // Fallback: no region-specific hint
+  return isMale ? '' : '';
+}
+
 export function buildImagePrompt(
   verdict: OracleVerdict,
   weather: WeatherData,
@@ -129,15 +274,16 @@ export function buildImagePrompt(
   profile?: StyleProfile,
 ): string {
   const isMale  = gender === 'Men';
-  const person  = isMale ? 'The man'  : 'The woman';
   const S       = isMale ? 'He'       : 'She';
   const pronoun = isMale ? 'his'      : 'her';
-  const modelDesc = isMale
+  const regionHint = countryModelHint(weather.country, isMale);
+  const baseDesc = isMale
     ? 'intelligent, emotionally present, naturally handsome — not influencer-styled, not AI-glamorized. Realistic male proportions, no exaggerated physique.'
     : 'intelligent, emotionally present, naturally beautiful — not influencer-styled, not AI-glamorized. Realistic body proportions, no uncanny perfection.';
+  const modelDesc = regionHint ? `${regionHint} — ${baseDesc}` : baseDesc;
 
   const outfits = variant === 'night' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits;
-  const outfitItems = outfits.map(o => o.item).join(', ');
+  const outfitItems = sketchOutfitManifest(outfits);
   const tags = aestheticTags(weather, gender, profile);
   const env = variant === 'night' ? nightEnvironmentDetail(weather, S) : environmentDetail(weather, S);
   const comp = compositionType(outfits);
@@ -148,39 +294,57 @@ export function buildImagePrompt(
     ? 'This is the NIGHT image. It must use the evening outfit, after-dark setting, dark sky or interior night ambience, and a clearly different pose/composition from the daytime version.'
     : 'This is the DAY image. It must use the daytime outfit, visible daylight, and a clearly different pose/composition from the night version.';
 
-  return `Generate a cinematic editorial fashion photograph. The aesthetic should feel like a luxury fashion campaign — soft atmospheric lighting, realistic textures, shallow depth of field, gentle grain. The model should appear ${modelDesc}
+  // Outfit items first — FLUX Pro weights earlier tokens most heavily.
+  // Everything else is context; the outfit list is the source of truth.
+  const prompt = `VERDICT OUTFIT — render ONLY these garments, nothing else:
+${outfitItems}
+
+Do not add, swap, or omit any listed piece. Do not invent unlisted garments. If outer layer says "None needed", show NO jacket, coat, blazer, or extra layer of any kind. Every listed accessory and footwear item must be clearly visible.
+
+Cinematic editorial fashion photograph. Luxury campaign aesthetic — soft atmospheric lighting, realistic fabric textures, shallow depth of field, gentle grain. Model: ${modelDesc}
 
 ${variantRule}
 
-${person} wears: ${outfitItems}.
-
-The setting is ${weather.city}. The weather is ${weather.conditionLabel.toLowerCase()} — ${weather.temp}°C, feels like ${weather.feelsLike}°C. ${env}
-
-Temperature context: ${tempCue}. The image's visual warmth, layering weight, and setting must accurately reflect this temperature. Do not depict heavy winter coats, cold breath, or winter textures unless the temperature is genuinely cold (below 8°C).
+Setting: ${weather.city}, ${weather.conditionLabel.toLowerCase()}, ${weather.temp}°C (feels like ${weather.feelsLike}°C). ${env}
+Temperature: ${tempCue}. Layering weight and fabric choice must match this temperature exactly.
 
 ${timeOfDay}
 
-${S} is dressed for ${occasionContext(occasion, pronoun)}. The occasion should be visible in how ${S.toLowerCase()} holds ${pronoun}self.
+${S} is ${occasionContext(occasion, pronoun)}. Mood: ${verdict.vibe}. Aesthetic: ${tags}.
 
-The mood is ${verdict.vibe}. The aesthetic registers as: ${tags}.
+Framing: ${comp}. Full outfit including footwear must be visible. The image should feel like a still from a fashion film.`;
 
-Framing: ${comp}. The full outfit — including coat, footwear, and accessories — must be visible. The image should feel like a still from a fashion film the viewer wants to walk into.
-
-Do not generate: influencer aesthetics, ecommerce product shots, exaggerated AI beauty, hypersexualized poses, distorted anatomy, brand names, designer logos, visible labels, loud colors, or synthetic-looking fabric textures. If the outfit text contains a brand, translate it into generic garment characteristics before rendering.`;
+  return fitPrompt(prompt);
 }
 
+// Hand-drawn style references — specific enough that FLUX's CLIP encoder
+// maps them to actual drawn media rather than polished digital art.
 const SKETCH_RENDER_STYLES = [
-  'soft watercolor realism with pencil underdrawing',
-  'digital gouache on textured paper',
-  'pencil and watercolor hybrid with loose ink lines',
-  'textured editorial illustration in the manner of vintage Vogue sketches',
-  'semi-realistic fashion rendering with visible brushwork',
+  'pencil and loose ink wash on cream cartridge paper, gestural hatching lines, visible paper grain, clearly handmade',
+  'editorial fashion illustration in the tradition of René Gruau — bold ink lines, flat watercolor fills, expressive gesture',
+  'hand-drawn fashion croquis in the style of 1960s Vogue fashion plates — dry-brush ink, delicate watercolor washes',
+  'loose pencil croquis with wet watercolor washes, visible pencil underdrawing showing through color, art-school sketchbook quality',
+  'Antonio Lopez editorial ink drawing — sinuous ink lines, minimal color, gestural poses, clearly hand-rendered',
 ] as const;
 
 function sketchRenderStyle(vibe: string): string {
   const idx = Math.abs(vibe.charCodeAt(0) + vibe.charCodeAt(vibe.length - 1)) % SKETCH_RENDER_STYLES.length;
   return SKETCH_RENDER_STYLES[idx];
 }
+
+export const PHOTO_NEGATIVE_PROMPT =
+  'invented garments, extra unlisted clothing, missing outfit pieces, wrong outfit items, ' +
+  'added jacket, added coat, added cardigan, added blazer, added scarf, added hat, added bag, added sunglasses, ' +
+  'influencer aesthetics, ecommerce product shot, brand logos, designer labels, visible text, ' +
+  'distorted anatomy, exaggerated AI beauty, hypersexualized pose, uncanny face, ' +
+  'neon colors, oversaturated, heavy winter layers in warm weather, summer clothes in cold weather';
+
+const SKETCH_NEGATIVE_PROMPT =
+  'photorealistic, photography, photograph, CGI, 3D render, digital painting, airbrushed, perfectly smooth, ' +
+  'hyper-detailed fabric texture, studio lighting, DSLR, sharp focus, skin pores, ' +
+  'realistic face, influencer, AI face, uncanny, ecommerce, product shot, ' +
+  'neon colors, oversaturated, brand logos, labels, ' +
+  'invented garments, extra clothing not in the outfit list, missing listed garments';
 
 export function buildSketchPrompt(
   verdict: OracleVerdict,
@@ -191,72 +355,54 @@ export function buildSketchPrompt(
   profile?: StyleProfile,
 ): string {
   const isMale  = gender === 'Men';
-  const pronoun = isMale ? 'his' : 'her';
+  const regionHintSketch = countryModelHint(weather.country, isMale);
+  const sketchToneNote = regionHintSketch
+    ? ` Skin tone and hair: reflect ${regionHintSketch.split(' — ')[1] ?? regionHintSketch}.`
+    : '';
   const figureGender = isMale
-    ? 'Male figure — elongated, editorial, graceful. Elegant masculine proportions, relaxed tailoring energy.'
-    : 'Female figure — elongated, editorial, graceful. Elegant feminine proportions, effortless posture.';
+    ? `Elongated male fashion croquis — elegant masculine proportions, relaxed tailoring energy.${sketchToneNote}`
+    : `Elongated female fashion croquis — graceful feminine proportions, effortless editorial posture.${sketchToneNote}`;
 
   const outfits = variant === 'night' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits;
-  const outfitItems = outfits.map(o => `${o.item}`).join(',\n');
+  const outfitItems = sketchOutfitManifest(outfits);
   const tags = aestheticTags(weather, gender, profile);
-  const tempCue = tempVisualCue(weather.temp);
   const env = variant === 'night' ? nightEnvironmentDetail(weather, 'The figure') : environmentDetail(weather, 'The figure');
   const renderStyle = sketchRenderStyle(verdict.vibe);
-  const lightingCtx = getLightingContext(variant);
   const timeOfDay = variant === 'night'
-    ? 'evening — warm, ambient, intimate light'
-    : 'daytime — natural daylight, visible sky, readable garment color';
-  const weatherDesc = `${weather.conditionLabel.toLowerCase()} — ${weather.temp}°C, feels like ${weather.feelsLike}°C`;
+    ? 'evening/night — warm ambient light, dark sky or interior glow'
+    : 'daytime — natural light, visible sky, readable garment color';
   const variantRule = variant === 'night'
-    ? 'This is the NIGHT sketch. It must show the evening outfit and after-dark mood, not a daylight version.'
-    : 'This is the DAY sketch. It must show the daytime outfit in natural daylight, not an evening version.';
+    ? 'NIGHT SKETCH: show the evening/night outfit in after-dark ambience.'
+    : 'DAY SKETCH: show the daytime outfit in natural daylight.';
 
-  return `Generate a ${renderStyle} fashion illustration for Outfit Oracle. This is an ILLUSTRATED ARTWORK, not a photograph. The style must resemble luxury editorial fashion sketches, couture croquis, and cinematic fashion renderings — never photorealistic.
+  // Outfit section intentionally first — FLUX weights earlier tokens more heavily.
+  const prompt = `Hand-drawn editorial fashion illustration. Medium: ${renderStyle}. NOT a photograph, NOT CGI, NOT digital art. Every line and wash is visibly hand-made.
 
-${variantRule}
-
-FIGURE RULES — NON-NEGOTIABLE:
-The figure must be faceless or near-faceless. Allowed: soft jawline indication, neck, hair, profile silhouette, abstract facial structure, face turned away or cropped. The figure may be partially obscured or rendered like a fashion illustration mannequin.
-FORBIDDEN: detailed eyes, detailed nose, realistic mouth, influencer beauty, AI faces, portrait focus. The clothing is the emotional center, not the face.
-
-${figureGender}
-
-OUTFIT — render every piece with obsessive textile detail and fashion-illustration specificity:
+VERDICT OUTFIT — draw exactly these garments, nothing else:
 ${outfitItems}
 
-Focus intensely on: silhouette, layering, tailoring, drape, knit texture, fabric folds, stitching, accessories, color harmony, footwear styling. The outfit communicates mood, social identity, weather, and narrative.
+This is the only source of truth for clothing. Do not substitute, simplify, add, or omit any listed piece. If the outer layer says "None needed", draw absolutely no jacket, coat, blazer, or extra layer. Every listed accessory and footwear item must be visible.
 
-WEATHER & ENVIRONMENT:
-City: ${weather.city}. Weather: ${weatherDesc}. Time of day: ${timeOfDay}.
-Lighting: ${lightingCtx}
-Temperature context: ${tempCue}. ${env}
-The illustration's visual warmth, fabric weight, and layering must accurately reflect ${weather.temp}°C. Do NOT depict heavy winter coats or cold breath unless below 8°C.
+FIGURE: ${figureGender} Faceless or near-faceless — eyes, nose, and mouth are minimal marks or absent; the clothing is the subject. No realistic face, no influencer beauty, no AI-generated features.
 
-OCCASION: The figure is ${occasionContext(occasion, pronoun)}. This should be visible in posture and styling confidence.
+${variantRule}
+Setting: ${truncateText(env, 120)}. Mood: ${verdict.vibe}. Aesthetic register: ${tags}.
+Lighting: ${timeOfDay}. Temperature ${weather.temp}°C — fabric weight and layering must reflect this.
 
-MOOD & AESTHETIC:
-Vibe: ${verdict.vibe}. Aesthetic: ${tags}. The image should feel like a memory, a dream wardrobe, a fashion diary.
+COMPOSITION: Full body or 3/4 body so all footwear and accessories are visible. Graceful editorial pose. Muted, sophisticated palette. No heavy winter layers unless below 8°C. No neon, no loud color. Background: loose gestural suggestion of the setting, not a detailed scene.`;
 
-COMPOSITION:
-Full body or 3/4 body. Walking silhouette, seated styling pose, or over-the-shoulder composition. The figure appears graceful, elongated, editorial — relaxed but intentional.
-
-RENDER STYLE:
-${renderStyle}. Textures feel tactile, layered, expensive, soft, atmospheric. Background: soft, painterly, cinematic — ${env.replace('The figure', 'suggested behind the figure')} Never clutter.
-
-COLOR PALETTE:
-Muted luxury tones — cream, camel, charcoal, espresso, soft navy, dusty rose, olive, wine red, faded black, heather gray. Avoid neon, oversaturation, harsh contrast, synthetic colors.
-
-MANDATORY: elegant illustrated anatomy, realistic fabric rendering with visible brushwork, editorial styling quality, cohesive silhouette, emotionally atmospheric, luxury visual language.
-FORBIDDEN: photorealistic faces, AI glamour, uncanny realism, ecommerce product catalog energy, generic Pinterest collage, fast fashion aesthetic, photographs, brand names, designer logos, visible labels. If the outfit text contains a brand, translate it into generic garment characteristics before rendering.`;
+  return fitPrompt(prompt);
 }
 
-export async function generateOutfitImage(prompt: string): Promise<string> {
+export { SKETCH_NEGATIVE_PROMPT };
+
+export async function generateOutfitImage(prompt: string, negativePrompt?: string): Promise<string> {
   if (PROXY_URL) {
     // Production: route through Cloudflare Worker — key never in bundle
     const resp = await fetch(`${PROXY_URL}/image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, negative_prompt: negativePrompt }),
     });
     if (!resp.ok) {
       const body = await resp.json().catch(() => ({})) as { error?: string };
@@ -269,26 +415,28 @@ export async function generateOutfitImage(prompt: string): Promise<string> {
 
   // Dev fallback: direct fal.ai call (key must be set in .env.local, never in production)
   if (!FAL_KEY_DEV) throw new Error('No proxy URL or FAL_KEY configured');
+  const body: Record<string, unknown> = {
+    prompt,
+    image_size: 'portrait_4_3', // 768×1024, tallest named preset FLUX Pro v1.1 supports
+    num_images: 1,
+    output_format: 'jpeg',
+  };
+  if (negativePrompt) body.negative_prompt = negativePrompt;
   const resp = await fetch('https://fal.run/fal-ai/flux-pro/v1.1', {
     method: 'POST',
     headers: { 'Authorization': `Key ${FAL_KEY_DEV}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt,
-      image_size: 'portrait_4_3', // 768×1024, tallest named preset FLUX Pro v1.1 supports
-      num_images: 1,
-      output_format: 'jpeg',
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!resp.ok) {
-    const body = await resp.json().catch(() => ({})) as { detail?: string };
-    const detail = body.detail ?? `HTTP ${resp.status}`;
-    if (__DEV__) console.error(`[OracleImage] fal.ai ${resp.status}:`, detail);
+    const errBody = await resp.json().catch(() => ({})) as { detail?: string };
+    const detail = errBody.detail ?? `HTTP ${resp.status}`;
+    if (IS_DEV) console.error(`[OracleImage] fal.ai ${resp.status}:`, detail);
     throw new Error(detail);
   }
 
   const data = await resp.json() as { images: { url: string }[] };
   if (!data.images?.length) throw new Error('No image returned');
-  if (__DEV__) console.log('[OracleImage] image ready:', data.images[0].url.slice(0, 60) + '…');
+  if (IS_DEV) console.log('[OracleImage] image ready:', data.images[0].url.slice(0, 60) + '…');
   return data.images[0].url;
 }

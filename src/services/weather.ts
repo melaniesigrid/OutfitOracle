@@ -6,11 +6,15 @@ const ECCC_API = 'https://api.weather.gc.ca/collections/weather-alerts/items';
 
 export interface WeatherAlert {
   event: string;
-  severity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
+  severity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown' | 'Red' | 'Orange' | 'Yellow' | 'Grey';
   headline: string;
+  source: string;
 }
 
-const SEVERITIES = new Set<WeatherAlert['severity']>(['Extreme', 'Severe', 'Moderate', 'Minor', 'Unknown']);
+const SEVERITIES = new Set<WeatherAlert['severity']>([
+  'Extreme', 'Severe', 'Moderate', 'Minor', 'Unknown',
+  'Red', 'Orange', 'Yellow', 'Grey',
+]);
 
 function titleCase(value: string): string {
   return value.replace(/\w\S*/g, word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
@@ -30,11 +34,11 @@ function normalizeSeverity(value: unknown): WeatherAlert['severity'] {
 function canadaSeverity(props: Record<string, any>): WeatherAlert['severity'] {
   const riskColour = String(props.risk_colour_en ?? '').trim().toLowerCase();
   switch (riskColour) {
-    case 'red':    return 'Extreme';
-    case 'orange': return 'Severe';
-    case 'yellow': return 'Moderate';
+    case 'red':    return 'Red';
+    case 'orange': return 'Orange';
+    case 'yellow': return 'Yellow';
     case 'grey':
-    case 'gray':   return 'Minor';
+    case 'gray':   return 'Grey';
     default:       return normalizeSeverity(props.impact_en);
   }
 }
@@ -107,13 +111,16 @@ export interface WeatherData {
   feelsLike: number;
   humidity: number;
   windSpeed: number;
+  windGust?: number;
   windDirection?: number;
+  windChill?: number;
   conditionCode: number;
   conditionLabel: string;
   conditionIcon: string;
   description: string;
   latitude?: number;
   longitude?: number;
+  utcOffsetSeconds?: number;
   uvIndex?: number;
   hourly?: HourlyForecast[];
   daily?: DailyForecast[];
@@ -124,6 +131,11 @@ export interface WeatherData {
   moonPhaseIcon?: string;
   pollen?: PollenData;
   alerts?: WeatherAlert[];
+}
+
+/** Returns the current hour (0–23) at the location, using the weather API's UTC offset. */
+export function localHour(utcOffsetSeconds: number): number {
+  return Math.floor((Date.now() / 1000 + utcOffsetSeconds) / 3600) % 24;
 }
 
 function wmoCondition(code: number): [string, string, string] {
@@ -189,6 +201,14 @@ function aqiLabel(aqi: number): string {
   return 'Hazardous';
 }
 
+export function uvLabel(uv: number): string {
+  if (uv <= 2)  return 'Low';
+  if (uv <= 5)  return 'Moderate';
+  if (uv <= 7)  return 'High';
+  if (uv <= 10) return 'Very High';
+  return 'Extreme';
+}
+
 function isoToTime(iso: string): string {
   return iso.slice(11, 16); // "2026-05-12T14:00" → "14:00"
 }
@@ -216,6 +236,7 @@ async function fetchNWSAlerts(lat: number, lon: number): Promise<WeatherAlert[]>
       event:    f.properties?.event    ?? 'Alert',
       severity: normalizeSeverity(f.properties?.severity),
       headline: f.properties?.headline ?? f.properties?.event ?? 'Weather Alert',
+      source:   'National Weather Service',
     }));
   } catch {
     return [];
@@ -227,23 +248,92 @@ async function fetchCanadaAlerts(lat: number, lon: number): Promise<WeatherAlert
     const d = 0.05;
     const bbox = `${(lon - d).toFixed(4)},${(lat - d).toFixed(4)},${(lon + d).toFixed(4)},${(lat + d).toFixed(4)}`;
     const resp = await fetch(
-      `${ECCC_API}?bbox=${bbox}&f=json&lang=en&limit=10`,
+      `${ECCC_API}?bbox=${bbox}&f=json&lang=en&limit=20`,
       { headers: { 'User-Agent': 'OutfitOracle/1.0 (melaniesigridab@gmail.com)' } },
     );
     if (!resp.ok) return [];
     const data = await resp.json();
-    return (data.features ?? []).map((f: Record<string, any>) => {
+
+    // ECCC returns one feature per alert zone — deduplicate by event name,
+    // keeping the most severe instance of each alert type.
+    const seen = new Map<string, WeatherAlert>();
+    const SEVERITY_RANK: Record<WeatherAlert['severity'], number> = {
+      Extreme: 5, Red: 5,
+      Severe: 4, Orange: 4,
+      Moderate: 3, Yellow: 3,
+      Minor: 2, Grey: 2,
+      Unknown: 1,
+    };
+
+    for (const f of (data.features ?? [])) {
       const props = f.properties ?? {};
       const event = String(props.alert_name_en ?? props.alert_short_name_en ?? props.alert_type ?? 'Alert');
       const eventTitle = titleCase(event);
-      return {
-        event:    eventTitle,
-        severity: canadaSeverity(props),
-        headline: firstTextBlock(props.alert_text_en) ?? eventTitle,
-      };
-    });
+      const severity = canadaSeverity(props);
+
+      // Prefer headline_en (a clean one-liner the ECCC API provides for most alerts);
+      // fall back to the first paragraph of the full alert text.
+      let headline: string = eventTitle;
+      if (typeof props.headline_en === 'string' && props.headline_en.trim()) {
+        headline = props.headline_en.trim();
+      } else {
+        headline = firstTextBlock(props.alert_text_en) ?? eventTitle;
+      }
+
+      const existing = seen.get(eventTitle);
+      if (!existing || SEVERITY_RANK[severity] > SEVERITY_RANK[existing.severity]) {
+        seen.set(eventTitle, { event: eventTitle, severity, headline, source: 'Environment Canada' });
+      }
+    }
+
+    return Array.from(seen.values());
   } catch {
     return [];
+  }
+}
+
+const ECCC_CITY_API = 'https://api.weather.gc.ca/collections/citypageweather-realtime/items';
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+interface ECCCCityData {
+  windChill?: number;
+}
+
+async function fetchECCCCityWeather(lat: number, lon: number): Promise<ECCCCityData> {
+  try {
+    const d = 1.5;
+    const bbox = `${(lon - d).toFixed(4)},${(lat - d).toFixed(4)},${(lon + d).toFixed(4)},${(lat + d).toFixed(4)}`;
+    const resp = await fetch(
+      `${ECCC_CITY_API}?f=json&lang=en&bbox=${bbox}&limit=20`,
+      { headers: { 'User-Agent': 'OutfitOracle/1.0 (melaniesigridab@gmail.com)' } },
+    );
+    if (!resp.ok) return {};
+    const data = await resp.json();
+    const features: Record<string, any>[] = data.features ?? [];
+    if (!features.length) return {};
+
+    let nearest = features[0];
+    let minDist = Infinity;
+    for (const f of features) {
+      const [fLon, fLat] = f.geometry?.coordinates ?? [0, 0];
+      const dist = haversineKm(lat, lon, fLat, fLon);
+      if (dist < minDist) { minDist = dist; nearest = f; }
+    }
+
+    const cc = nearest.properties?.currentConditions ?? {};
+    const raw = cc.windChill?.value?.en;
+    return { windChill: raw != null ? Math.round(raw) : undefined };
+  } catch {
+    return {};
   }
 }
 
@@ -276,7 +366,7 @@ async function fetchPollen(lat: number, lon: number): Promise<PollenData | undef
 }
 
 const CURRENT_PARAMS =
-  'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,uv_index';
+  'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,uv_index';
 const HOURLY_PARAMS =
   'temperature_2m,precipitation_probability,weather_code,uv_index';
 const DAILY_PARAMS =
@@ -288,6 +378,7 @@ function buildWeatherResult(
   wxData: Record<string, any>,
   pollen?: PollenData,
   alerts?: WeatherAlert[],
+  windChill?: number,
 ): WeatherData {
   const cur = wxData.current ?? {};
   const hourlyRaw = wxData.hourly ?? {};
@@ -338,11 +429,14 @@ function buildWeatherResult(
     feelsLike:     Math.round(cur.apparent_temperature ?? 0),
     humidity:      Math.round(cur.relative_humidity_2m ?? 0),
     windSpeed:     Math.round(cur.wind_speed_10m ?? 0),
+    windGust:      cur.wind_gusts_10m != null ? Math.round(cur.wind_gusts_10m) : undefined,
     windDirection: cur.wind_direction_10m !== undefined ? Math.round(cur.wind_direction_10m) : undefined,
+    windChill,
     conditionCode: cur.weather_code ?? 0,
     conditionLabel,
     conditionIcon,
     description,
+    utcOffsetSeconds: typeof wxData.utc_offset_seconds === 'number' ? wxData.utc_offset_seconds : undefined,
     uvIndex:       Math.round(cur.uv_index ?? 0),
     hourly:        hourly.length ? hourly : undefined,
     daily:         daily.length  ? daily  : undefined,
@@ -364,7 +458,7 @@ export async function fetchWeatherByCoords(
   city: string,
   country: string,
 ): Promise<WeatherData> {
-  const [wxResp, pollen, alerts] = await Promise.all([
+  const [wxResp, pollen, alerts, eccc] = await Promise.all([
     fetch(
       `${WX_API}?latitude=${latitude}&longitude=${longitude}` +
       `&current=${CURRENT_PARAMS}&hourly=${HOURLY_PARAMS}&daily=${DAILY_PARAMS}` +
@@ -372,10 +466,11 @@ export async function fetchWeatherByCoords(
     ),
     fetchPollen(latitude, longitude),
     fetchWeatherAlerts(latitude, longitude, country),
+    isCanada(country) ? fetchECCCCityWeather(latitude, longitude) : Promise.resolve({} as ECCCCityData),
   ]);
   if (!wxResp.ok) throw new Error('Failed to fetch weather data.');
   const wxData = await wxResp.json();
-  return buildWeatherResult(city, country, wxData, pollen, alerts);
+  return buildWeatherResult(city, country, wxData, pollen, alerts, eccc.windChill);
 }
 
 export async function fetchWeather(city: string): Promise<WeatherData> {
@@ -391,7 +486,7 @@ export async function fetchWeather(city: string): Promise<WeatherData> {
 
   const { latitude, longitude, name, country } = geoData.results[0];
 
-  const [wxResp, pollen, alerts] = await Promise.all([
+  const [wxResp, pollen, alerts, eccc] = await Promise.all([
     fetch(
       `${WX_API}?latitude=${latitude}&longitude=${longitude}` +
       `&current=${CURRENT_PARAMS}&hourly=${HOURLY_PARAMS}&daily=${DAILY_PARAMS}` +
@@ -399,8 +494,9 @@ export async function fetchWeather(city: string): Promise<WeatherData> {
     ),
     fetchPollen(latitude, longitude),
     fetchWeatherAlerts(latitude, longitude, country),
+    isCanada(country) ? fetchECCCCityWeather(latitude, longitude) : Promise.resolve({} as ECCCCityData),
   ]);
   if (!wxResp.ok) throw new Error('Failed to fetch weather data.');
   const wxData = await wxResp.json();
-  return buildWeatherResult(name, country, wxData, pollen, alerts);
+  return buildWeatherResult(name, country, wxData, pollen, alerts, eccc.windChill);
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WeatherData } from '../../services/weather';
 import { y2kTokens, spacing } from '../../theme';
@@ -23,8 +23,8 @@ export function Y2KWeatherCard({ weather, formatTemp }: Props) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -122,8 +122,8 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   cityName: {
     fontFamily: typo.displaySmall.fontFamily,
-    fontSize: 18,
-    lineHeight: 26,
+    fontSize: typo.displaySmall.fontSize,
+    lineHeight: typo.displaySmall.lineHeight,
     color: y2kTokens.cream,
     letterSpacing: typo.displaySmall.letterSpacing,
   },

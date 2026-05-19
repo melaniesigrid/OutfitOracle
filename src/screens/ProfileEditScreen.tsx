@@ -7,7 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
 import {
-  STYLE_KEYWORDS, BUDGET_TIERS, SIZE_OPTIONS, PERSONALITY_OPTIONS, TEMP_SENSITIVITY_OPTIONS, COLOR_OPTIONS,
+  STYLE_KEYWORDS, BUDGET_TIERS, SIZE_OPTIONS, CLOTHING_CATEGORIES, PERSONALITY_OPTIONS, TEMP_SENSITIVITY_OPTIONS, COLOR_OPTIONS,
   OraclePersonality, BudgetTier, TempSensitivity, ClothingSize,
 } from '../hooks/useStyleProfile';
 import { AppColors, AppFonts, ThemeName, isY2KTheme, spacing } from '../theme';
@@ -28,6 +28,12 @@ export function ProfileEditScreen() {
   const [colorLoves,      setColorLoves]      = useState<string[]>(existing?.colorLoves ?? []);
   const [colorAvoids,     setColorAvoids]     = useState<string[]>(existing?.colorAvoids ?? []);
   const [size,            setSize]            = useState<ClothingSize | undefined>(existing?.size);
+  const [categories,      setCategories]      = useState<string[]>(existing?.categories ?? []);
+
+  const toggleCategory = (cat: string) => {
+    Haptics.selectionAsync();
+    setCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  };
 
   const toggleKeyword = (kw: string) => {
     Haptics.selectionAsync();
@@ -38,7 +44,7 @@ export function ProfileEditScreen() {
 
   const save = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    profileCtx.saveProfile({ keywords, budget, name: name.trim() || undefined, personality, tempSensitivity, colorLoves, colorAvoids, size });
+    profileCtx.saveProfile({ keywords, budget, name: name.trim() || undefined, personality, tempSensitivity, colorLoves, colorAvoids, size, categories: categories.length ? categories : undefined });
     navigation.goBack();
   };
 
@@ -143,6 +149,31 @@ export function ProfileEditScreen() {
                   accessibilityLabel={s}
                 >
                   <Text style={[styles.chipText, active && styles.chipTextActive]}>{s}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Clothing categories */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>WHAT DO YOU WEAR?</Text>
+          <Text style={[styles.fieldHint, { marginBottom: spacing.md }]}>
+            Select the pieces you actually wear. The Oracle favours these categories in every verdict.
+          </Text>
+          <View style={styles.chips}>
+            {CLOTHING_CATEGORIES.map(cat => {
+              const active = categories.includes(cat);
+              return (
+                <Pressable
+                  key={cat}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => toggleCategory(cat)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: active }}
+                  accessibilityLabel={cat}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{cat}</Text>
                 </Pressable>
               );
             })}

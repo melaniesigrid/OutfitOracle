@@ -9,10 +9,12 @@ import {
   ViewStyle,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { WeatherData } from '../services/weather';
+import { WeatherData, uvLabel } from '../services/weather';
 import { AppFonts, AppMetrics, isY2KTheme, spacing, weatherGlanceTokens } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTempUnit } from '../contexts/TemperatureContext';
+import { SunnyWeatherAnimation } from './SunnyWeatherAnimation';
+import { formatLocationTimeWithCue } from '../utils/locationTime';
 
 type WeatherGlanceMode = 'strip' | 'hero';
 type TempFormatter = (celsius: number) => string;
@@ -211,14 +213,19 @@ function parseTimeMinutes(value?: string): number | null {
 }
 
 function isNightWeather(weather: WeatherData): boolean {
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const localH = weather.utcOffsetSeconds !== undefined
+    ? Math.floor((Date.now() / 1000 + weather.utcOffsetSeconds) / 3600) % 24
+    : new Date().getHours();
+  const localM = weather.utcOffsetSeconds !== undefined
+    ? Math.floor((Date.now() / 1000 + weather.utcOffsetSeconds) / 60) % 60
+    : new Date().getMinutes();
+  const currentMinutes = localH * 60 + localM;
   const sunrise = parseTimeMinutes(weather.sunrise);
   const sunset = parseTimeMinutes(weather.sunset);
   if (sunrise !== null && sunset !== null) {
     return currentMinutes < sunrise || currentMinutes > sunset;
   }
-  return now.getHours() < 6 || now.getHours() >= 19;
+  return localH < 6 || localH >= 19;
 }
 
 function weatherKind(weather: WeatherData): WeatherGlanceKind {
@@ -419,15 +426,19 @@ function copyFor(kind: WeatherGlanceKind, weather: WeatherData): GlanceCopy {
         statOneValue: 'Low',
         statOneIcon: 'weather-fog',
       };
-    case 'wind':
+    case 'wind': {
+      const gust = weather.windGust && weather.windGust > weather.windSpeed + 10
+        ? ` · gusts ${weather.windGust}`
+        : '';
       return {
         summary: 'Breezy enough to edit volume.',
         verdict: 'Anchor the silhouette.',
         verdictIcon: 'weather-windy',
         statOneLabel: 'Wind',
-        statOneValue: `${weather.windSpeed} km/h`,
+        statOneValue: `${weather.windSpeed}${gust} km/h`,
         statOneIcon: 'weather-windy',
       };
+    }
     case 'night':
       return {
         summary: 'Cooler air, sharper contrast.',
@@ -438,15 +449,20 @@ function copyFor(kind: WeatherGlanceKind, weather: WeatherData): GlanceCopy {
         statOneIcon: 'water-percent',
       };
     case 'sunny':
-    default:
+    default: {
+      const isHot = weather.feelsLike >= 33;
+      const uvVal = weather.uvIndex !== undefined
+        ? `${weather.uvIndex} · ${uvLabel(weather.uvIndex)}`
+        : 'High';
       return {
-        summary: 'Warm, dry, low wind.',
-        verdict: 'Take the sunglasses.',
-        verdictIcon: 'sunglasses',
+        summary: isHot ? 'High heat today. Dress light, stay hydrated.' : 'Warm, dry, low wind.',
+        verdict: isHot ? 'Breathable fabrics only.' : 'Take the sunglasses.',
+        verdictIcon: isHot ? 'thermometer-high' : 'sunglasses',
         statOneLabel: 'UV Index',
-        statOneValue: weather.uvIndex !== undefined ? String(weather.uvIndex) : 'High',
+        statOneValue: uvVal,
         statOneIcon: 'white-balance-sunny',
       };
+    }
   }
 }
 
@@ -476,25 +492,24 @@ function editorialStatus(kind: WeatherGlanceKind): string {
 
 function secondaryStatFor(primaryLabel: string, weather: WeatherData): GlanceStat {
   if (primaryLabel.toLowerCase() === 'wind') {
-    return {
-      label: 'Humidity',
-      value: `${weather.humidity}%`,
-      icon: 'water-percent',
-    };
+    return { label: 'Humidity', value: `${weather.humidity}%`, icon: 'water-percent' };
   }
-
-  return {
-    label: 'Wind',
-    value: `${weather.windSpeed} km/h`,
-    icon: 'weather-windy',
-  };
+  if (weather.feelsLike >= 33) {
+    return { label: 'Humidity', value: `${weather.humidity}%`, icon: 'water-percent' };
+  }
+  if (weather.windChill !== undefined && weather.windChill <= -10) {
+    return { label: 'Wind Chill', value: `${weather.windChill}°`, icon: 'thermometer-chevron-down' };
+  }
+  return { label: 'Wind', value: `${weather.windSpeed} km/h`, icon: 'weather-windy' };
 }
 
-function formatConsultedAt(lastConsultedAt?: number | null): string {
+function formatConsultedAt(weather: WeatherData, lastConsultedAt?: number | null): string {
   if (!lastConsultedAt) return 'CONSULTED';
-  const consultedAt = new Date(lastConsultedAt);
-  if (Number.isNaN(consultedAt.getTime())) return 'CONSULTED';
-  return `LAST ${consultedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  const time = formatLocationTimeWithCue(lastConsultedAt, weather.utcOffsetSeconds, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return time ? `LAST · ${time}` : 'CONSULTED';
 }
 
 export function WeatherGlanceCard({ weather, formatTemp, mode = 'strip', style, lastConsultedAt }: Props) {
@@ -510,7 +525,10 @@ export function WeatherGlanceCard({ weather, formatTemp, mode = 'strip', style, 
   const styles = useMemo(() => makeStyles(fonts, palette, mode, cardRadius, isY2K), [fonts, palette, mode, cardRadius, isY2K]);
   const days = weather.daily?.slice(0, 3) ?? [];
   const useEditorialLayout = themeName === 'classic' || themeName === 'weather-editorial';
-  const consultedLabel = useMemo(() => formatConsultedAt(lastConsultedAt), [lastConsultedAt]);
+  const consultedLabel = useMemo(
+    () => formatConsultedAt(weather, lastConsultedAt),
+    [lastConsultedAt, weather],
+  );
 
   if (!useEditorialLayout) {
     return (
@@ -531,15 +549,23 @@ export function WeatherGlanceCard({ weather, formatTemp, mode = 'strip', style, 
   return (
     <View style={[styles.cardShell, style]}>
       <View style={styles.card}>
-        <Atmosphere kind={kind} palette={palette} mode={mode} />
-        <WeatherDepthSubject kind={kind} palette={palette} mode={mode} />
+        {kind === 'sunny' ? (
+          <SunnyWeatherAnimation borderRadius={cardRadius} utcOffsetSeconds={weather.utcOffsetSeconds} />
+        ) : (
+          <>
+            <Atmosphere kind={kind} palette={palette} mode={mode} />
+            <WeatherDepthSubject kind={kind} palette={palette} mode={mode} />
+          </>
+        )}
         <View pointerEvents="none" style={styles.edgeHighlight} />
         <View pointerEvents="none" style={styles.depthShade} />
 
         <View style={styles.content}>
           <View style={styles.editorialHeader}>
             <Text style={styles.editorialKicker} numberOfLines={1}>WEATHER EDITORIAL</Text>
-            <Text style={styles.editorialStatus} numberOfLines={1}>{editorialStatus(kind)}</Text>
+            <Text style={styles.editorialStatus} numberOfLines={1}>
+              {kind === 'sunny' && weather.feelsLike >= 33 ? 'HEAT CHECK' : editorialStatus(kind)}
+            </Text>
           </View>
 
           <View style={styles.glassPanel}>
@@ -617,7 +643,7 @@ export function WeatherGlanceCard({ weather, formatTemp, mode = 'strip', style, 
             </View>
           )}
         </View>
-        <WeatherForeground kind={kind} palette={palette} mode={mode} />
+        {kind !== 'sunny' && <WeatherForeground kind={kind} palette={palette} mode={mode} />}
       </View>
     </View>
   );
@@ -648,8 +674,14 @@ function AnimatedWeatherWidget({
   return (
     <View style={[styles.cardShell, style]}>
       <View style={styles.card}>
-        <Atmosphere kind={kind} palette={palette} mode={mode} />
-        <WeatherDepthSubject kind={kind} palette={palette} mode={mode} />
+        {kind === 'sunny' ? (
+          <SunnyWeatherAnimation borderRadius={cardRadius} utcOffsetSeconds={weather.utcOffsetSeconds} />
+        ) : (
+          <>
+            <Atmosphere kind={kind} palette={palette} mode={mode} />
+            <WeatherDepthSubject kind={kind} palette={palette} mode={mode} />
+          </>
+        )}
         <View pointerEvents="none" style={styles.edgeHighlight} />
         <View pointerEvents="none" style={styles.depthShade} />
 
@@ -686,13 +718,21 @@ function AnimatedWeatherWidget({
             </View>
             <View style={styles.statDivider} />
             <View style={styles.stat}>
-              <Text style={styles.statLabel}>WIND</Text>
-              <Text style={styles.statValue}>{weather.windSpeed}</Text>
-              <Text style={styles.statUnit}>km/h</Text>
+              <Text style={styles.statLabel}>
+                {weather.windChill !== undefined && weather.windChill <= -10 ? 'CHILL' : 'WIND'}
+              </Text>
+              <Text style={styles.statValue}>
+                {weather.windChill !== undefined && weather.windChill <= -10
+                  ? weather.windChill
+                  : weather.windSpeed}
+              </Text>
+              <Text style={styles.statUnit}>
+                {weather.windChill !== undefined && weather.windChill <= -10 ? '°C' : 'km/h'}
+              </Text>
             </View>
           </View>
         </View>
-        <WeatherForeground kind={kind} palette={palette} mode={mode} />
+        {kind !== 'sunny' && <WeatherForeground kind={kind} palette={palette} mode={mode} />}
       </View>
     </View>
   );
@@ -1113,6 +1153,8 @@ function Atmosphere({ kind, palette, mode }: { kind: WeatherGlanceKind; palette:
       {kind === 'storm' && (
         <>
           <Animated.View style={[stylesBase.flash, { opacity: flash }]} />
+          <Animated.View style={[stylesBase.stormStreakHigh, { opacity: flash }]} />
+          <Animated.View style={[stylesBase.stormStreakLow, { opacity: flash }]} />
           <Animated.View style={[stylesBase.electricRing, { opacity: flash, transform: [{ scale: boltScale }] }]} />
           <Animated.View style={[stylesBase.stormBolt, { opacity: flash, transform: [{ scale: boltScale }] }]}>
             <MaterialCommunityIcons name="lightning-bolt" size={86} color="#FDE68A" />
@@ -2897,6 +2939,32 @@ const stylesBase = StyleSheet.create({
   flash: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255,255,255,0.72)',
+  },
+  stormStreakHigh: {
+    position: 'absolute',
+    top: '18%',
+    left: '-8%',
+    right: '-8%',
+    height: 3,
+    backgroundColor: '#FDE68A',
+    transform: [{ rotate: '-8deg' }],
+    shadowColor: '#FDE68A',
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  stormStreakLow: {
+    position: 'absolute',
+    top: '22%',
+    left: '14%',
+    right: '-8%',
+    height: 2,
+    backgroundColor: '#FDE68A',
+    transform: [{ rotate: '-12deg' }],
+    shadowColor: '#FDE68A',
+    shadowOpacity: 0.6,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 0 },
   },
   stormBolt: {
     position: 'absolute',

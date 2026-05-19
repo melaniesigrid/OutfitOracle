@@ -66,7 +66,7 @@ export function Y2KDecreeCard({ verdict }: Props) {
 
           {/* Rating */}
           <View style={styles.ratingRow}>
-            <Text style={styles.ratingLabel}>EFFORT</Text>
+            <Text style={styles.ratingLabel}>POLISH</Text>
             <View style={styles.ratingBar}>
               {Array.from({ length: 5 }, (_, i) => (
                 <View
@@ -128,8 +128,8 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   vibeHeadline: {
     fontFamily: typo.displayLarge.fontFamily,
-    fontSize: 44,
-    lineHeight: 58,
+    fontSize: typo.displayLarge.fontSize,
+    lineHeight: typo.displayLarge.lineHeight,
     color: y2kTokens.hotPink,
     letterSpacing: typo.displayLarge.letterSpacing,
     marginBottom: spacing.md,

@@ -50,7 +50,7 @@ export function WelcomeScreen({ onContinue }: Props) {
         </Text>
         <View style={styles.rule} />
         <Text style={styles.sub}>
-          Weather-powered outfit verdicts,{'\n'}editorially curated by AI.
+          Weather-powered outfit verdicts,{'\n'}editorially created using AI and our custom algorithm that reads the weather and your style, and outputs a magazine-style guide to dressing today.
         </Text>
       </Animated.View>
 

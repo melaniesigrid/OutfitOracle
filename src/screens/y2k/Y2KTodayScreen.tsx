@@ -18,6 +18,7 @@ import { Y2KSticker } from '../../components/y2k/Y2KSticker';
 import { Y2KSignature } from '../../components/y2k/Y2KSignature';
 import { WeatherAlertBanner } from '../../components/WeatherAlertBanner';
 import { fashionUsageFor } from '../../utils/wordUsage';
+import { formatLocationTimeWithCue } from '../../utils/locationTime';
 
 // ─── Word of the Day (same deterministic list) ────────────────────────────────
 
@@ -127,6 +128,7 @@ export function Y2KTodayScreen() {
   const showResult = !!weather && !!verdict;
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const hoursAgo   = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
+  const lastResultTime = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
   const word       = WORDS[dayOfYear() % WORDS.length];
   const wordUsage  = fashionUsageFor(word.word);
   const today      = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
@@ -272,7 +274,7 @@ export function Y2KTodayScreen() {
                   {/* Rating + signature row */}
                   <View style={styles.verdictFooter}>
                     <View style={styles.ratingRow}>
-                      <Text style={styles.ratingLabel}>EFFORT</Text>
+                      <Text style={styles.ratingLabel}>POLISH</Text>
                       <View style={styles.pips}>
                         {Array.from({ length: 5 }, (_, i) => (
                           <View
@@ -437,7 +439,7 @@ export function Y2KTodayScreen() {
             <View style={styles.refreshRow}>
               {hoursAgo !== null && (
                 <Text style={styles.refreshMeta}>
-                  {hoursAgo === 0 ? 'just now' : `${hoursAgo}h ago`} · {cachedCity}
+                  {lastResultTime ? `last ${lastResultTime.toLowerCase()}` : hoursAgo === 0 ? 'just now' : `${hoursAgo}h ago`} · {cachedCity}
                 </Text>
               )}
               <Pressable
@@ -896,7 +898,9 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   condItem: {
     flex: 1,
     minWidth: 70,
+    minHeight: 92,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     backgroundColor: y2kTokens.blush,
     borderRadius: 10,

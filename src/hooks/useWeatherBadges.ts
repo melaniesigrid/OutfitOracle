@@ -35,9 +35,9 @@ type BadgeDef = {
 // ── Category display names ────────────────────────────────────────────────────
 
 export const BADGE_CATEGORY_LABELS: Record<string, string> = {
-  culture:     'FASHION MYTHOLOGY',
+  culture:     'FASHION REFERENCES',
   first_steps: 'FIRST STEPS',
-  streak:      'DEVOTION STREAKS',
+  streak:      'STYLE STREAKS',
   cold:        'COLD WEATHER',
   heat:        'HOT WEATHER',
   rain:        'RAIN & STORMS',
@@ -132,7 +132,7 @@ const FASHION_CAPITALS = ['paris', 'milan', 'new york', 'london', 'tokyo'];
 
 const BADGE_DEFS: BadgeDef[] = [
 
-  // ══ FASHION MYTHOLOGY (Pop Culture) ══════════════════════════════════════
+  // ══ FASHION REFERENCES (Pop Culture) ═════════════════════════════════════
   {
     id: 'miranda_directive',
     title: "Miranda's Directive",
@@ -450,7 +450,7 @@ const BADGE_DEFS: BadgeDef[] = [
   {
     id: 'five_hundred',
     title: 'Five Hundred',
-    desc: '500 total consults — truly devoted',
+    desc: '500 total consults — fully committed to the edit',
     icon: 'infinity',
     category: 'first_steps',
     evaluate: (h, _f, ex) => ex.totalConsults >= 500 ? (h[0]?.consultedAt ?? Date.now()) : false,
@@ -467,7 +467,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'streak_7',
-    title: 'Week of Devotion',
+    title: 'Seven-Day Edit',
     desc: '7-day consult streak',
     icon: 'fire',
     category: 'streak',
@@ -483,7 +483,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'streak_30',
-    title: 'Monthly Devotee',
+    title: 'Thirty-Day Edit',
     desc: '30-day consult streak',
     icon: 'lightning-bolt-outline',
     category: 'streak',
@@ -507,7 +507,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'streak_365',
-    title: 'Year of Devotion',
+    title: 'Year in Looks',
     desc: '365-day consult streak',
     icon: 'star-circle',
     category: 'streak',
@@ -549,7 +549,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'cold_devotee',
-    title: 'Cold Devotee',
+    title: 'Cold-Weather Regular',
     desc: '5 consults at 5°C or below',
     icon: 'weather-snowy-heavy',
     category: 'cold',
@@ -599,7 +599,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'heat_devotee',
-    title: 'Heat Devotee',
+    title: 'Heat Regular',
     desc: '5 consults at 30°C or above',
     icon: 'thermometer-plus',
     category: 'heat',
@@ -693,7 +693,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'thunder_devotee',
-    title: 'Thunder Devotee',
+    title: 'Thunderstorm Regular',
     desc: '3 thunderstorm consults',
     icon: 'weather-lightning',
     category: 'rain',
@@ -719,7 +719,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'snow_devotee',
-    title: 'Snow Devotee',
+    title: 'Snow Regular',
     desc: '10 consults during snowfall',
     icon: 'weather-snowy-heavy',
     category: 'snow',
@@ -765,7 +765,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'sun_devotee',
-    title: 'The Sun Devotee',
+    title: 'Solar Regular',
     desc: '20 clear-sky consults',
     icon: 'weather-sunny',
     category: 'sunshine',
@@ -1013,7 +1013,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'weekend_devotee',
-    title: 'Weekend Devotee',
+    title: 'Weekend Regular',
     desc: '10 consults on a Saturday or Sunday',
     icon: 'calendar-weekend-outline',
     category: 'calendar',
@@ -1584,10 +1584,10 @@ const BADGE_DEFS: BadgeDef[] = [
     },
   },
 
-    {
+  {
     id: 'oracle_initiate',
     title: 'Oracle Initiate',
-    desc: '35 total consults. The ritual is working.',
+    desc: '35 total consults. The edit is working.',
     icon: 'eye-circle-outline',
     category: 'first_steps',
     evaluate: (h, _f, ex) => ex.totalConsults >= 35 ? (h[0]?.consultedAt ?? Date.now()) : false,
@@ -1602,8 +1602,8 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'oracle_high_priestess',
-    title: 'High Priestess',
-    desc: '750 total consults. Fashion prophecy has a spokesperson.',
+    title: 'Runway Authority',
+    desc: '750 total consults. Fashion instinct has a spokesperson.',
     icon: 'account-cowboy-hat-outline',
     category: 'first_steps',
     evaluate: (h, _f, ex) => ex.totalConsults >= 750 ? (h[0]?.consultedAt ?? Date.now()) : false,
@@ -1627,8 +1627,8 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'streak_180',
-    title: 'Half-Year Ritual',
-    desc: '180-day consult streak. The Oracle is family now.',
+    title: 'Half-Year Edit',
+    desc: '180-day consult streak. The Oracle is in the routine now.',
     icon: 'calendar-star',
     category: 'streak',
     evaluate: (_h, _f, ex) => ex.streak >= 180 ? Date.now() : false,
@@ -1910,7 +1910,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'fog_devotee',
-    title: 'Fog Devotee',
+    title: 'Fog Regular',
     desc: '5 consults in fog, mist, or haze.',
     icon: 'weather-fog',
     category: 'atmosphere',
@@ -2627,7 +2627,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'six_month',
-    title: 'Six-Month Devotee',
+    title: 'Six-Month Edit',
     desc: '6 months with the Oracle',
     icon: 'calendar-check',
     category: 'anniversary',
@@ -2643,7 +2643,7 @@ const BADGE_DEFS: BadgeDef[] = [
   },
   {
     id: 'two_years',
-    title: 'Two Years Devoted',
+    title: 'Two Years Styled',
     desc: '2 full years with the Oracle',
     icon: 'star-circle',
     category: 'anniversary',

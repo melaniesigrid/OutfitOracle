@@ -16,13 +16,13 @@ const SLIDES = [
   },
   {
     kicker: 'EDITORIALLY CURATED',
-    headline: 'AI with taste.\nNot just data.',
-    body: 'Claude Sonnet reads the weather and delivers verdicts with the confidence of a fashion editor who has seen everything.',
+    headline: 'AI with taste.\nNot just data. \nThe forecast\nis not enough.',
+    body: 'You need a verdict. Real conditions from your city — temperature, rain, wind — translated into what to wear, what to avoid, and why. Claude Sonnet reads the weather and delivers verdicts with the confidence of a fashion editor who has seen everything.',
   },
   {
     kicker: 'UNIQUELY YOURS',
     headline: 'The Oracle\nlearns your eye.',
-    body: 'Your aesthetic, your budget, your city history. Every consultation gets sharper. Every verdict gets closer to perfect.',
+    body: 'Your aesthetic, your budget, your cities. Every consult is tailored. None are generic.',
   },
 ];
 

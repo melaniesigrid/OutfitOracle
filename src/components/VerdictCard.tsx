@@ -58,7 +58,7 @@ export function VerdictCard({ verdict }: Props) {
 
       {/* Rating row */}
       <View style={styles.ratingRow}>
-        <Text style={styles.ratingLabel}>EFFORT</Text>
+        <Text style={styles.ratingLabel}>POLISH</Text>
         <View style={styles.ratingDashes}>
           {Array.from({ length: 5 }, (_, i) => (
             <Animated.View

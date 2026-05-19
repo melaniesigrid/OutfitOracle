@@ -328,6 +328,27 @@ const neoBrutalDarkColors = {
   irisText:    '#000000',
 };
 
+// Void — electric editorial in deep indigo-violet. Cyan accent on void, hot-pink energy.
+const voidColors = {
+  ...electricColors,
+  scarlet:       '#22D3EE',  // electric cyan — the primary structural accent
+  scarletFg:     '#22D3EE',
+  scarletDim:    '#061E26',  // dark tint for cyan on void surfaces
+  scarletText:   '#000000',  // black text on cyan fills
+  bg:            '#0A0614',  // deep indigo-void — primary reading surface
+  bgDark:        '#050208',  // near-black void — header and hero panels
+  bgSurface:     '#0F0A1E',  // slightly raised void surface
+  bgCard:        '#140C28',  // violet-tinted card surface
+  bgCardAlt:     '#100820',
+  textPrimary:   '#FAFAFA',
+  textSecondary: '#D4CCF0',  // periwinkle-white with violet cast
+  textMuted:     '#8B7DC0',  // muted violet — labels and captions
+  border:        '#2D1B6B',  // violet divider on void
+  borderHard:    '#FAFAFA',
+  borderMid:     '#5930C2',  // mid-strength violet
+  widgetBg:      '#060310',
+};
+
 // ── Font sets ─────────────────────────────────────────────────────────────
 
 const cormorantFonts = {
@@ -404,7 +425,8 @@ export type ThemeName =
   | 'y2k'
   | 'neo-brutal-light'
   | 'neo-brutal-dark'
-  | 'mondrian';
+  | 'mondrian'
+  | 'void';
 
 // ThemeFamily groups themes by visual/structural lineage.
 // Use this (via THEMES[name].family) instead of per-name predicate functions
@@ -559,6 +581,14 @@ export const THEMES: Record<ThemeName, { colors: AppColors; fonts: AppFonts; met
     isDark: true,
     family: 'electric',
   },
+  'void': {
+    colors: voidColors,
+    fonts:  electricFonts,  // Syne ExtraBold — already loaded with Electric
+    metrics: { ...baseMetrics, borderWidth: 0 },
+    flags: bannerFlags,
+    isDark: true,
+    family: 'electric',
+  },
   'weather-glance': {
     colors: weatherGlanceColors,
     fonts:  syneFonts,
@@ -619,6 +649,7 @@ export const THEME_OPTIONS: ReadonlyArray<{ id: ThemeName; label: string }> = [
   { id: 'morning-paper',    label: 'Morning Paper' },
   { id: 'golden-hour',      label: 'Golden Hour' },
   { id: 'electric',         label: 'Electric' },
+  { id: 'void',             label: 'Void' },
   { id: 'y2k',              label: 'Y2K ♡' },
   { id: 'neo-brutal-light', label: 'Neo-Brutal Light' },
   { id: 'neo-brutal-dark',  label: 'Neo-Brutal Dark' },

@@ -5,10 +5,9 @@ import * as Haptics from 'expo-haptics';
 import { OutfitItem } from '../services/oracle';
 import { useAppData } from '../contexts/AppContext';
 import { fetchPexelsImage } from '../services/pexels';
+import { buildGoogleShoppingUrl, isNoneNeededItem, resolveShopQueries } from '../services/shoppingLinks';
 import { AppColors, AppFonts, AppMetrics, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
-
-const NONE_NEEDED_RE = /\bnone\b|not needed|no outer|skip the|universe has gifted|weather permits|too warm|unnecessary/i;
 
 interface Props {
   item: OutfitItem;
@@ -19,16 +18,7 @@ interface Props {
 }
 
 function openShop(itemName: string) {
-  const q = encodeURIComponent(itemName);
-  Linking.openURL(`https://www.google.com/search?tbm=shop&q=${q}`);
-}
-
-// Split "scarf, gloves and sunglasses" or "clutch + earrings + scarf" into individual items
-function splitItems(raw: string): string[] {
-  return raw
-    .split(/,\s*|\s+and\s+|\s*\+\s*/i)
-    .map(s => s.trim())
-    .filter(Boolean);
+  Linking.openURL(buildGoogleShoppingUrl(itemName));
 }
 
 export function OutfitCard({ item, index, city, vibe, weather }: Props) {
@@ -47,8 +37,8 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   const styles = useMemo(() => makeStyles(colors, fonts, metrics, flags, accent), [colors, fonts, metrics, flags, accent]);
 
   const num = String(index + 1).padStart(2, '0');
-  const isNoneNeeded = NONE_NEEDED_RE.test(item.item);
-  const shopItems = splitItems(item.item);
+  const isNoneNeeded = isNoneNeededItem(item.item);
+  const shopItems = resolveShopQueries(item);
   const hearted = savedCtx.isSaved(item, city);
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -125,7 +115,7 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
 
           {isNoneNeeded ? (
             <Text style={styles.blessingNote}>
-              The Oracle blesses your bare arms. Go forth. :)
+              The Oracle signs off on bare arms. Proceed. :)
             </Text>
           ) : (
             <View style={styles.shopBtns}>
@@ -138,8 +128,11 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
                   accessibilityLabel={`Shop ${piece}`}
                   accessibilityHint="Opens Google Shopping in your browser"
                 >
-                  <Text style={[styles.shopText, { color: flags.solidCardBackgrounds ? accent.text : accent.color }]}>
-                    {shopItems.length > 1 ? `SHOP ${piece.toUpperCase()}` : 'SHOP THIS PIECE'}
+                  <Text
+                    style={[styles.shopText, { color: flags.solidCardBackgrounds ? accent.text : accent.color }]}
+                    numberOfLines={1}
+                  >
+                    SHOP SIMILAR →
                   </Text>
                   <MaterialCommunityIcons
                     name="open-in-new"
