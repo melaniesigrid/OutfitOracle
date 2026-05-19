@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,17 +24,60 @@ export function AuthScreen() {
   const { colors, fonts } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithApple } = useAuth();
 
+  const [showEmail, setShowEmail] = useState(false);
   const [mode, setMode] = useState<AuthMode>('create');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showForgotNote, setShowForgotNote] = useState(false);
 
   const isCreate = mode === 'create';
   const disabled = submitting || !email.trim() || !password || (isCreate && !name.trim());
+
+  async function handleApple() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const rawNonceBytes = new Uint8Array(16);
+      (globalThis.crypto as Crypto).getRandomValues(rawNonceBytes);
+      const rawNonce = Array.from(rawNonceBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      const nonceHashBuffer = await (globalThis.crypto as Crypto).subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(rawNonce),
+      );
+      const nonceHash = Array.from(new Uint8Array(nonceHashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: nonceHash,
+      });
+      await signInWithApple({
+        user: credential.user,
+        identityToken: credential.identityToken,
+        fullName: credential.fullName,
+        email: credential.email,
+        nonce: rawNonce,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      if (e?.code === 'ERR_REQUEST_CANCELED') {
+        // user cancelled — no error shown
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setError('Sign in with Apple failed. Try the email option below.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function submit() {
     if (disabled) return;
@@ -48,7 +92,7 @@ export function AuthScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError(e instanceof Error ? e.message : 'Authentication failed. Please try again.');
+      setError(e instanceof Error ? e.message : 'The Oracle could not verify you. Try again.');
     } finally {
       setSubmitting(false);
     }
@@ -58,6 +102,7 @@ export function AuthScreen() {
     Haptics.selectionAsync();
     setMode(nextMode);
     setError(null);
+    setShowForgotNote(false);
   }
 
   return (
@@ -71,115 +116,158 @@ export function AuthScreen() {
         >
           <View style={styles.header}>
             <Text style={styles.eyebrow}>OUTFIT ORACLE</Text>
-            <Text style={styles.title}>{isCreate ? 'Create Account' : 'Welcome Back'}</Text>
+            <Text style={styles.title}>Join the Court</Text>
             <Text style={styles.note}>
-              {isCreate
-                ? 'Save your profile, archive, and Oracle preferences on this device.'
-                : 'Log in to continue with your saved Oracle profile on this device.'}
+              Save your profile, looks, and Oracle preferences on this device.
             </Text>
           </View>
 
-          <View style={styles.modeRow}>
-            {(['create', 'login'] as const).map(opt => {
-              const active = mode === opt;
-              return (
-                <Pressable
-                  key={opt}
-                  style={[styles.modeBtn, active && styles.modeBtnActive]}
-                  onPress={() => switchMode(opt)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={opt === 'create' ? 'Create account' : 'Log in'}
-                >
-                  <Text style={[styles.modeText, active && styles.modeTextActive]}>
-                    {opt === 'create' ? 'CREATE' : 'LOGIN'}
-                  </Text>
-                </Pressable>
-              );
-            })}
+          {/* ── Primary: Sign in with Apple ── */}
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+            cornerRadius={0}
+            style={styles.appleBtn}
+            onPress={handleApple}
+          />
+
+          {error ? (
+            <View style={styles.errorRow}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={15} color={colors.scarletFg} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {/* ── Divider ── */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
           </View>
 
-          <View style={styles.form}>
-            {isCreate ? (
-              <View style={styles.field}>
-                <Text style={styles.label}>NAME</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Melanie"
-                  placeholderTextColor="rgba(250,249,246,0.28)"
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                  textContentType="name"
-                  accessibilityLabel="Name"
-                />
-              </View>
-            ) : null}
-
-            <View style={styles.field}>
-              <Text style={styles.label}>EMAIL</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor="rgba(250,249,246,0.28)"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                returnKeyType="next"
-                textContentType="emailAddress"
-                accessibilityLabel="Email"
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>PASSWORD</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="At least 8 characters"
-                placeholderTextColor="rgba(250,249,246,0.28)"
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="done"
-                textContentType={isCreate ? 'newPassword' : 'password'}
-                onSubmitEditing={submit}
-                accessibilityLabel="Password"
-              />
-            </View>
-
-            {error ? (
-              <View style={styles.errorRow}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={15} color={colors.scarletFg} />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
+          {/* ── Secondary: Email / password ── */}
+          {!showEmail ? (
             <Pressable
-              style={({ pressed }) => [
-                styles.submitBtn,
-                pressed && !disabled && styles.submitBtnPressed,
-                disabled && styles.submitBtnDisabled,
-              ]}
-              onPress={submit}
-              disabled={disabled}
+              style={styles.emailToggle}
+              onPress={() => { Haptics.selectionAsync(); setShowEmail(true); }}
               accessibilityRole="button"
-              accessibilityLabel={isCreate ? 'Create account' : 'Log in'}
-              accessibilityState={{ disabled }}
+              accessibilityLabel="Continue with email"
             >
-              <Text style={styles.submitText}>
-                {submitting ? 'PLEASE WAIT...' : isCreate ? 'CREATE ACCOUNT' : 'LOGIN'}
-              </Text>
-              {!submitting ? <MaterialCommunityIcons name="arrow-right" size={15} color="#0D0B08" /> : null}
+              <MaterialCommunityIcons name="email-outline" size={15} color="rgba(250,249,246,0.48)" />
+              <Text style={styles.emailToggleText}>Continue with email</Text>
             </Pressable>
-          </View>
+          ) : (
+            <>
+              <View style={styles.modeRow}>
+                {(['create', 'login'] as const).map(opt => {
+                  const active = mode === opt;
+                  return (
+                    <Pressable
+                      key={opt}
+                      style={[styles.modeBtn, active && styles.modeBtnActive]}
+                      onPress={() => switchMode(opt)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={opt === 'create' ? 'Create account' : 'Log in'}
+                    >
+                      <Text style={[styles.modeText, active && styles.modeTextActive]}>
+                        {opt === 'create' ? 'CREATE' : 'LOGIN'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View style={styles.form}>
+                {isCreate ? (
+                  <View style={styles.field}>
+                    <Text style={styles.label}>NAME</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={name}
+                      onChangeText={setName}
+                      placeholder="Melanie"
+                      placeholderTextColor="rgba(250,249,246,0.28)"
+                      autoCapitalize="words"
+                      returnKeyType="next"
+                      textContentType="name"
+                      accessibilityLabel="Name"
+                    />
+                  </View>
+                ) : null}
+
+                <View style={styles.field}>
+                  <Text style={styles.label}>EMAIL</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor="rgba(250,249,246,0.28)"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    returnKeyType="next"
+                    textContentType="emailAddress"
+                    accessibilityLabel="Email"
+                  />
+                </View>
+
+                <View style={styles.field}>
+                  <Text style={styles.label}>PASSWORD</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="At least 8 characters"
+                    placeholderTextColor="rgba(250,249,246,0.28)"
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    textContentType={isCreate ? 'newPassword' : 'password'}
+                    onSubmitEditing={submit}
+                    accessibilityLabel="Password"
+                  />
+                </View>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.submitBtn,
+                    pressed && !disabled && styles.submitBtnPressed,
+                    disabled && styles.submitBtnDisabled,
+                  ]}
+                  onPress={submit}
+                  disabled={disabled}
+                  accessibilityRole="button"
+                  accessibilityLabel={isCreate ? 'Create account' : 'Log in'}
+                  accessibilityState={{ disabled }}
+                >
+                  <Text style={styles.submitText}>
+                    {submitting ? 'PLEASE WAIT...' : isCreate ? 'CREATE ACCOUNT' : 'LOGIN'}
+                  </Text>
+                  {!submitting ? <MaterialCommunityIcons name="arrow-right" size={15} color="#0D0B08" /> : null}
+                </Pressable>
+              </View>
+
+              {!isCreate && (
+                <View style={styles.forgotWrapper}>
+                  <Pressable onPress={() => setShowForgotNote(v => !v)} accessibilityRole="button" accessibilityLabel="Forgot password">
+                    <Text style={styles.forgotLink}>Forgot your password?</Text>
+                  </Pressable>
+                  {showForgotNote && (
+                    <Text style={styles.forgotNote}>
+                      Password recovery isn't available for local accounts — your credentials are stored only on this device, never on a server.
+                      {'\n\n'}Try your password again. If you've forgotten it, use Settings → Reset all data to start fresh. This will erase all saved data on this device.
+                    </Text>
+                  )}
+                </View>
+              )}
+            </>
+          )}
 
           <Text style={styles.localNote}>
-            This local account is stored on this device. Cloud sync and password recovery require hosted auth.
+            Sign in with Apple syncs your profile and looks across devices.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -225,6 +313,44 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
       fontSize: 17,
       lineHeight: 24,
       color: 'rgba(250,249,246,0.58)',
+    },
+    appleBtn: {
+      width: '100%',
+      height: 52,
+      marginBottom: spacing.md,
+    },
+    dividerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: 'rgba(250,249,246,0.12)',
+    },
+    dividerText: {
+      fontFamily: fonts.mono,
+      fontSize: 10,
+      letterSpacing: 1,
+      color: 'rgba(250,249,246,0.28)',
+    },
+    emailToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      paddingVertical: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(250,249,246,0.16)',
+      marginBottom: spacing.md,
+    },
+    emailToggleText: {
+      fontFamily: fonts.mono,
+      fontSize: 11,
+      letterSpacing: 1.5,
+      color: 'rgba(250,249,246,0.48)',
     },
     modeRow: {
       flexDirection: 'row',
@@ -279,6 +405,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
       borderLeftWidth: 2,
       borderLeftColor: colors.scarletFg,
       padding: spacing.sm,
+      marginBottom: spacing.sm,
     },
     errorText: {
       flex: 1,
@@ -309,12 +436,34 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
       letterSpacing: 2,
       color: '#0D0B08',
     },
+    forgotWrapper: {
+      marginTop: spacing.sm,
+      gap: spacing.sm,
+    },
+    forgotLink: {
+      fontFamily: fonts.mono,
+      fontSize: 11,
+      letterSpacing: 0.5,
+      color: 'rgba(250,249,246,0.42)',
+      textDecorationLine: 'underline',
+    },
+    forgotNote: {
+      fontFamily: fonts.mono,
+      fontSize: 11,
+      lineHeight: 17,
+      color: 'rgba(250,249,246,0.50)',
+      backgroundColor: 'rgba(250,249,246,0.05)',
+      borderLeftWidth: 2,
+      borderLeftColor: 'rgba(250,249,246,0.16)',
+      padding: spacing.sm,
+    },
     localNote: {
       fontFamily: fonts.mono,
       fontSize: 10,
       lineHeight: 15,
       color: 'rgba(250,249,246,0.30)',
       marginTop: spacing.xl,
+      textAlign: 'center',
     },
   });
 }

@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 export const AUTH_USERS_KEY = '@outfit_oracle_auth_users_v1';
 export const AUTH_SESSION_KEY = '@outfit_oracle_auth_session_v1';
@@ -9,11 +9,13 @@ export interface AuthUser {
   name: string;
   createdAt: number;
   lastLoginAt: number;
+  appleUserId?: string;
 }
 
 interface StoredAuthUser extends AuthUser {
   passwordSalt: string;
   passwordHash: string;
+  appleUserId?: string;
 }
 
 interface StoredSession {
@@ -43,19 +45,19 @@ function publicUser(user: StoredAuthUser): AuthUser {
 }
 
 async function readUsers(): Promise<StoredAuthUser[]> {
-  const raw = await AsyncStorage.getItem(AUTH_USERS_KEY);
+  const raw = await SecureStore.getItemAsync(AUTH_USERS_KEY).catch(() => null);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch {
-    await AsyncStorage.removeItem(AUTH_USERS_KEY);
+    await SecureStore.deleteItemAsync(AUTH_USERS_KEY).catch(() => {});
     return [];
   }
 }
 
 async function writeUsers(users: StoredAuthUser[]) {
-  await AsyncStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users));
+  await SecureStore.setItemAsync(AUTH_USERS_KEY, JSON.stringify(users));
 }
 
 function makeId(): string {
@@ -137,23 +139,22 @@ function hmacSha256(key: Uint8Array, msg: Uint8Array): Uint8Array {
 }
 
 // PBKDF2-SHA256: 10k iterations, 32-byte output (local-device auth only).
-// Native crypto.subtle (100k iter) is used when available; this runs in all Hermes builds.
+// Throws if crypto.getRandomValues is unavailable — never silently weakens to Math.random.
 function makeSalt(): string {
-  // Try native PRNG first; fall back to Math.random + timestamp entropy
-  try {
-    const c = globalThis.crypto as Crypto | undefined;
-    if (c?.getRandomValues) {
-      const bytes = new Uint8Array(16);
-      c.getRandomValues(bytes);
-      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-  } catch { /* fall through */ }
-  // Fallback: xorshift + Date entropy — sufficient for a local device salt
-  let s = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
-  return Array.from({ length: 16 }, () => {
-    s ^= s << 13; s ^= s >>> 17; s ^= s << 5;
-    return (s >>> 24) & 0xff;
-  }).map(b => b.toString(16).padStart(2, '0')).join('');
+  const c = globalThis.crypto as Crypto | undefined;
+  if (!c?.getRandomValues) {
+    throw new Error('Cryptographically secure random unavailable — cannot create account safely.');
+  }
+  const bytes = new Uint8Array(16);
+  c.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 function hashPassword(password: string, salt: string): Promise<string> {
@@ -178,31 +179,32 @@ function hashPassword(password: string, salt: string): Promise<string> {
 }
 
 async function writeSession(userId: string) {
+  // Session stored in SecureStore — encrypted at rest on all platforms.
   const now = Date.now();
   const session: StoredSession = { userId, startedAt: now, expiresAt: now + 90 * 24 * 60 * 60 * 1000 };
-  await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  await SecureStore.setItemAsync(AUTH_SESSION_KEY, JSON.stringify(session));
 }
 
 export async function getStoredAuthSession(): Promise<AuthUser | null> {
   const [rawSession, users] = await Promise.all([
-    AsyncStorage.getItem(AUTH_SESSION_KEY),
+    SecureStore.getItemAsync(AUTH_SESSION_KEY).catch(() => null),
     readUsers(),
   ]);
   if (!rawSession) return null;
   try {
     const session = JSON.parse(rawSession) as StoredSession;
     if (session.expiresAt && Date.now() > session.expiresAt) {
-      await AsyncStorage.removeItem(AUTH_SESSION_KEY);
+      await SecureStore.deleteItemAsync(AUTH_SESSION_KEY).catch(() => {});
       return null;
     }
     const user = users.find(u => u.id === session.userId);
     if (!user) {
-      await AsyncStorage.removeItem(AUTH_SESSION_KEY);
+      await SecureStore.deleteItemAsync(AUTH_SESSION_KEY).catch(() => {});
       return null;
     }
     return publicUser(user);
   } catch {
-    await AsyncStorage.removeItem(AUTH_SESSION_KEY);
+    await SecureStore.deleteItemAsync(AUTH_SESSION_KEY).catch(() => {});
     return null;
   }
 }
@@ -261,7 +263,7 @@ export async function signInLocalAccount(emailInput: string, password: string): 
 
   const user = users[idx];
   const attemptedHash = await hashPassword(password, user.passwordSalt);
-  if (attemptedHash !== user.passwordHash) {
+  if (!timingSafeEqual(attemptedHash, user.passwordHash)) {
     throw new AuthError('That password does not match this account.', 'wrong-password');
   }
 
@@ -274,5 +276,88 @@ export async function signInLocalAccount(emailInput: string, password: string): 
 }
 
 export async function signOutLocalAccount(): Promise<void> {
-  await AsyncStorage.removeItem(AUTH_SESSION_KEY);
+  await SecureStore.deleteItemAsync(AUTH_SESSION_KEY).catch(() => {});
+}
+
+export interface AppleCredential {
+  user: string;
+  identityToken?: string | null;
+  fullName?: { givenName?: string | null; familyName?: string | null } | null;
+  email?: string | null;
+  nonce?: string | null;
+}
+
+export async function signInWithApple(credential: AppleCredential): Promise<AuthUser> {
+  const users = await readUsers();
+  const existing = users.findIndex(u => u.appleUserId === credential.user);
+
+  if (existing >= 0) {
+    const updated = { ...users[existing], lastLoginAt: Date.now() };
+    const next = [...users];
+    next[existing] = updated;
+    await writeUsers(next);
+    await writeSession(updated.id);
+    return publicUser(updated);
+  }
+
+  // First time: create a local account linked to this Apple user ID.
+  const given = credential.fullName?.givenName ?? '';
+  const family = credential.fullName?.familyName ?? '';
+  const name = [given, family].filter(Boolean).join(' ') || 'Oracle Member';
+  const email = credential.email ?? `apple_${credential.user.slice(0, 8)}@device.local`;
+
+  const now = Date.now();
+  const stored: StoredAuthUser = {
+    id: makeId(),
+    name,
+    email,
+    createdAt: now,
+    lastLoginAt: now,
+    passwordSalt: '',
+    passwordHash: '',
+    appleUserId: credential.user,
+  };
+  await writeUsers([stored, ...users]);
+  await writeSession(stored.id);
+  return publicUser(stored);
+}
+
+export async function updateLocalAccount(
+  userId: string,
+  updates: { name?: string; currentPassword?: string; newPassword?: string },
+): Promise<AuthUser> {
+  const users = await readUsers();
+  const idx = users.findIndex(u => u.id === userId);
+  if (idx < 0) throw new AuthError('Account not found on this device.', 'not-found');
+
+  let user = users[idx];
+
+  if (updates.name !== undefined) {
+    const name = updates.name.trim();
+    if (name.length < 2) throw new AuthError('Name must be at least 2 characters.', 'invalid-input');
+    user = { ...user, name };
+  }
+
+  if (updates.newPassword !== undefined) {
+    if (!updates.currentPassword) {
+      throw new AuthError('Enter your current password to set a new one.', 'invalid-input');
+    }
+    const currentHash = await hashPassword(updates.currentPassword, user.passwordSalt);
+    if (!timingSafeEqual(currentHash, user.passwordHash)) {
+      throw new AuthError('Current password is incorrect.', 'wrong-password');
+    }
+    if (updates.newPassword.length < 8) {
+      throw new AuthError('New password must be at least 8 characters.', 'invalid-input');
+    }
+    if (updates.newPassword.length > 1024) {
+      throw new AuthError('New password is too long.', 'invalid-input');
+    }
+    const newSalt = makeSalt();
+    user = { ...user, passwordSalt: newSalt, passwordHash: await hashPassword(updates.newPassword, newSalt) };
+  }
+
+  const next = [...users];
+  next[idx] = user;
+  await writeUsers(next);
+  return publicUser(user);
 }

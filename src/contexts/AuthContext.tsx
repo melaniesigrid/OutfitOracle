@@ -1,11 +1,20 @@
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import {
+  AppleCredential,
   AuthUser,
   createLocalAccount,
   getStoredAuthSession,
   signInLocalAccount,
+  signInWithApple as signInWithAppleLocal,
   signOutLocalAccount,
+  updateLocalAccount,
 } from '../services/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { cloudSignInWithApple, cloudSignOut, cloudMigrateLocalData, MigratePayload } from '../services/authApi';
+
+const CLOUD_TOKEN_KEY = 'outfit_oracle_cloud_token_v1';
+const PROXY_URL = process.env.EXPO_PUBLIC_PROXY_URL ?? '';
 
 type AuthState =
   | { status: 'loading'; user: null }
@@ -15,26 +24,85 @@ type AuthState =
 interface AuthContextValue {
   state: AuthState;
   user: AuthUser | null;
+  /** Opaque cloud session token — null when not signed in via Apple or proxy unavailable */
+  token: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (input: { name: string; email: string; password: string }) => Promise<void>;
+  signInWithApple: (credential: AppleCredential) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (updates: { name?: string; currentPassword?: string; newPassword?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function uploadLocalDataToCloud(token: string): Promise<void> {
+  const [styleRaw, historyRaw, savedRaw, archiveRaw, streakRaw] = await Promise.all([
+    AsyncStorage.getItem('@outfit_oracle_style_profile').catch(() => null),
+    AsyncStorage.getItem('@outfit_oracle_history').catch(() => null),
+    AsyncStorage.getItem('@outfit_oracle_saved').catch(() => null),
+    AsyncStorage.getItem('@outfit_oracle_look_archive_v1').catch(() => null),
+    AsyncStorage.getItem('@outfit_oracle_streak').catch(() => null),
+  ]);
+
+  const payload: MigratePayload = {};
+
+  if (styleRaw) {
+    try {
+      const parsed = JSON.parse(styleRaw);
+      if (!parsed.skipped) payload.styleProfile = parsed;
+    } catch {}
+  }
+  if (historyRaw) {
+    try {
+      const parsed = JSON.parse(historyRaw);
+      if (Array.isArray(parsed) && parsed.length) payload.history = parsed;
+    } catch {}
+  }
+  if (savedRaw) {
+    try {
+      const parsed = JSON.parse(savedRaw);
+      if (Array.isArray(parsed) && parsed.length) payload.saved = parsed;
+    } catch {}
+  }
+  if (archiveRaw) {
+    try {
+      const parsed = JSON.parse(archiveRaw);
+      if (Array.isArray(parsed) && parsed.length) payload.archive = parsed;
+    } catch {}
+  }
+  if (streakRaw) {
+    try {
+      payload.streak = JSON.parse(streakRaw);
+    } catch {}
+  }
+
+  if (Object.keys(payload).length) {
+    await cloudMigrateLocalData(token, payload);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: 'loading', user: null });
+  const [cloudToken, setCloudToken] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    getStoredAuthSession()
-      .then(user => {
-        if (!mounted) return;
-        setState(user ? { status: 'authenticated', user } : { status: 'unauthenticated', user: null });
-      })
-      .catch(() => {
-        if (mounted) setState({ status: 'unauthenticated', user: null });
-      });
+
+    const loadSession = async () => {
+      const [user, token] = await Promise.all([
+        getStoredAuthSession(),
+        SecureStore.getItemAsync(CLOUD_TOKEN_KEY).catch(() => null),
+      ]);
+
+      if (!mounted) return;
+      setState(user ? { status: 'authenticated', user } : { status: 'unauthenticated', user: null });
+      if (token) setCloudToken(token);
+    };
+
+    loadSession().catch(() => {
+      if (mounted) setState({ status: 'unauthenticated', user: null });
+    });
+
     return () => { mounted = false; };
   }, []);
 
@@ -48,14 +116,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: 'authenticated', user });
   }, []);
 
-  const signOut = useCallback(async () => {
-    await signOutLocalAccount();
-    setState({ status: 'unauthenticated', user: null });
+  const signInWithApple = useCallback(async (credential: AppleCredential) => {
+    // Cloud SIWA (verifies identityToken server-side) when proxy is configured
+    let cloudResult = null;
+    if (PROXY_URL && credential.identityToken) {
+      try {
+        cloudResult = await cloudSignInWithApple(credential.identityToken, credential.nonce ?? undefined);
+        await SecureStore.setItemAsync(CLOUD_TOKEN_KEY, cloudResult.token);
+        setCloudToken(cloudResult.token);
+      } catch {
+        // Cloud auth failed — continue with local auth only
+      }
+    }
+
+    // Always maintain local account for offline use and existing UI compatibility
+    const user = await signInWithAppleLocal(credential);
+    setState({ status: 'authenticated', user });
+
+    // On first cloud sign-in, upload any existing local data (fire-and-forget)
+    if (cloudResult?.isNewUser && cloudResult.token) {
+      uploadLocalDataToCloud(cloudResult.token).catch(() => {});
+    }
   }, []);
 
+  const signOut = useCallback(async () => {
+    if (cloudToken) {
+      cloudSignOut(cloudToken); // fire-and-forget
+      await SecureStore.deleteItemAsync(CLOUD_TOKEN_KEY).catch(() => {});
+      setCloudToken(null);
+    }
+    await signOutLocalAccount();
+    setState({ status: 'unauthenticated', user: null });
+  }, [cloudToken]);
+
+  const updateProfile = useCallback(async (
+    updates: { name?: string; currentPassword?: string; newPassword?: string },
+  ) => {
+    const currentUser = state.user;
+    if (!currentUser) throw new Error('Not signed in.');
+    const updated = await updateLocalAccount(currentUser.id, updates);
+    setState({ status: 'authenticated', user: updated });
+  }, [state.user]);
+
   const value = useMemo(
-    () => ({ state, user: state.user, signIn, signUp, signOut }),
-    [state, signIn, signUp, signOut],
+    () => ({ state, user: state.user, token: cloudToken, signIn, signUp, signInWithApple, signOut, updateProfile }),
+    [state, cloudToken, signIn, signUp, signInWithApple, signOut, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
