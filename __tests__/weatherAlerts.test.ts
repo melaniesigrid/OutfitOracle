@@ -79,14 +79,15 @@ describe('Canadian weather alerts', () => {
     jest.restoreAllMocks();
   });
 
-  it('fetches ECCC weather-alerts for Canada country codes and maps yellow heat alerts', async () => {
+  it('fetches ECCC weather-alerts for Canada country codes and preserves yellow heat alerts', async () => {
     const weather = await fetchWeatherByCoords(43.7064, -79.3986, 'Toronto', 'CA');
 
     expect(weather.alerts).toEqual([
       {
         event: 'Heat Warning',
-        severity: 'Moderate',
+        severity: 'Yellow',
         headline: 'The first heat event of the season will begin this afternoon.',
+        source: 'Environment Canada',
       },
     ]);
 

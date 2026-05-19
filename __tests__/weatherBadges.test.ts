@@ -50,9 +50,9 @@ describe('BADGE_CATEGORY_LABELS', () => {
   });
 
   it('maps known categories to uppercased display labels', () => {
-    expect(BADGE_CATEGORY_LABELS['culture']).toBe('FASHION MYTHOLOGY');
+    expect(BADGE_CATEGORY_LABELS['culture']).toBe('FASHION REFERENCES');
     expect(BADGE_CATEGORY_LABELS['first_steps']).toBe('FIRST STEPS');
-    expect(BADGE_CATEGORY_LABELS['streak']).toBe('DEVOTION STREAKS');
+    expect(BADGE_CATEGORY_LABELS['streak']).toBe('STYLE STREAKS');
     expect(BADGE_CATEGORY_LABELS['cold']).toBe('COLD WEATHER');
     expect(BADGE_CATEGORY_LABELS['heat']).toBe('HOT WEATHER');
     expect(BADGE_CATEGORY_LABELS['rain']).toBe('RAIN & STORMS');

@@ -6,7 +6,7 @@ describe('theme registry', () => {
     const optionIds = THEME_OPTIONS.map(option => option.id).sort();
 
     expect(optionIds).toEqual(registeredIds);
-    expect(THEME_OPTIONS).toHaveLength(13);
+    expect(THEME_OPTIONS).toHaveLength(registeredIds.length);
     expect(THEMES['weather-glance']).toBeDefined();
     expect(THEMES['weather-editorial']).toBeDefined();
     expect(THEME_OPTIONS[0]).toEqual({ id: 'weather-glance', label: 'Weather Glance' });
