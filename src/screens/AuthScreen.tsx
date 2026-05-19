@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,19 +12,28 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { AppColors, AppFonts, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
+WebBrowser.maybeCompleteAuthSession();
+
 type AuthMode = 'login' | 'create';
+
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
 
 export function AuthScreen() {
   const { colors, fonts } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
-  const { signIn, signUp, signInWithApple } = useAuth();
+  const { signIn, signUp, signInWithApple, signInWithGoogle, signInWithFacebook } = useAuth();
 
   const [showEmail, setShowEmail] = useState(false);
   const [mode, setMode] = useState<AuthMode>('create');
@@ -34,6 +43,58 @@ export function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showForgotNote, setShowForgotNote] = useState(false);
+
+  // ── Google OAuth ──
+  const [_googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    clientId: GOOGLE_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    scopes: ['openid', 'profile', 'email'],
+  });
+
+  useEffect(() => {
+    if (googleResponse?.type !== 'success') return;
+    const { authentication } = googleResponse;
+    if (!authentication?.idToken) return;
+    setSubmitting(true);
+    setError(null);
+    signInWithGoogle({
+      userId: '', // resolved server-side from idToken sub claim
+      email: null,
+      name: null,
+      idToken: authentication.idToken,
+    })
+      .then(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success))
+      .catch(e => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setError(e instanceof Error ? e.message : 'Google sign-in failed. Try again.');
+      })
+      .finally(() => setSubmitting(false));
+  }, [googleResponse, signInWithGoogle]);
+
+  // ── Facebook OAuth ──
+  const [_fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
+    clientId: FACEBOOK_APP_ID ?? '',
+  });
+
+  useEffect(() => {
+    if (fbResponse?.type !== 'success') return;
+    const { authentication } = fbResponse;
+    if (!authentication?.accessToken) return;
+    setSubmitting(true);
+    setError(null);
+    signInWithFacebook({
+      userId: '', // resolved server-side from access token
+      email: null,
+      name: null,
+      accessToken: authentication.accessToken,
+    })
+      .then(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success))
+      .catch(e => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setError(e instanceof Error ? e.message : 'Facebook sign-in failed. Try again.');
+      })
+      .finally(() => setSubmitting(false));
+  }, [fbResponse, signInWithFacebook]);
 
   const isCreate = mode === 'create';
   const disabled = submitting || !email.trim() || !password || (isCreate && !name.trim());
@@ -122,7 +183,7 @@ export function AuthScreen() {
             </Text>
           </View>
 
-          {/* ── Primary: Sign in with Apple ── */}
+          {/* ── Social sign-in buttons ── */}
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
             buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
@@ -130,6 +191,32 @@ export function AuthScreen() {
             style={styles.appleBtn}
             onPress={handleApple}
           />
+
+          {GOOGLE_CLIENT_ID ? (
+            <Pressable
+              style={({ pressed }) => [styles.socialBtn, pressed && styles.socialBtnPressed, submitting && styles.submitBtnDisabled]}
+              onPress={() => { Haptics.selectionAsync(); googlePromptAsync(); }}
+              disabled={submitting}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Google"
+            >
+              <MaterialCommunityIcons name="google" size={16} color="#0D0B08" />
+              <Text style={styles.socialBtnText}>CONTINUE WITH GOOGLE</Text>
+            </Pressable>
+          ) : null}
+
+          {FACEBOOK_APP_ID ? (
+            <Pressable
+              style={({ pressed }) => [styles.socialBtn, pressed && styles.socialBtnPressed, submitting && styles.submitBtnDisabled]}
+              onPress={() => { Haptics.selectionAsync(); fbPromptAsync(); }}
+              disabled={submitting}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Facebook"
+            >
+              <MaterialCommunityIcons name="facebook" size={16} color="#0D0B08" />
+              <Text style={styles.socialBtnText}>CONTINUE WITH FACEBOOK</Text>
+            </Pressable>
+          ) : null}
 
           {error ? (
             <View style={styles.errorRow}>
@@ -267,7 +354,7 @@ export function AuthScreen() {
           )}
 
           <Text style={styles.localNote}>
-            Sign in with Apple syncs your profile and looks across devices.
+            Social sign-in syncs your profile and looks across devices.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -317,12 +404,31 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
     appleBtn: {
       width: '100%',
       height: 52,
-      marginBottom: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    socialBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      height: 52,
+      backgroundColor: '#FAF9F6',
+      marginBottom: spacing.sm,
+    },
+    socialBtnPressed: {
+      opacity: 0.82,
+    },
+    socialBtnText: {
+      fontFamily: fonts.monoMedium,
+      fontSize: 11,
+      letterSpacing: 2,
+      color: '#0D0B08',
     },
     dividerRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
+      marginTop: spacing.xs,
       marginBottom: spacing.md,
     },
     dividerLine: {

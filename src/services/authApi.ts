@@ -30,6 +30,40 @@ export async function cloudSignInWithApple(identityToken: string, nonce?: string
   return res.json() as Promise<CloudAuthResponse>;
 }
 
+export async function cloudSignInWithGoogle(idToken: string): Promise<CloudAuthResponse> {
+  if (!BASE) throw new Error('EXPO_PUBLIC_PROXY_URL is not set');
+
+  const res = await fetch(`${BASE}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({} as { error?: string }));
+    throw new Error((err as { error?: string }).error ?? `Google sign-in failed (${res.status})`);
+  }
+
+  return res.json() as Promise<CloudAuthResponse>;
+}
+
+export async function cloudSignInWithFacebook(accessToken: string): Promise<CloudAuthResponse> {
+  if (!BASE) throw new Error('EXPO_PUBLIC_PROXY_URL is not set');
+
+  const res = await fetch(`${BASE}/auth/facebook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({} as { error?: string }));
+    throw new Error((err as { error?: string }).error ?? `Facebook sign-in failed (${res.status})`);
+  }
+
+  return res.json() as Promise<CloudAuthResponse>;
+}
+
 export interface MigratePayload {
   styleProfile?: unknown;
   history?: unknown[];

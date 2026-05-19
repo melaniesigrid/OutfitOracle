@@ -2,16 +2,27 @@ import React, { createContext, ReactNode, useCallback, useContext, useEffect, us
 import * as SecureStore from 'expo-secure-store';
 import {
   AppleCredential,
+  GoogleCredential,
+  FacebookCredential,
   AuthUser,
   createLocalAccount,
   getStoredAuthSession,
   signInLocalAccount,
   signInWithApple as signInWithAppleLocal,
+  signInWithGoogle as signInWithGoogleLocal,
+  signInWithFacebook as signInWithFacebookLocal,
   signOutLocalAccount,
   updateLocalAccount,
 } from '../services/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { cloudSignInWithApple, cloudSignOut, cloudMigrateLocalData, MigratePayload } from '../services/authApi';
+import {
+  cloudSignInWithApple,
+  cloudSignInWithGoogle,
+  cloudSignInWithFacebook,
+  cloudSignOut,
+  cloudMigrateLocalData,
+  MigratePayload,
+} from '../services/authApi';
 
 const CLOUD_TOKEN_KEY = 'outfit_oracle_cloud_token_v1';
 const PROXY_URL = process.env.EXPO_PUBLIC_PROXY_URL ?? '';
@@ -24,11 +35,13 @@ type AuthState =
 interface AuthContextValue {
   state: AuthState;
   user: AuthUser | null;
-  /** Opaque cloud session token — null when not signed in via Apple or proxy unavailable */
+  /** Opaque cloud session token — null when not signed in via a social provider or proxy unavailable */
   token: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (input: { name: string; email: string; password: string }) => Promise<void>;
   signInWithApple: (credential: AppleCredential) => Promise<void>;
+  signInWithGoogle: (credential: GoogleCredential & { idToken: string }) => Promise<void>;
+  signInWithFacebook: (credential: FacebookCredential & { accessToken: string }) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: { name?: string; currentPassword?: string; newPassword?: string }) => Promise<void>;
 }
@@ -139,6 +152,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signInWithGoogle = useCallback(async (credential: GoogleCredential & { idToken: string }) => {
+    let cloudResult = null;
+    if (PROXY_URL && credential.idToken) {
+      try {
+        cloudResult = await cloudSignInWithGoogle(credential.idToken);
+        await SecureStore.setItemAsync(CLOUD_TOKEN_KEY, cloudResult.token);
+        setCloudToken(cloudResult.token);
+      } catch {
+        // Cloud auth failed — continue with local auth only
+      }
+    }
+    const user = await signInWithGoogleLocal(credential);
+    setState({ status: 'authenticated', user });
+    if (cloudResult?.isNewUser && cloudResult.token) {
+      uploadLocalDataToCloud(cloudResult.token).catch(() => {});
+    }
+  }, []);
+
+  const signInWithFacebook = useCallback(async (credential: FacebookCredential & { accessToken: string }) => {
+    let cloudResult = null;
+    if (PROXY_URL && credential.accessToken) {
+      try {
+        cloudResult = await cloudSignInWithFacebook(credential.accessToken);
+        await SecureStore.setItemAsync(CLOUD_TOKEN_KEY, cloudResult.token);
+        setCloudToken(cloudResult.token);
+      } catch {
+        // Cloud auth failed — continue with local auth only
+      }
+    }
+    const user = await signInWithFacebookLocal(credential);
+    setState({ status: 'authenticated', user });
+    if (cloudResult?.isNewUser && cloudResult.token) {
+      uploadLocalDataToCloud(cloudResult.token).catch(() => {});
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     if (cloudToken) {
       cloudSignOut(cloudToken); // fire-and-forget
@@ -159,8 +208,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [state.user]);
 
   const value = useMemo(
-    () => ({ state, user: state.user, token: cloudToken, signIn, signUp, signInWithApple, signOut, updateProfile }),
-    [state, cloudToken, signIn, signUp, signInWithApple, signOut, updateProfile],
+    () => ({
+      state,
+      user: state.user,
+      token: cloudToken,
+      signIn,
+      signUp,
+      signInWithApple,
+      signInWithGoogle,
+      signInWithFacebook,
+      signOut,
+      updateProfile,
+    }),
+    [state, cloudToken, signIn, signUp, signInWithApple, signInWithGoogle, signInWithFacebook, signOut, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

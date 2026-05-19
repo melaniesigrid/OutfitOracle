@@ -24,3 +24,6 @@ id = "0026f7dd8bd64903870ae5b141344d42"
 #   npx wrangler secret put FAL_KEY              ← image generation (/image endpoint)
 #   npx wrangler secret put NEON_DATABASE_URL    ← postgres://user:pass@host/db?sslmode=require
 #   npx wrangler secret put APPLE_BUNDLE_ID      ← com.melaniesigrid.outfitoracle
+#   npx wrangler secret put GOOGLE_CLIENT_ID     ← web OAuth client ID (used to validate aud)
+#   npx wrangler secret put FACEBOOK_APP_ID      ← from developers.facebook.com
+#   npx wrangler secret put FACEBOOK_APP_SECRET  ← from developers.facebook.com

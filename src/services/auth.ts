@@ -16,6 +16,8 @@ interface StoredAuthUser extends AuthUser {
   passwordSalt: string;
   passwordHash: string;
   appleUserId?: string;
+  googleUserId?: string;
+  facebookUserId?: string;
 }
 
 interface StoredSession {
@@ -287,6 +289,18 @@ export interface AppleCredential {
   nonce?: string | null;
 }
 
+export interface GoogleCredential {
+  userId: string;
+  email: string | null;
+  name: string | null;
+}
+
+export interface FacebookCredential {
+  userId: string;
+  email: string | null;
+  name: string | null;
+}
+
 export async function signInWithApple(credential: AppleCredential): Promise<AuthUser> {
   const users = await readUsers();
   const existing = users.findIndex(u => u.appleUserId === credential.user);
@@ -316,6 +330,68 @@ export async function signInWithApple(credential: AppleCredential): Promise<Auth
     passwordSalt: '',
     passwordHash: '',
     appleUserId: credential.user,
+  };
+  await writeUsers([stored, ...users]);
+  await writeSession(stored.id);
+  return publicUser(stored);
+}
+
+export async function signInWithGoogle(credential: GoogleCredential): Promise<AuthUser> {
+  const users = await readUsers();
+  const existing = users.findIndex(u => u.googleUserId === credential.userId);
+
+  if (existing >= 0) {
+    const updated = { ...users[existing], lastLoginAt: Date.now() };
+    const next = [...users];
+    next[existing] = updated;
+    await writeUsers(next);
+    await writeSession(updated.id);
+    return publicUser(updated);
+  }
+
+  const name = credential.name ?? 'Oracle Member';
+  const email = credential.email ?? `google_${credential.userId.slice(0, 8)}@device.local`;
+  const now = Date.now();
+  const stored: StoredAuthUser = {
+    id: makeId(),
+    name,
+    email,
+    createdAt: now,
+    lastLoginAt: now,
+    passwordSalt: '',
+    passwordHash: '',
+    googleUserId: credential.userId,
+  };
+  await writeUsers([stored, ...users]);
+  await writeSession(stored.id);
+  return publicUser(stored);
+}
+
+export async function signInWithFacebook(credential: FacebookCredential): Promise<AuthUser> {
+  const users = await readUsers();
+  const existing = users.findIndex(u => u.facebookUserId === credential.userId);
+
+  if (existing >= 0) {
+    const updated = { ...users[existing], lastLoginAt: Date.now() };
+    const next = [...users];
+    next[existing] = updated;
+    await writeUsers(next);
+    await writeSession(updated.id);
+    return publicUser(updated);
+  }
+
+  const name = credential.name ?? 'Oracle Member';
+  const email = credential.email ?? `facebook_${credential.userId.slice(0, 8)}@device.local`;
+  const now = Date.now();
+  const stored: StoredAuthUser = {
+    id: makeId(),
+    name,
+    email,
+    createdAt: now,
+    lastLoginAt: now,
+    passwordSalt: '',
+    passwordHash: '',
+    facebookUserId: credential.userId,
   };
   await writeUsers([stored, ...users]);
   await writeSession(stored.id);

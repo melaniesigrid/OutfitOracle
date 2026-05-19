@@ -4,12 +4,17 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS users (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  apple_sub   TEXT UNIQUE NOT NULL,
-  email       TEXT,
-  name        TEXT,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  apple_sub    TEXT UNIQUE,
+  google_sub   TEXT UNIQUE,
+  facebook_sub TEXT UNIQUE,
+  email        TEXT,
+  name         TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT users_has_identifier CHECK (
+    apple_sub IS NOT NULL OR google_sub IS NOT NULL OR facebook_sub IS NOT NULL
+  )
 );
 
 CREATE TABLE IF NOT EXISTS sessions (

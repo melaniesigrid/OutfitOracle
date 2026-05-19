@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { verifyAppleToken } from '../lib/apple.js';
+import { verifyGoogleToken } from '../lib/google.js';
+import { verifyFacebookToken } from '../lib/facebook.js';
 import { createSession, deleteSession, verifySession } from '../lib/session.js';
 import { getDb } from '../lib/db.js';
 
@@ -56,6 +58,96 @@ auth.post('/siwa', async (c) => {
     name: user.name ?? null,
     isNewUser,
   });
+});
+
+// POST /auth/google — verify Google ID token, upsert user, issue session token
+auth.post('/google', async (c) => {
+  const env = c.env;
+
+  let body;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON body' }, 400); }
+
+  const { idToken } = body ?? {};
+  if (typeof idToken !== 'string' || !idToken) {
+    return c.json({ error: 'idToken required' }, 400);
+  }
+
+  if (!env.GOOGLE_CLIENT_ID) {
+    return c.json({ error: 'Server misconfiguration: GOOGLE_CLIENT_ID not set' }, 500);
+  }
+  if (!env.NEON_DATABASE_URL) {
+    return c.json({ error: 'Server misconfiguration: NEON_DATABASE_URL not set' }, 500);
+  }
+
+  let googleUser;
+  try {
+    googleUser = await verifyGoogleToken(idToken, env.GOOGLE_CLIENT_ID);
+  } catch (e) {
+    return c.json({ error: `Google token verification failed: ${e.message}` }, 401);
+  }
+
+  const sql = getDb(env);
+
+  const rows = await sql`
+    INSERT INTO users (google_sub, email, name)
+    VALUES (${googleUser.sub}, ${googleUser.email}, ${googleUser.name})
+    ON CONFLICT (google_sub) DO UPDATE
+      SET email      = COALESCE(EXCLUDED.email, users.email),
+          name       = COALESCE(EXCLUDED.name, users.name),
+          updated_at = now()
+    RETURNING id, email, name, created_at
+  `;
+
+  const user = rows[0];
+  const isNewUser = Date.now() - new Date(user.created_at).getTime() < 10_000;
+  const token = await createSession(user.id, sql);
+
+  return c.json({ token, userId: user.id, email: user.email ?? null, name: user.name ?? null, isNewUser });
+});
+
+// POST /auth/facebook — verify Facebook access token, upsert user, issue session token
+auth.post('/facebook', async (c) => {
+  const env = c.env;
+
+  let body;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON body' }, 400); }
+
+  const { accessToken } = body ?? {};
+  if (typeof accessToken !== 'string' || !accessToken) {
+    return c.json({ error: 'accessToken required' }, 400);
+  }
+
+  if (!env.FACEBOOK_APP_ID || !env.FACEBOOK_APP_SECRET) {
+    return c.json({ error: 'Server misconfiguration: FACEBOOK_APP_ID/SECRET not set' }, 500);
+  }
+  if (!env.NEON_DATABASE_URL) {
+    return c.json({ error: 'Server misconfiguration: NEON_DATABASE_URL not set' }, 500);
+  }
+
+  let fbUser;
+  try {
+    fbUser = await verifyFacebookToken(accessToken, env.FACEBOOK_APP_ID, env.FACEBOOK_APP_SECRET);
+  } catch (e) {
+    return c.json({ error: `Facebook token verification failed: ${e.message}` }, 401);
+  }
+
+  const sql = getDb(env);
+
+  const rows = await sql`
+    INSERT INTO users (facebook_sub, email, name)
+    VALUES (${fbUser.sub}, ${fbUser.email}, ${fbUser.name})
+    ON CONFLICT (facebook_sub) DO UPDATE
+      SET email      = COALESCE(EXCLUDED.email, users.email),
+          name       = COALESCE(EXCLUDED.name, users.name),
+          updated_at = now()
+    RETURNING id, email, name, created_at
+  `;
+
+  const user = rows[0];
+  const isNewUser = Date.now() - new Date(user.created_at).getTime() < 10_000;
+  const token = await createSession(user.id, sql);
+
+  return c.json({ token, userId: user.id, email: user.email ?? null, name: user.name ?? null, isNewUser });
 });
 
 // DELETE /auth/session — invalidate the current session (sign out)
