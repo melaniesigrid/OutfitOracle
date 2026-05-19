@@ -391,7 +391,7 @@ Your style, however, is entirely your own responsibility.
 
 ```
 Shop the look — curated by the Oracle, disclosed like a professional.
-Affiliate links may be included. The judgment is still free.
+Affiliate links may be included. The verdict is still independent.
 ```
 
 ### Tooltip / Info Icon Copy (tapped by user)

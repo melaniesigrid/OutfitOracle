@@ -261,7 +261,7 @@ Image generation is live. The feature is silently disabled when `EXPO_PUBLIC_FAL
 
 ### API Selection
 
-fal.ai FLUX Pro v1.1 was chosen and is live in production.
+fal.ai FLUX Pro v1.1 was selected and is live in production.
 
 | Service | Model | Decision |
 |---------|-------|----------|

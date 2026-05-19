@@ -183,7 +183,7 @@ Botanical editorial. Syne sans-serif replaces Cormorant for display; sage accent
 
 **TodayScreen treatment:** `isWarmTheme = true`, `isBannerTheme = true`. Hero temperature is rendered in ivory-cream (`#FAF9F6`) inside the charcoal header banner. The banner layout displays time + city + temperature together in a single structured unit.
 
-**Mood:** Porter × Kinfolk. Botanical, clean, morning ritual.
+**Mood:** Porter × Kinfolk. Botanical, clean, morning routine.
 
 ---
 
@@ -348,7 +348,7 @@ Digital zine / fashion club. Lavender page background, deep purple hero panels, 
 - `Y2KDecreeCard` — verdict: file header → vibe headline (40px display) → scarlet rule → Cormorant italic pull quote → pip rating bar → signature
 - `Y2KWeatherCard` — weather: file header → city + condition → 80px temp hero in deep purple panel → mono meta line
 - `Y2KOutfitCard` — outfit item: piece number, category badge, shop link, heart save
-- `Y2KAvoidSection` — "ORACLE FORBIDS" avoid list on blush background
+- `Y2KAvoidSection` — "ORACLE VETOES" avoid list on blush background
 
 **Oracle routing:** `OracleScreen` is a thin router — `isY2KTheme(themeName)` → `<Y2KOracleScreen />`, otherwise `<EditorialOracleScreen />`.
 
@@ -836,7 +836,7 @@ Every token must exist in every theme, even if its value matches Classic. Compon
 | 2026-05-14 | Outfit accent palette retained (all themes) | Mint/lavender/coral/lemon/iris are semantically tied to outfit categories. They work. They don't compete. |
 | 2026-05-14 | Terra Firma, Morning Paper, Golden Hour added | Three warm-organic themes. Terracotta, sage, amber-gold replace scarlet as the accent. Warm-theme flag pattern introduced in TodayScreen. |
 | 2026-05-14 | Syne for Morning Paper display | Geometric sans replaces Cormorant in Morning Paper. Botanical-clean editorial voice; different font identity from Editorial themes without losing authority. |
-| 2026-05-14 | Electric theme (TREVO-inspired) added | 7th theme. Vivid cobalt `#1E2DFF` throughout (both content surface and header), hot-pink `#FF1060` accent, `Syne_800ExtraBold` display — maximum-weight, graphic-design register. Chosen over lighter electric-blue approach because the vivid full-screen blue is the TREVO identity. |
+| 2026-05-14 | Electric theme (TREVO-inspired) added | 7th theme. Vivid cobalt `#1E2DFF` throughout (both content surface and header), hot-pink `#FF1060` accent, `Syne_800ExtraBold` display — maximum-weight, graphic-design register. Selected over lighter electric-blue approach because the vivid full-screen blue is the TREVO identity. |
 | 2026-05-14 | Electric readability revamp | Full-screen cobalt made small periwinkle labels hard to read. Electric moved to deep navy `#050B46` / near-black widget surfaces with readable periwinkle tokens while retaining hot pink and cobalt as accent energy. |
 | 2026-05-14 | Electric uses `Syne_800ExtraBold` not `Syne_700Bold` | Morning Paper already uses `Syne_700Bold`. Distinct weight ensures the two Syne themes read differently — Electric is heavier, more graphic; Morning Paper is editorial. Both use IBM Plex for mono (not Space Mono) to pair precision data labels with vivid blue. |
 | 2026-05-14 | Electric classified as `isWarmTheme = false`, `isBannerTheme = true` | Electric is structurally a dark theme with full-width banner rhythm. Surface readability comes from `widgetBg` + semantic text tokens, not from the warm-theme light-surface resolver. |

@@ -6,13 +6,18 @@ Design and UX debt tracked here. Each item has a what, why, and context for anyo
 
 ## UI / Design Debt
 
-### Achievements empty state copy
-**What:** Replace the single-line placeholder "Consult the Oracle to begin earning achievements." with richer editorial copy that teases the depth of the 127-badge system.
-**Why:** New users land on the ACHIEVEMENTS section with zero badges earned. The current text is accurate but doesn't signal the 15-category depth or create anticipation. The empty state is the first thing they see before collapsing the locked row.
-**Pros:** Better Day 1 impression; sets expectation for the gamification depth; in the Oracle voice.
-**Cons:** Requires editorial copy decision (which voice, how specific); blocked on knowing which Oracle personality the user has when they first open the screen.
-**Context:** Added 2026-05-13 during /plan-design-review of feat/launch-week1. The locked-badge collapse was fixed in that review — this is the remaining empty-state gap. The YouScreen has a `personalityLabel` derived from the user's profile; the empty state could use it.
-**Depends on:** User has completed mandatory onboarding and has a personality set (guaranteed by the gate added in this branch).
+### ~~Style Passport — CityDossierSheet~~ — RESOLVED 2026-05-19
+MapScreen pin tap now opens the full dossier: FASHION TERRITORY (Claude descriptor from `useCityPassport`), CLIMATE PERSONALITY (`getClimatePersonality(humidity, windSpeed)`), YOUR HISTORY (consult count + first visit date + signature vibe), FROM YOUR ARCHIVE (2×2 thumbnail grid), SHARE THIS CITY → button (captures `PassportPageCard` via `captureRef`). Same slide-up animation pattern, `ScrollView` inside `Animated.View` with `maxHeight: 72vh`.
+
+---
+
+### ~~Style Passport — Collectible Deck View~~ — RESOLVED 2026-05-19
+PASSPORT DECK section added to YouScreen below the city count hero. 2-column grid of collected city cards (thumbnail or gradient placeholder, city name, visit count, red dot for fashion capital). Locked silhouette cards for the 5 featured capitals not yet visited. "SHOW ALL n ↓ / SHOW LESS ↑" expand toggle after 6 cards. Tap collected card → `navigation.navigate('Map', { openCity })` → MapScreen reads `openCity` param and pre-selects the pin, opening the CityDossierSheet.
+
+---
+
+### ~~Achievements empty state copy~~ — RESOLVED 2026-05-18
+YouScreen now renders `{personalityLabel} earns standing here. The Oracle tracks 127 marks of distinction across 15 disciplines — temperature, rainfall, wind, cities, occasions, timing, and eight further style records. Your ledger is empty. Consult a first verdict to open it.` — uses the user's personality title, names 15 disciplines, creates anticipation for the badge depth.
 
 ---
 

@@ -270,8 +270,9 @@ Node ≥ 20.19.0 (SDK 54).
 ### Always (in order)
 
 1. **[CLAUDE.md](CLAUDE.md)** — Commands, env rules, architecture summary, learned rules
-2. **[DESIGN.md](DESIGN.md)** — Typography, scarlet discipline, per-theme specs (required for any UI)
-3. **[BEST_PRACTICES.md](BEST_PRACTICES.md)** — TypeScript, React Native, AsyncStorage, accessibility
+2. **[Roadmap.md](Roadmap.md)** - Roadmap
+3. **[DESIGN.md](DESIGN.md)** — Typography, scarlet discipline, per-theme specs (required for any UI)
+4. **[BEST_PRACTICES.md](BEST_PRACTICES.md)** — TypeScript, React Native, AsyncStorage, accessibility
 
 ### By task type
 

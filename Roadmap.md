@@ -191,15 +191,15 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 - [x] **TodayScreen widget redesign** — all sections refactored into uniform dark bordered Widget cards; Word of the Day widget (60-word curated fashion vocabulary, deterministic per calendar day) shown above weather ✅ 2026/05/11
 - [x] **Alternative outfits** — Claude now returns `outfits` (polished) + `outfitsAlt` (casual); POLISHED / CASUAL toggle appears in OracleScreen when both sets are present; old cached verdicts without `outfitsAlt` render normally ✅ 2026/05/11
 
-### Gamification — The Oracle's Court
-> Every mechanic stays in the editorial register — no XP bars, no pixel badges. Devotion, rank, pilgrimage.
+### Gamification — Editorial Track
+> Every mechanic stays in the editorial register — no XP bars, no pixel badges. Style streaks, rank, passport marks.
 
 - [x] **Consult streak** — consecutive-day tracking; milestone banners at 3/7/14/30/100 days ✅ 2026/05/11
-- [x] **Oracle Rank** — 5 tiers (Initiate → Oracle's Chosen) based on lifetime consults ✅ 2026/05/11
+- [x] **Oracle Rank** — 5 tiers (New Arrival → Front Row) based on lifetime consults ✅ 2026/05/11
 - [x] **Style Passport** — unique city tally; milestone stamps at 10/25/50 cities ✅ 2026/05/11
-- [x] **Achievements** — 127 badges across 15 categories (temperature, precipitation, wind, timing, cities, occasions, saves, streaks, calendar, anniversaries, and "Fashion Mythology" pop culture references); category-grouped display in YouScreen with scarlet category headers; expandable — new badges added without cap ✅ 2026/05/13
+- [x] **Achievements** — 127 badges across 15 categories (temperature, precipitation, wind, timing, cities, occasions, saves, streaks, calendar, anniversaries, and "Fashion References" pop culture references); category-grouped display in YouScreen with scarlet category headers; expandable — new badges added without cap ✅ 2026/05/13
 - [x] **Weekly editorial challenge** — 16 rotating challenges (rain, cities, occasions, timing, weather conditions); ISO week number picks the active challenge; `useWeeklyChallenge` evaluates against current week's history; `ChallengeCard` shown above the consult CTA in OracleScreen ✅ 2026/05/12
-- [ ] **Achievement unlock celebration** — when `useWeatherBadges` returns a newly-earned badge (compare prev count vs current count after each consult), trigger a bottom-sheet toast: badge icon, title, category, and "Achievement unlocked." with a haptic `notificationAsync(Success)`. Currently badges appear silently, which wastes a moment of genuine delight.
+- [x] **Achievement unlock celebration** — `BadgeToast` component (slide-up, spring-pop icon, haptic, 4s auto-dismiss) wired in `AppNavigator` via `BadgeToastPortal`; badge detection in `AppContext` via `prevEarnedRef` + hydration guard ✅ 2026/05/19
 - [ ] **Oracle Accuracy score** — powered by "Rate my outfit day" ratings; running percentage shown in YouScreen ("The Oracle has been right 78% of the time"); >80% unlocks "Trusted Oracle" badge; <50% prompts style profile update
 - [ ] **Leaderboard** — opt-in, global, ranked by streak + city count; display name derived from city of first consult ("The London Oracle"). **Do not build until DAU > 1,000.** Empty leaderboards are demotivating. Requires Phase 6 (Identity).
 
@@ -231,10 +231,11 @@ Use that file for reminders. Use this `Roadmap.md` section as the source of trut
 
 > Refinements that have outsized impact on perceived quality. Ship these before monetising — they determine whether users trust the product enough to pay.
 
-- [ ] **Achievement unlock toast** — when a badge is newly earned (detect by comparing earned count before vs. after consult), fire a brief animated bottom sheet: badge icon + title + "Achievement unlocked" with `Haptics.notificationAsync(Success)`. Currently badges appear silently. This is a missed delight moment on every unlock.
+- [x] **Achievement unlock toast** — (duplicate entry) see above ✅ 2026/05/14
 - [ ] **Mandatory onboarding gate** *(see Launch Checklist — this is the implementation detail)* — `App.tsx` checks `profileCtx.status`; renders `<WelcomeOnboarding />` full-screen when `not-set`; tab navigator only mounts after profile is saved. The onboarding component needs a redesign from its current inline/skippable form: full-bleed dark opening screen, editorial copy, 3 steps max, no skip.
-- [ ] **Tab bar badge on Oracle tab** — when a cached result is available and it's over 2 hours old, show a small dot on the Oracle tab icon hinting the Oracle has a fresh take waiting. Subtle urgency without being pushy.
-- [ ] **Transition polish** — the switch between POLISHED and CASUAL outfit sets currently re-renders cards with no animation; add a crossfade or slide so the toggle feels intentional.
+- [x] **Tab bar badge on Oracle tab** — scarlet dot on Oracle tab icon when cached result is > 2h old; implemented in `TabNavigator` via `stale` flag ✅ 2026/05/19
+- [x] **Transition polish** — DAY/NIGHT outfit toggle has `toggleFade` crossfade (220ms); `Animated.View` wraps the outfit card list in OracleScreen ✅ 2026/05/19
+- [x] **City Dossier Sheet** — MapScreen pin tap now opens full dossier: FASHION TERRITORY (Claude descriptor), CLIMATE PERSONALITY (`getClimatePersonality`), YOUR HISTORY (consults + first visit + signature vibe), FROM YOUR ARCHIVE (2×2 thumbnail grid), SHARE THIS CITY → button (captures `PassportPageCard` via `captureRef`) ✅ 2026/05/19
 - [x] **Empty state illustrations** — Oracle Archives, Saved Looks, and the Map now show editorial first-run states instead of blank surfaces. ✅ 2026/05/15
 - [ ] **Keyboard avoidance on Oracle tab** — on smaller devices (iPhone SE), the city input can be obscured by the keyboard; verify `KeyboardAvoidingView` behaviour with `behavior="padding"` is consistent across all supported device sizes.
 - [x] **Haptic on save** — `OutfitCard` now fires `impactAsync(Medium)` when saving and keeps `selectionAsync` for unsaving. ✅ 2026/05/15
@@ -400,7 +401,7 @@ Apply in this order — lowest approval friction first. Use `affiliate@outfitora
 - [x] **Analytics opt-out enforcement** — Settings "Usage analytics" now persists to `@outfit_oracle_analytics_enabled`; `analytics.ts` reads the preference before generating a device ID or sending PostHog events; full reset clears the key; analytics tests cover default enabled, explicit opt-out, persistence, and no-network-call behavior ✅ 2026/05/14
 - [x] **Test suite (ts-jest)** — 43 tests across 4 suites covering oracle type shapes, analytics events, weather badge exports, and proxy routing; compatible with Node 23 via ts-jest (jest-expo incompatible with Node 23) ✅ 2026/05/13
 - [x] **Mandatory onboarding gate** — skip button removed from StyleOnboarding; AppNavigator gates tab navigator on profileState.status; returning skipped users redirected to style step on next launch ✅ 2026/05/13
-- [x] **Achievement categories + Fashion Mythology** — 127 achievements across 15 named categories; 27 new pop culture badges (Carrie Bradshaw, Miranda Priestly, Euphoria, Succession, Bridgerton, etc.); YouScreen now groups earned achievements by category with scarlet headers; locked badges shown as a collapsed count at the bottom ✅ 2026/05/13
+- [x] **Achievement categories + Fashion References** — 127 achievements across 15 named categories; 27 new pop culture badges (Carrie Bradshaw, Miranda Priestly, Euphoria, Succession, Bridgerton, etc.); YouScreen now groups earned achievements by category with scarlet headers; locked badges shown as a collapsed count at the bottom ✅ 2026/05/13
 - [x] **Colour preferences** — 16-colour swatch grid in ProfileEditScreen; tap-cycle (love → avoid → clear); injected into Claude prompt in both app and Worker ✅ 2026/05/12
 - [x] **Saved outfits** — `useSavedOutfits` hook; heart icon on OutfitCard; SAVED LOOKS in YouScreen; settings clear flow ✅ 2026/05/12
 - [x] **Accessories split fix** — `splitItems()` splits comma/and-separated accessories into individual Google Shopping links ✅ 2026/05/12
@@ -412,6 +413,8 @@ Apply in this order — lowest approval friction first. Use `affiliate@outfitora
 - [x] **Expanded TodayScreen** — hourly forecast, 7-day daily, UV, sun/moon, allergens ✅ 2026/05/11
 - [x] **Weather service expansion** — pollen/AQI (Open-Meteo Air Quality API), moon phase calculation, parallel fetches ✅ 2026/05/11
 - [x] **Style Passport world map** — `MapScreen` with Apple Maps (mutedStandard); scarlet markers for visited cities with visit-count badge; 5 fashion capital inspiration markers (Paris/Milan/NY/London/Tokyo) that hide once visited; tap-to-select city detail card (name, country, last vibe, temp, condition, date); passport stats panel (city count, milestone countdown, earned stamps); `lat/lon` added to `WeatherData`; entry via "VIEW ON MAP" in YouScreen ✅ 2026/05/11
+- [x] **City Dossier Sheet** — MapScreen pin tap replaced with full 5-section dossier: FASHION TERRITORY, CLIMATE PERSONALITY, YOUR HISTORY (count + first visit + signature vibe), FROM YOUR ARCHIVE (2×2 thumbnails), SHARE → PassportPageCard capture; `useCityPassport` + `getClimatePersonality` wired; same slide-up animation, ScrollView body ✅ 2026/05/19
+- [x] **Passport Deck** — YouScreen PASSPORT DECK section: 2-column city card grid with thumbnails, visit counts, fashion capital red-dot badge; locked silhouette cards for 5 unvisited featured capitals (FOMO); expand/collapse after 6 cards; tap → `navigate('Map', { openCity })` → MapScreen pre-selects pin and opens dossier ✅ 2026/05/19
 - [x] **City autocomplete alignment fix** — `CitySuggestions` now respects screen horizontal margins ✅ 2026/05/11
 - [x] **BEST_PRACTICES.md** — commit conventions, TypeScript rules, RN/Expo constraints documented ✅ 2026/05/11
 - [x] **Engineering audit + 9 bug fixes** ✅ 2026/05/11

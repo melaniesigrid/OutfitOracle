@@ -112,9 +112,9 @@ Data flow: `OracleScreen` → `useOracle.consult()` → Open-Meteo weather → C
 
 | Category | Examples |
 |---|---|
-| **Fashion Mythology** | Carrie Bradshaw (10 saved looks), Miranda Priestly (Work + rain), Euphoria Hour (after 10pm), Bridgerton Season (London in spring) |
-| Temperature | Arctic Devotee, Desert Chic, The Goldilocks |
-| Streaks | The Oracle's Devotee (7-day), Century (100-day) |
+| **Fashion References** | Carrie Bradshaw (10 saved looks), Miranda Priestly (Work + rain), Euphoria Hour (after 10pm), Bridgerton Season (London in spring) |
+| Temperature | Cold-Weather Regular, Desert Chic, The Goldilocks |
+| Streaks | Seven-Day Edit, Century Streak |
 | Precipitation | First Rain, Storm Chaser, The Detox |
 | Sunshine | First Sun, UV Warrior |
 | Wind | Windswept Editorial |
@@ -202,6 +202,7 @@ Hosted at `https://melaniesigrid.github.io/OutfitOracle/` (GitHub Pages from `/d
 
 ## More docs
 
+- [MARKETING.md](MARKETING.md) — marketing plan: Instagram, content calendar, launch checklist, brand voice
 - [ARCHITECTURE.md](ARCHITECTURE.md) — codebase guide: entry points, modules, data flow, pre-change reading list
 - [Roadmap.md](Roadmap.md) — feature backlog and launch checklist
 - [CHANGELOG.md](CHANGELOG.md) — release history

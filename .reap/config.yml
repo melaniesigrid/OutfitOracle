@@ -1,0 +1,8 @@
+project: outfit-oracle
+language: english
+autoSubagent: true
+strictEdit: false
+strictMerge: false
+agentClient: claude-code
+autoUpdate: true
+autoIssueReport: true
