@@ -11,7 +11,8 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import * as AppleAuthentication from 'expo-apple-authentication';
+// import * as AppleAuthentication from 'expo-apple-authentication'; // requires paid Apple Developer account
+// import * as ExpoCrypto from 'expo-crypto'; // only needed for Apple Sign In
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as Facebook from 'expo-auth-session/providers/facebook';
@@ -29,11 +30,60 @@ const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
 
+type AuthStyles = ReturnType<typeof makeStyles>;
+
+function GoogleGMark({ styles }: { styles: AuthStyles }) {
+  return (
+    <View
+      style={styles.googleLogo}
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+      pointerEvents="none"
+    >
+      <View style={styles.googleLogoRing} />
+      <View style={styles.googleLogoCutout} />
+      <View style={styles.googleLogoStem} />
+    </View>
+  );
+}
+
+function SocialSignInButton({
+  styles,
+  label,
+  accessibilityLabel,
+  icon,
+  disabled,
+  onPress,
+}: {
+  styles: AuthStyles;
+  label: string;
+  accessibilityLabel: string;
+  icon: React.ReactNode;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.socialBtn, pressed && styles.socialBtnPressed, disabled && styles.submitBtnDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+    >
+      <View style={styles.socialBtnIconSlot} pointerEvents="none">
+        {icon}
+      </View>
+      <Text style={styles.socialBtnText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function AuthScreen() {
   const { colors, fonts } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
-  const { signIn, signUp, signInWithApple, signInWithGoogle, signInWithFacebook } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithFacebook } = useAuth();
 
   const [showEmail, setShowEmail] = useState(false);
   const [mode, setMode] = useState<AuthMode>('create');
@@ -99,46 +149,8 @@ export function AuthScreen() {
   const isCreate = mode === 'create';
   const disabled = submitting || !email.trim() || !password || (isCreate && !name.trim());
 
-  async function handleApple() {
-    setError(null);
-    setSubmitting(true);
-    try {
-      const rawNonceBytes = new Uint8Array(16);
-      (globalThis.crypto as Crypto).getRandomValues(rawNonceBytes);
-      const rawNonce = Array.from(rawNonceBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-      const nonceHashBuffer = await (globalThis.crypto as Crypto).subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(rawNonce),
-      );
-      const nonceHash = Array.from(new Uint8Array(nonceHashBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-        nonce: nonceHash,
-      });
-      await signInWithApple({
-        user: credential.user,
-        identityToken: credential.identityToken,
-        fullName: credential.fullName,
-        email: credential.email,
-        nonce: rawNonce,
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (e: any) {
-      if (e?.code === 'ERR_REQUEST_CANCELED') {
-        // user cancelled — no error shown
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setError('Sign in with Apple failed. Try the email option below.');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  // handleApple — disabled until paid Apple Developer account is set up
+  // async function handleApple() { ... }
 
   async function submit() {
     if (disabled) return;
@@ -184,38 +196,37 @@ export function AuthScreen() {
           </View>
 
           {/* ── Social sign-in buttons ── */}
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-            cornerRadius={0}
-            style={styles.appleBtn}
+          {/* Apple Sign In — re-enable once enrolled in paid Apple Developer Program
+          <SocialSignInButton
+            styles={styles}
+            label="Sign in with Apple"
+            accessibilityLabel="Sign in with Apple"
+            icon={<MaterialCommunityIcons name="apple" size={22} color="#0D0B08" />}
+            disabled={submitting}
             onPress={handleApple}
           />
+          */}
 
           {GOOGLE_CLIENT_ID ? (
-            <Pressable
-              style={({ pressed }) => [styles.socialBtn, pressed && styles.socialBtnPressed, submitting && styles.submitBtnDisabled]}
-              onPress={() => { Haptics.selectionAsync(); googlePromptAsync(); }}
+            <SocialSignInButton
+              styles={styles}
+              label="Sign in with Google"
+              accessibilityLabel="Sign in with Google"
+              icon={<GoogleGMark styles={styles} />}
               disabled={submitting}
-              accessibilityRole="button"
-              accessibilityLabel="Continue with Google"
-            >
-              <MaterialCommunityIcons name="google" size={16} color="#0D0B08" />
-              <Text style={styles.socialBtnText}>CONTINUE WITH GOOGLE</Text>
-            </Pressable>
+              onPress={() => { Haptics.selectionAsync(); googlePromptAsync(); }}
+            />
           ) : null}
 
           {FACEBOOK_APP_ID ? (
-            <Pressable
-              style={({ pressed }) => [styles.socialBtn, pressed && styles.socialBtnPressed, submitting && styles.submitBtnDisabled]}
-              onPress={() => { Haptics.selectionAsync(); fbPromptAsync(); }}
+            <SocialSignInButton
+              styles={styles}
+              label="Sign in with Facebook"
+              accessibilityLabel="Sign in with Facebook"
+              icon={<MaterialCommunityIcons name="facebook" size={22} color="#1877F2" />}
               disabled={submitting}
-              accessibilityRole="button"
-              accessibilityLabel="Continue with Facebook"
-            >
-              <MaterialCommunityIcons name="facebook" size={16} color="#0D0B08" />
-              <Text style={styles.socialBtnText}>CONTINUE WITH FACEBOOK</Text>
-            </Pressable>
+              onPress={() => { Haptics.selectionAsync(); fbPromptAsync(); }}
+            />
           ) : null}
 
           {error ? (
@@ -401,28 +412,65 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
       lineHeight: 24,
       color: 'rgba(250,249,246,0.58)',
     },
-    appleBtn: {
-      width: '100%',
-      height: 52,
-      marginBottom: spacing.sm,
-    },
     socialBtn: {
-      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: spacing.sm,
+      width: '100%',
       height: 52,
       backgroundColor: '#FAF9F6',
       marginBottom: spacing.sm,
+      position: 'relative',
     },
     socialBtnPressed: {
       opacity: 0.82,
     },
+    socialBtnIconSlot: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 64,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     socialBtnText: {
-      fontFamily: fonts.monoMedium,
-      fontSize: 11,
-      letterSpacing: 2,
+      fontSize: 17,
+      lineHeight: 22,
+      fontWeight: Platform.OS === 'ios' ? '600' : '500',
+      letterSpacing: 0,
       color: '#0D0B08',
+    },
+    googleLogo: {
+      width: 22,
+      height: 22,
+      position: 'relative',
+    },
+    googleLogoRing: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 3,
+      borderTopColor: '#EA4335',
+      borderRightColor: '#4285F4',
+      borderBottomColor: '#34A853',
+      borderLeftColor: '#FBBC05',
+    },
+    googleLogoCutout: {
+      position: 'absolute',
+      right: -1,
+      top: 6,
+      width: 9,
+      height: 10,
+      backgroundColor: '#FAF9F6',
+    },
+    googleLogoStem: {
+      position: 'absolute',
+      right: 1,
+      top: 9,
+      width: 10,
+      height: 3,
+      backgroundColor: '#4285F4',
     },
     dividerRow: {
       flexDirection: 'row',

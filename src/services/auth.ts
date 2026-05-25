@@ -1,7 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
+import * as ExpoCrypto from 'expo-crypto';
 
-export const AUTH_USERS_KEY = '@outfit_oracle_auth_users_v1';
-export const AUTH_SESSION_KEY = '@outfit_oracle_auth_session_v1';
+export const AUTH_USERS_KEY = 'outfit_oracle_auth_users_v1';
+export const AUTH_SESSION_KEY = 'outfit_oracle_auth_session_v1';
 
 export interface AuthUser {
   id: string;
@@ -140,15 +141,20 @@ function hmacSha256(key: Uint8Array, msg: Uint8Array): Uint8Array {
   return sha256(outer);
 }
 
-// PBKDF2-SHA256: 10k iterations, 32-byte output (local-device auth only).
-// Throws if crypto.getRandomValues is unavailable — never silently weakens to Math.random.
-function makeSalt(): string {
+function fillSecureRandomBytes(bytes: Uint8Array): void {
   const c = globalThis.crypto as Crypto | undefined;
-  if (!c?.getRandomValues) {
-    throw new Error('Cryptographically secure random unavailable — cannot create account safely.');
+  if (c?.getRandomValues) {
+    c.getRandomValues(bytes);
+    return;
   }
+
+  ExpoCrypto.getRandomValues(bytes);
+}
+
+// PBKDF2-SHA256: 10k iterations, 32-byte output (local-device auth only).
+function makeSalt(): string {
   const bytes = new Uint8Array(16);
-  c.getRandomValues(bytes);
+  fillSecureRandomBytes(bytes);
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 

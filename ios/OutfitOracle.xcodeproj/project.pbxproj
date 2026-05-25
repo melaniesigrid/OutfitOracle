@@ -21,7 +21,7 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = OutfitOracle/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = OutfitOracle/Info.plist; sourceTree = "<group>"; };
 		2FF45FAEA4E1DE5B81B65114 /* Pods-OutfitOracle.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OutfitOracle.debug.xcconfig"; path = "Target Support Files/Pods-OutfitOracle/Pods-OutfitOracle.debug.xcconfig"; sourceTree = "<group>"; };
-		3F4EFADD63277F8B2E37FBD6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = OutfitOracle/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		3F4EFADD63277F8B2E37FBD6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = OutfitOracle/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		44B094649991E5B94798302B /* libPods-OutfitOracle.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-OutfitOracle.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		742DD99101D2B43B5F4FB324 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-OutfitOracle/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		993CFA60112A485F6A7E261E /* Pods-OutfitOracle.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OutfitOracle.release.xcconfig"; path = "Target Support Files/Pods-OutfitOracle/Pods-OutfitOracle.release.xcconfig"; sourceTree = "<group>"; };
@@ -128,7 +128,6 @@
 				2FF45FAEA4E1DE5B81B65114 /* Pods-OutfitOracle.debug.xcconfig */,
 				993CFA60112A485F6A7E261E /* Pods-OutfitOracle.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -361,7 +360,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = OutfitOracle/OutfitOracle.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C25X766DGK;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -382,6 +384,7 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.melaniesigrid.outfitoracle;
 				PRODUCT_NAME = OutfitOracle;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "OutfitOracle/OutfitOracle-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -397,7 +400,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = OutfitOracle/OutfitOracle.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C25X766DGK;
 				INFOPLIST_FILE = OutfitOracle/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -413,6 +419,7 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.melaniesigrid.outfitoracle;
 				PRODUCT_NAME = OutfitOracle;
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "OutfitOracle/OutfitOracle-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;

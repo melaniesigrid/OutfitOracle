@@ -16,8 +16,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.melaniesigrid.outfitoracle",
-      "usesAppleSignIn": true
+      "bundleIdentifier": "com.melaniesigrid.outfitoracle"
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +26,6 @@
       "package": "com.melaniesigrid.outfitoracle"
     },
     "plugins": [
-      "expo-apple-authentication",
       "expo-font",
       "expo-splash-screen",
       [
@@ -52,7 +50,8 @@
           "sounds": []
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "extra": {}
   }
