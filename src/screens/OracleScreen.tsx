@@ -26,11 +26,17 @@ import { SkeletonResults } from '../components/SkeletonResults';
 import { ChallengeCard } from '../components/ChallengeCard';
 import { UnlockToast } from '../components/UnlockToast';
 import { OutfitRatingPrompt } from '../components/OutfitRatingPrompt';
+import { DailyNotifPrompt } from '../components/DailyNotifPrompt';
 import { OracleImage } from '../components/OracleImage';
 import { CityArrivalModal } from '../components/CityArrivalModal';
 import { CityReturnBanner } from '../components/CityReturnBanner';
 import { PassportPageCard } from '../components/PassportPageCard';
-import { scheduleRatingReminder } from '../hooks/useNotifications';
+import {
+  scheduleRatingReminder,
+  saveLastConsultLocation,
+  NOTIF_PROMPTED_KEY,
+  useNotifications,
+} from '../hooks/useNotifications';
 import { useCityPassport } from '../hooks/useCityPassport';
 import { fetchCityDescriptor } from '../services/cityDescriptor';
 import { useWeeklyChallenge } from '../hooks/useWeeklyChallenge';
@@ -148,6 +154,10 @@ function EditorialOracleScreen() {
   const [gender, setGender]           = useState<Gender>('Women');
   const [occasion, setOccasion]       = useState<Occasion>('Any');
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const notifPromptCityRef = useRef<string>('');
+  const notifPromptTempRef = useRef<string>('');
+  const { enable: enableNotifs } = useNotifications();
 
   const returnPassport = useCityPassport(
     city || null,
@@ -261,14 +271,24 @@ function EditorialOracleScreen() {
   useEffect(() => {
     if (status === 'done' && !isFromCache && weather && verdict) {
       const entryId = String(Date.now());
+      const tempLabel = formatTemp(weather.temp);
       tryTriggerFirstConsult(historyCtx.history.length);
       historyCtx.addEntry(city, gender, weather, verdict, occasion);
       streakCtx.recordConsult();
       setCurrentEntryId(entryId);
       scheduleRatingReminder(city, verdict.vibe).catch(() => {});
+      saveLastConsultLocation(city, tempLabel).catch(() => {});
       if (verdict.foundingMember) {
         AsyncStorage.setItem('@outfit_oracle_founding_member', '1').catch(() => {});
       }
+      // Show notification opt-in once after first consult
+      AsyncStorage.getItem(NOTIF_PROMPTED_KEY).then(prompted => {
+        if (!prompted) {
+          notifPromptCityRef.current = city;
+          notifPromptTempRef.current = tempLabel;
+          setShowNotifPrompt(true);
+        }
+      }).catch(() => {});
     }
   }, [status, isFromCache]);
 
@@ -759,6 +779,22 @@ function EditorialOracleScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── DAILY NOTIFICATION OPT-IN ── */}
+      <DailyNotifPrompt
+        visible={showNotifPrompt}
+        city={notifPromptCityRef.current}
+        tempLabel={notifPromptTempRef.current}
+        onEnable={async (hour) => {
+          setShowNotifPrompt(false);
+          await enableNotifs(hour, notifPromptCityRef.current, notifPromptTempRef.current).catch(() => {});
+          AsyncStorage.setItem(NOTIF_PROMPTED_KEY, 'true').catch(() => {});
+        }}
+        onDismiss={() => {
+          setShowNotifPrompt(false);
+          AsyncStorage.setItem(NOTIF_PROMPTED_KEY, 'true').catch(() => {});
+        }}
+      />
 
       {/* ── FIRST-CONSULT MAGIC MOMENT ── */}
       {showMagicMoment && verdict && (

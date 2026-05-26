@@ -6,6 +6,8 @@ import { Platform } from 'react-native';
 export const NOTIF_ENABLED_KEY    = '@outfit_oracle_notif_enabled';
 export const NOTIF_HOUR_KEY       = '@outfit_oracle_notif_hour';
 export const NOTIF_RATING_ID_KEY  = '@outfit_oracle_notif_rating_id';
+export const NOTIF_LAST_CITY_KEY  = '@outfit_oracle_notif_last_city';
+export const NOTIF_PROMPTED_KEY   = '@outfit_oracle_notif_prompted';
 export const DEFAULT_NOTIF_HOUR   = 8;
 
 async function setupAndroidChannel() {
@@ -18,13 +20,21 @@ async function setupAndroidChannel() {
   }
 }
 
-async function scheduleDailyNotif(hour: number): Promise<void> {
+function buildNotifBody(city: string | null, tempLabel: string | null): string {
+  if (city && tempLabel) return `${city}, ${tempLabel} — the Oracle has a verdict for you.`;
+  if (city) return `${city} — the Oracle has a verdict for you.`;
+  return 'Your daily verdict is ready. Open the Oracle.';
+}
+
+async function scheduleDailyNotif(hour: number, city?: string | null, tempLabel?: string | null): Promise<void> {
+  const storedCity = city ?? await AsyncStorage.getItem(NOTIF_LAST_CITY_KEY).catch(() => null);
   await Notifications.cancelAllScheduledNotificationsAsync();
   await Notifications.scheduleNotificationAsync({
     content: {
       title: 'The Oracle awaits.',
-      body: 'Your daily verdict is ready. Open the Oracle.',
+      body: buildNotifBody(storedCity, tempLabel ?? null),
       sound: true,
+      data: { screen: 'Oracle', city: storedCity },
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -32,6 +42,23 @@ async function scheduleDailyNotif(hour: number): Promise<void> {
       minute: 0,
     },
   });
+}
+
+/** Call after every successful consult to keep the notification body current. */
+export async function saveLastConsultLocation(city: string, tempLabel: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(NOTIF_LAST_CITY_KEY, city);
+    const [enabled, hourRaw] = await Promise.all([
+      AsyncStorage.getItem(NOTIF_ENABLED_KEY),
+      AsyncStorage.getItem(NOTIF_HOUR_KEY),
+    ]);
+    if (enabled === 'true') {
+      const hour = hourRaw !== null ? Number(hourRaw) : DEFAULT_NOTIF_HOUR;
+      await scheduleDailyNotif(hour, city, tempLabel);
+    }
+  } catch {
+    // Non-critical
+  }
 }
 
 export function useNotifications() {
@@ -51,11 +78,14 @@ export function useNotifications() {
     }).catch(() => setLoaded(true));
   }, []);
 
-  async function enable(newHour = hour): Promise<boolean> {
+  async function enable(newHour = hour, city?: string | null, tempLabel?: string | null): Promise<boolean> {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') return false;
-    await scheduleDailyNotif(newHour);
-    await AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'true');
+    await scheduleDailyNotif(newHour, city, tempLabel);
+    await Promise.all([
+      AsyncStorage.setItem(NOTIF_ENABLED_KEY, 'true'),
+      AsyncStorage.setItem(NOTIF_PROMPTED_KEY, 'true'),
+    ]);
     setEnabled(true);
     return true;
   }

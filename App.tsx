@@ -1,10 +1,11 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Appearance, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainerRef, createNavigationContainerRef, NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
+import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 import {
   CormorantGaramond_700Bold_Italic,
@@ -49,6 +50,19 @@ enableScreens();
 const _appearanceSub = Appearance.addChangeListener(() => {});
 SplashScreen.preventAutoHideAsync();
 
+// Navigation ref used by notification tap handler (outside React tree)
+const navigationRef = createNavigationContainerRef<any>();
+
+// Show notifications while app is foregrounded
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
+
 if (!__DEV__ && process.env.EXPO_PUBLIC_SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -83,6 +97,16 @@ function App() {
     if (fontError) SplashScreen.hideAsync();
   }, [fontError]);
 
+  // Deep-link: tap on any notification → navigate to Oracle tab
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('Tabs', { screen: 'Oracle' });
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   if (!fontsLoaded && !fontError) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
@@ -94,7 +118,7 @@ function App() {
         <ThemeProvider>
           <AuthProvider>
             <AppDataProvider>
-              <NavigationContainer>
+              <NavigationContainer ref={navigationRef}>
                 <AppNavigator />
               </NavigationContainer>
             </AppDataProvider>
