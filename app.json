@@ -16,7 +16,18 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.melaniesigrid.outfitoracle"
+      "bundleIdentifier": "com.melaniesigrid.outfitoracle",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "outfitoracle",
+              "com.melaniesigrid.outfitoracle",
+              "com.googleusercontent.apps.5567358159392-e7me79n0acj4oh3hokou8hvip0hdvmvl"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
