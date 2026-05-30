@@ -6,13 +6,18 @@ Design and UX debt tracked here. Each item has a what, why, and context for anyo
 
 ## UI / Design Debt
 
-### Achievements empty state copy
-**What:** Replace the single-line placeholder "Consult the Oracle to begin earning achievements." with richer editorial copy that teases the depth of the 127-badge system.
-**Why:** New users land on the ACHIEVEMENTS section with zero badges earned. The current text is accurate but doesn't signal the 15-category depth or create anticipation. The empty state is the first thing they see before collapsing the locked row.
-**Pros:** Better Day 1 impression; sets expectation for the gamification depth; in the Oracle voice.
-**Cons:** Requires editorial copy decision (which voice, how specific); blocked on knowing which Oracle personality the user has when they first open the screen.
-**Context:** Added 2026-05-13 during /plan-design-review of feat/launch-week1. The locked-badge collapse was fixed in that review — this is the remaining empty-state gap. The YouScreen has a `personalityLabel` derived from the user's profile; the empty state could use it.
-**Depends on:** User has completed mandatory onboarding and has a personality set (guaranteed by the gate added in this branch).
+### ~~Style Passport — CityDossierSheet~~ — RESOLVED 2026-05-19
+MapScreen pin tap now opens the full dossier: FASHION TERRITORY (Claude descriptor from `useCityPassport`), CLIMATE PERSONALITY (`getClimatePersonality(humidity, windSpeed)`), YOUR HISTORY (consult count + first visit date + signature vibe), FROM YOUR ARCHIVE (2×2 thumbnail grid), SHARE THIS CITY → button (captures `PassportPageCard` via `captureRef`). Same slide-up animation pattern, `ScrollView` inside `Animated.View` with `maxHeight: 72vh`.
+
+---
+
+### ~~Style Passport — Collectible Deck View~~ — RESOLVED 2026-05-19
+PASSPORT DECK section added to YouScreen below the city count hero. 2-column grid of collected city cards (thumbnail or gradient placeholder, city name, visit count, red dot for fashion capital). Locked silhouette cards for the 5 featured capitals not yet visited. "SHOW ALL n ↓ / SHOW LESS ↑" expand toggle after 6 cards. Tap collected card → `navigation.navigate('Map', { openCity })` → MapScreen reads `openCity` param and pre-selects the pin, opening the CityDossierSheet.
+
+---
+
+### ~~Achievements empty state copy~~ — RESOLVED 2026-05-18
+YouScreen now renders `{personalityLabel} earns standing here. The Oracle tracks 127 marks of distinction across 15 disciplines — temperature, rainfall, wind, cities, occasions, timing, and eight further style records. Your ledger is empty. Consult a first verdict to open it.` — uses the user's personality title, names 15 disciplines, creates anticipation for the badge depth.
 
 ---
 
@@ -96,13 +101,8 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 
 ---
 
-### Time-aware greeting in TodayScreen header
-**What:** Replace the static wordmark + streak line in the TodayScreen header with a time-sensitive greeting when the user has a name set: "Good morning, [Name]" / "Good afternoon, [Name]" / "Good evening, [Name]". Morning = before 12, Afternoon = 12–17, Evening = 17+. The wordmark ("Outfit Oracle") moves to a smaller label above the greeting or is dropped in favour of the greeting entirely.
-**Why:** StyleScape (design inspo, 2026-05-14) demonstrates how much warmer a personalised time-aware greeting feels vs. a static brand name on the home screen. The TodayScreen already has `profile.name` available via `profileCtx`; this is a one-line conditional.
-**Pros:** High delight, near-zero effort. Makes the app feel alive and personal. Pairs with name collection in onboarding (already in Roadmap Phase 3).
-**Cons:** Falls back gracefully to wordmark if no name is set. No downside once name collection is shipped.
-**Context:** Added 2026-05-14 from StyleScape design reference. Blocked on name collection in onboarding — ship both together. Implementation: `const hour = new Date().getHours(); const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';`
-**Depends on:** Name collection in onboarding (Phase 3 Roadmap).
+### ~~Time-aware greeting in TodayScreen header~~ — RESOLVED 2026-05-18
+`StandardTodayScreen` now derives `greeting` from `new Date().getHours()` and `profile?.name`. Falls back to "Outfit Oracle" wordmark when no name is set. Uses display font at 20px (vs. wordmark's 22px). Streak label unchanged.
 
 ---
 
@@ -121,10 +121,6 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 ### ~~Test coverage for getSeason~~ — RESOLVED in 1.4.0
 `getSeason()` is exported and covered by 22 tests in `__tests__/oracleUtils.test.ts` (northern/southern hemisphere, all months, equator, undefined lat). Also added: `themePredicates.test.ts` (isDarkColor + all 5 isXTheme predicates) and `y2kTypography.test.ts` (font set + typography for both subthemes). Total: 134 tests across 11 suites.
 
-### Test coverage for formatTemp and offline cache fallback
-**What:** Two remaining coverage gaps: (1) `formatTemp()` Celsius/Fahrenheit conversion in `src/contexts/TemperatureContext.tsx`, (2) the network-error-to-cache fallback in `src/hooks/useOracle.ts`.
-**Why:** formatTemp() bugs silently produce wrong temperatures in every UI element. The offline fallback is user-visible: breaking it surfaces an error instead of cached data on a network blip.
-**Pros:** Catches regressions in C/F conversion (32°F edge case, negative temps) and offline UX (most important for launch).
-**Cons:** Offline fallback test requires mocking AsyncStorage + fetch — uses the same pattern as `oracleProxy.test.ts`, so setup is straightforward. ~20 min total.
-**Context:** Added 2026-05-14. `getSeason` resolved in 1.4.0. formatTemp is in TemperatureContext (pure function, easy). oracleProxy.test.ts already shows the mock pattern for fetch + AsyncStorage.
-**Depends on:** Nothing — both are self-contained.
+### ~~Test coverage for formatTemp and offline cache fallback~~ — RESOLVED 2026-05-18
+`__tests__/formatTemp.test.ts` — 12 tests covering C/F conversion, rounding, edge cases (-40 convergence), and return type.
+`__tests__/oracleOffline.test.ts` — 6 tests covering the network-error regex classification and the CachedResult shape/TTL contract. Total: 152 tests across 13 suites.

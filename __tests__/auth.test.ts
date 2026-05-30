@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import {
   AUTH_SESSION_KEY,
   AUTH_USERS_KEY,
@@ -8,20 +8,9 @@ import {
   signOutLocalAccount,
 } from '../src/services/auth';
 
-const store: Record<string, string> = {};
-
 beforeEach(() => {
-  Object.keys(store).forEach(key => delete store[key]);
+  (SecureStore as any)._clear();
   jest.clearAllMocks();
-  (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => Promise.resolve(store[key] ?? null));
-  (AsyncStorage.setItem as jest.Mock).mockImplementation((key: string, value: string) => {
-    store[key] = value;
-    return Promise.resolve();
-  });
-  (AsyncStorage.removeItem as jest.Mock).mockImplementation((key: string) => {
-    delete store[key];
-    return Promise.resolve();
-  });
 });
 
 describe('local auth service', () => {
@@ -32,10 +21,13 @@ describe('local auth service', () => {
       password: 'weather123',
     });
 
+    const usersRaw = await SecureStore.getItemAsync(AUTH_USERS_KEY);
+    const sessionRaw = await SecureStore.getItemAsync(AUTH_SESSION_KEY);
+
     expect(user.email).toBe('melanie@example.com');
     expect(user.name).toBe('Melanie');
-    expect(store[AUTH_USERS_KEY]).toContain('melanie@example.com');
-    expect(store[AUTH_SESSION_KEY]).toContain(user.id);
+    expect(usersRaw).toContain('melanie@example.com');
+    expect(sessionRaw).toContain(user.id);
   });
 
   it('rejects duplicate emails on the same device', async () => {

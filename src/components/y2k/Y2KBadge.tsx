@@ -45,6 +45,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: 'IBMPlexMono_500Medium',
     fontSize: 12,
+    lineHeight: 17,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },

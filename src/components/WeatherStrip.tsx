@@ -2,16 +2,19 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WeatherData } from '../services/weather';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, usesWeatherWidget, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTempUnit } from '../contexts/TemperatureContext';
+import { WeatherGlanceCard } from './WeatherGlanceCard';
+import { WeatherAlertBanner } from './WeatherAlertBanner';
 
 interface Props {
   weather: WeatherData;
+  lastConsultedAt?: number | null;
 }
 
-export function WeatherStrip({ weather }: Props) {
-  const { colors, fonts } = useTheme();
+export function WeatherStrip({ weather, lastConsultedAt }: Props) {
+  const { colors, fonts, themeName } = useTheme();
   const { formatTemp } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const opacity    = useRef(new Animated.Value(0)).current;
@@ -24,8 +27,25 @@ export function WeatherStrip({ weather }: Props) {
     ]).start();
   }, []);
 
+  const alerts = weather.alerts ?? [];
+
+  if (usesWeatherWidget(themeName)) {
+    return (
+      <Animated.View style={{ opacity, transform: [{ translateX }] }}>
+        <WeatherAlertBanner alerts={alerts} />
+        <WeatherGlanceCard
+          weather={weather}
+          formatTemp={formatTemp}
+          mode="strip"
+          lastConsultedAt={lastConsultedAt}
+        />
+      </Animated.View>
+    );
+  }
+
   return (
     <Animated.View style={[styles.container, { opacity, transform: [{ translateX }] }]}>
+      <WeatherAlertBanner alerts={alerts} />
       <View style={styles.rule} />
       <View style={styles.locationRow}>
         <View style={styles.locationLeft}>

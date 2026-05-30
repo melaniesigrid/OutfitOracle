@@ -1,4 +1,4 @@
-import { OracleVerdict, OutfitItem } from '../src/services/oracle';
+import { normalizeVerdictShopItems, OracleVerdict, OutfitItem } from '../src/services/oracle';
 
 describe('OracleVerdict type shape', () => {
   it('accepts a valid verdict object', () => {
@@ -53,5 +53,26 @@ describe('OracleVerdict type shape', () => {
       rating: 3,
     };
     expect(verdict.foundingMember).toBeUndefined();
+  });
+
+  it('fills missing shopItems with deterministic shopping queries', () => {
+    const verdict: OracleVerdict = {
+      verdict: 'A real outfit.',
+      vibe: 'Shopping Sanity',
+      rating: 3,
+      outfits: [
+        {
+          category: 'Footwear',
+          item: 'Minimalist black leather mule with a low square heel and a single wide strap across the forefoot — no ankle strap, maximum airflow',
+          detail: 'A better query should not include the whole editorial note.',
+          accentColor: 'lemon',
+        },
+      ],
+      avoid: [],
+    };
+
+    expect(normalizeVerdictShopItems(verdict).outfits[0].shopItems).toEqual([
+      'Minimalist black leather mule',
+    ]);
   });
 });

@@ -39,6 +39,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import * as Sentry from '@sentry/react-native';
 import { AppDataProvider } from './src/contexts/AppContext';
+import { AuthProvider } from './src/contexts/AuthContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { TemperatureProvider } from './src/contexts/TemperatureContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
@@ -91,11 +92,13 @@ function App() {
       <SafeAreaProvider>
         <TemperatureProvider>
         <ThemeProvider>
-          <AppDataProvider>
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
-          </AppDataProvider>
+          <AuthProvider>
+            <AppDataProvider>
+              <NavigationContainer>
+                <AppNavigator />
+              </NavigationContainer>
+            </AppDataProvider>
+          </AuthProvider>
         </ThemeProvider>
         </TemperatureProvider>
       </SafeAreaProvider>

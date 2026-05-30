@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../contexts/AuthContext';
+import { cloudGet, cloudPut } from '../services/cloudData';
 
 const KEY = '@outfit_oracle_style_profile';
 
@@ -10,9 +12,9 @@ export const STYLE_KEYWORDS = [
 ] as const;
 
 export const BUDGET_TIERS = [
-  { id: 'high-street',   label: 'High Street',   note: 'ASOS, Zara, & Other Stories' },
-  { id: 'contemporary', label: 'Contemporary',   note: 'Reiss, AllSaints, COS' },
-  { id: 'luxury',       label: 'Luxury',         note: 'Totême, Bottega, The Row' },
+  { id: 'high-street',   label: 'High Street',   note: 'Accessible everyday retail, resale, and budget finds' },
+  { id: 'contemporary', label: 'Contemporary',   note: 'Better fabrics, construction, and modern labels' },
+  { id: 'luxury',       label: 'Luxury',         note: 'Designer-level materials, longevity, and restraint' },
 ] as const;
 
 export type BudgetTier = typeof BUDGET_TIERS[number]['id'];
@@ -78,6 +80,16 @@ export const COLOR_OPTIONS = [
 
 export type ColorId = typeof COLOR_OPTIONS[number]['id'];
 
+export const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'] as const;
+export type ClothingSize = typeof SIZE_OPTIONS[number];
+
+export const CLOTHING_CATEGORIES = [
+  'Shirts & Blouses', 'Trousers', 'Dresses', 'Skirts',
+  'Denim', 'Knitwear', 'Outerwear', 'Sneakers',
+  'Boots', 'Heels', 'Accessories', 'Shorts & Active',
+] as const;
+export type ClothingCategory = typeof CLOTHING_CATEGORIES[number];
+
 export interface StyleProfile {
   keywords: string[];
   budget: BudgetTier;
@@ -86,6 +98,8 @@ export interface StyleProfile {
   tempSensitivity?: TempSensitivity;
   colorLoves?: string[];
   colorAvoids?: string[];
+  size?: ClothingSize;
+  categories?: string[];
 }
 
 type ProfileState =
@@ -95,6 +109,7 @@ type ProfileState =
   | { status: 'set'; profile: StyleProfile };
 
 export function useStyleProfile() {
+  const { token } = useAuth();
   const [state, setState] = useState<ProfileState>({ status: 'loading' });
 
   useEffect(() => {
@@ -111,8 +126,22 @@ export function useStyleProfile() {
     }).catch(() => setState({ status: 'not-set' }));
   }, []);
 
+  // Fetch cloud profile on sign-in; only overwrite if local profile is not set
+  useEffect(() => {
+    if (!token) return;
+    cloudGet<StyleProfile>('/data/style-profile', token).then(cloud => {
+      if (!cloud?.keywords) return;
+      AsyncStorage.getItem(KEY).then(raw => {
+        if (raw) return; // local profile already exists — don't overwrite
+        AsyncStorage.setItem(KEY, JSON.stringify(cloud)).catch(() => {});
+        setState({ status: 'set', profile: cloud });
+      }).catch(() => {});
+    });
+  }, [token]);
+
   const saveProfile = (profile: StyleProfile) => {
     AsyncStorage.setItem(KEY, JSON.stringify(profile));
+    cloudPut('/data/style-profile', token, profile);
     setState({ status: 'set', profile });
   };
 

@@ -8,7 +8,8 @@ import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../../contexts/AppContext';
-import { ThemeName, THEMES, mondrianTokens, spacing } from '../../theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { THEME_OPTIONS, THEMES, mondrianTokens, spacing } from '../../theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTempUnit, TempUnit } from '../../contexts/TemperatureContext';
 import {
@@ -16,6 +17,7 @@ import {
   setAnalyticsEnabledPreference,
   ANALYTICS_ENABLED_KEY,
 } from '../../services/analytics';
+import { AUTH_SESSION_KEY, AUTH_USERS_KEY } from '../../services/auth';
 
 const { red, blue, yellow, black, white, gridLine } = mondrianTokens;
 
@@ -27,6 +29,7 @@ const ALL_KEYS = [
   '@outfit_oracle_founding_member', '@outfit_oracle_theme',
   '@outfit_oracle_temp_unit', '@outfit_oracle_y2k_font_subtheme',
   '@outfit_oracle_magic_shown', ANALYTICS_ENABLED_KEY,
+  AUTH_USERS_KEY, AUTH_SESSION_KEY,
 ];
 const SOFT_KEYS = [
   '@outfit_oracle_history', '@outfit_oracle_first_consult',
@@ -36,20 +39,6 @@ const SOFT_KEYS = [
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.1.0';
 const PRIVACY_POLICY_URL = 'https://melaniesigrid.github.io/OutfitOracle/';
-
-const THEME_OPTIONS: { id: ThemeName; label: string }[] = [
-  { id: 'classic',          label: 'Classic' },
-  { id: 'editorial-light',  label: 'Editorial Light' },
-  { id: 'editorial-dark',   label: 'Editorial Dark' },
-  { id: 'terra-firma',      label: 'Terra Firma' },
-  { id: 'morning-paper',    label: 'Morning Paper' },
-  { id: 'golden-hour',      label: 'Golden Hour' },
-  { id: 'electric',         label: 'Electric' },
-  { id: 'y2k',              label: 'Y2K ♡' },
-  { id: 'neo-brutal-light', label: 'Neo-Brutal Light' },
-  { id: 'neo-brutal-dark',  label: 'Neo-Brutal Dark' },
-  { id: 'mondrian',         label: 'Mondrian' },
-];
 
 const TEMP_OPTIONS: { id: TempUnit; label: string }[] = [
   { id: 'C', label: '°C — Celsius' },
@@ -81,6 +70,7 @@ export function MondrianSettingsScreen() {
   const { unit: tempUnit, setUnit: setTempUnit } = useTempUnit();
   const navigation = useNavigation<any>();
   const { historyCtx } = useAppData();
+  const { user, signOut } = useAuth();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
 
   useEffect(() => {
@@ -120,7 +110,7 @@ export function MondrianSettingsScreen() {
   async function resetAll() {
     Alert.alert(
       'Reset Everything',
-      'Deletes all data — history, streak, style profile, and onboarding. The app restarts from scratch.',
+      'Deletes all data — account, history, streak, style profile, and onboarding. The app restarts from scratch.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -128,9 +118,21 @@ export function MondrianSettingsScreen() {
           onPress: async () => {
             await Promise.all(ALL_KEYS.map(k => AsyncStorage.removeItem(k)));
             historyCtx.clear();
-            Alert.alert('Done', 'All data removed. Please close and reopen Outfit Oracle.');
+            await signOut();
+            Alert.alert('Done', 'All data removed.');
           },
         },
+      ],
+    );
+  }
+
+  async function confirmSignOut() {
+    Alert.alert(
+      'Sign Out',
+      'Your saved data stays on this device. You can log back in with this account.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: () => { signOut(); } },
       ],
     );
   }
@@ -196,6 +198,32 @@ export function MondrianSettingsScreen() {
         </View>
         <GridLine />
 
+        {/* ── ACCOUNT ── */}
+        <SectionBar label="ACCOUNT" bg={black} textColor={white} />
+        <View style={s.row}>
+          <View style={s.rowLeft}>
+            <MaterialCommunityIcons name="account-circle-outline" size={18} color={blue} />
+            <View>
+              <Text style={s.rowText}>{user?.name ?? 'Outfit Oracle account'}</Text>
+              <Text style={s.rowSub}>{user?.email ?? 'Local device account'}</Text>
+            </View>
+          </View>
+        </View>
+        <GridLine />
+        <Pressable
+          style={s.row}
+          onPress={confirmSignOut}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+        >
+          <View style={s.rowLeft}>
+            <MaterialCommunityIcons name="logout" size={18} color={red} />
+            <Text style={s.rowText}>Sign out</Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={18} color={black} />
+        </Pressable>
+        <GridLine />
+
         {/* ── PREFERENCES ── */}
         <SectionBar label="PREFERENCES" bg={blue} textColor={white} />
 
@@ -253,7 +281,7 @@ export function MondrianSettingsScreen() {
             <MaterialCommunityIcons name="delete-outline" size={18} color={red} />
             <View>
               <Text style={[s.rowText, { color: red }]}>Reset all data</Text>
-              <Text style={s.rowSub}>Removes everything, including profile</Text>
+              <Text style={s.rowSub}>Removes everything, including account</Text>
             </View>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={18} color={red} />

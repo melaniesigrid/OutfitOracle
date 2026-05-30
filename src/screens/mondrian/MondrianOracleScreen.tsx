@@ -19,13 +19,18 @@ import { CitySuggestions } from '../../components/CitySuggestions';
 import { LoadingOracle } from '../../components/LoadingOracle';
 import { SkeletonResults } from '../../components/SkeletonResults';
 import { ShareCard } from '../../components/ShareCard';
+import { DressingLogicCard } from '../../components/DressingLogicCard';
+import { WeatherAlertBanner } from '../../components/WeatherAlertBanner';
 import { useWeeklyChallenge } from '../../hooks/useWeeklyChallenge';
 import { searchCities, CitySuggestion } from '../../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../../services/analytics';
+import { hasNightOutfit, selectOutfitsForLook } from '../../utils/outfitSelection';
+import { formatLocationTimeWithCue } from '../../utils/locationTime';
 import { mondrianTokens, spacing } from '../../theme';
 import { useTempUnit } from '../../contexts/TemperatureContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { red, blue, yellow, black, white, gridLine } = mondrianTokens;
 
@@ -153,10 +158,11 @@ function OutfitRow({ item, onSave, isSaved }: {
 
 export function MondrianOracleScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { formatTemp } = useTempUnit();
   const { magicOpacity, showMagicMoment, dismissMagicMoment, tryTriggerFirstConsult } = useMagicMoment();
 
-  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
+  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx } = useAppData();
   const {
     status, weather, verdict, error, consult, consultByCoords,
     reset, cachedCity, cachedAt, isFromCache, isOffline,
@@ -168,20 +174,25 @@ export function MondrianOracleScreen() {
   const [occasion, setOccasion]       = useState<Occasion>('Any');
   const [lookMode, setLookMode]       = useState<'polished' | 'casual'>('polished');
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
+  const [suggestionsArmed, setSuggestionsArmed] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
 
   const debounceRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressSuggestRef = useRef(false);
+  const searchSeqRef       = useRef(0);
   const scrollRef          = useRef<ScrollView>(null);
   const shareCardRef       = useRef<View>(null);
   const resultTranslateX   = useRef(new Animated.Value(Dimensions.get('window').width)).current;
   const toggleFade         = useRef(new Animated.Value(1)).current;
   const isFirstToggle      = useRef(true);
+  const autoLocationStartedRef = useRef(false);
 
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && !!weather && !!verdict;
+  const hasNightLook = hasNightOutfit(verdict);
+  const cachedAtLabel = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
 
-  const { recents, addCity } = useRecentCities();
+  const { recents, addCity, removeCity } = useRecentCities();
   const weeklyChallenge = useWeeklyChallenge(historyCtx.history);
 
   const wearAgainMatches = showResult && weather
@@ -192,8 +203,22 @@ export function MondrianOracleScreen() {
       )
     : [];
 
+  const archiveWearMatches = showResult && weather
+    ? archiveCtx.entries.filter(e =>
+        e.city.toLowerCase() === city.toLowerCase() &&
+        Math.abs(e.weather.temp - weather.temp) <= 5,
+      )
+    : [];
+  const bestArchiveMatch = archiveWearMatches[0] ?? null;
+  const showWearAgain    = wearAgainMatches.length > 0 || archiveWearMatches.length > 0;
+
   useEffect(() => {
-    if (cachedCity && !city) setCity(cachedCity);
+    if (cachedCity && !city) {
+      suppressSuggestRef.current = true;
+      setSuggestionsArmed(false);
+      setSuggestions([]);
+      setCity(cachedCity);
+    }
   }, [cachedCity]);
 
   useEffect(() => {
@@ -215,6 +240,10 @@ export function MondrianOracleScreen() {
 
   useEffect(() => {
     if (status === 'done') {
+      isFirstToggle.current = true;
+      toggleFade.stopAnimation();
+      toggleFade.setValue(1);
+      setLookMode('polished');
       resultTranslateX.setValue(Dimensions.get('window').width);
       Animated.timing(resultTranslateX, {
         toValue: 0, duration: 500,
@@ -222,7 +251,7 @@ export function MondrianOracleScreen() {
         useNativeDriver: true,
       }).start();
     }
-  }, [status]);
+  }, [status, verdict?.vibe, weather?.city]);
 
   useEffect(() => {
     if (isFirstToggle.current) { isFirstToggle.current = false; return; }
@@ -231,23 +260,27 @@ export function MondrianOracleScreen() {
   }, [lookMode]);
 
   useEffect(() => {
-    if (isLoading || city.trim().length < 2 || suppressSuggestRef.current) {
+    const seq = ++searchSeqRef.current;
+    if (!suggestionsArmed || isLoading || city.trim().length < 2 || suppressSuggestRef.current) {
       setSuggestions([]);
       return;
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      if (suppressSuggestRef.current) return;
+      if (!suggestionsArmed || suppressSuggestRef.current) return;
       const results = await searchCities(city);
-      setSuggestions(results);
+      if (searchSeqRef.current === seq && suggestionsArmed && !suppressSuggestRef.current) {
+        setSuggestions(results);
+      }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [city, isLoading]);
+  }, [city, isLoading, suggestionsArmed]);
 
   const handleConsult = (overrideCity?: string) => {
     const target = (overrideCity ?? city).trim();
     if (!target || isLoading) return;
     suppressSuggestRef.current = true;
+    setSuggestionsArmed(false);
     setSuggestions([]);
     setCity(target);
     setLookMode('polished');
@@ -271,6 +304,7 @@ export function MondrianOracleScreen() {
       const detectedCountry = place.isoCountryCode ?? place.country ?? '';
       if (!detectedCity) return;
       suppressSuggestRef.current = true;
+      setSuggestionsArmed(false);
       setSuggestions([]);
       setCity(detectedCity);
       addCity(detectedCity);
@@ -284,6 +318,12 @@ export function MondrianOracleScreen() {
     finally { setLocationLoading(false); }
   };
 
+  useEffect(() => {
+    if (autoLocationStartedRef.current || profileCtx.profileState.status === 'loading') return;
+    autoLocationStartedRef.current = true;
+    handleUseLocation();
+  }, [profileCtx.profileState.status]);
+
   const handleShare = async () => {
     if (!shareCardRef.current || !verdict) return;
     trackShareTapped(city, verdict.vibe);
@@ -294,12 +334,12 @@ export function MondrianOracleScreen() {
   };
 
   const currentOutfits = useMemo(
-    () => lookMode === 'casual' && verdict?.outfitsAlt?.length ? verdict.outfitsAlt : verdict?.outfits ?? [],
+    () => selectOutfitsForLook(verdict, lookMode),
     [lookMode, verdict],
   );
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor={black} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
@@ -324,7 +364,7 @@ export function MondrianOracleScreen() {
           <View style={s.header}>
             <View style={{ flex: 1 }}>
               <Text style={s.headerTitle}>THE ORACLE.</Text>
-              <Text style={s.headerSub}>SUBMIT FOR JUDGMENT</Text>
+              <Text style={s.headerSub}>SUBMIT THE BRIEF</Text>
             </View>
             <Pressable
               onPress={() => navigation.navigate('Settings')}
@@ -342,7 +382,15 @@ export function MondrianOracleScreen() {
               value={city}
               onChangeText={t => {
                 suppressSuggestRef.current = false;
+                setSuggestionsArmed(true);
                 setCity(t);
+                if (!t.trim()) setSuggestions([]);
+              }}
+              onBlur={() => {
+                setTimeout(() => {
+                  setSuggestionsArmed(false);
+                  setSuggestions([]);
+                }, 120);
               }}
               onSubmitEditing={() => handleConsult()}
               placeholder="CITY NAME"
@@ -368,29 +416,12 @@ export function MondrianOracleScreen() {
               onSelect={name => {
                 trackAutocompleteCitySelected(name);
                 suppressSuggestRef.current = true;
+                setSuggestionsArmed(false);
                 setSuggestions([]);
                 setCity(name);
                 handleConsult(name);
               }}
             />
-          )}
-
-          {recents.length > 0 && !showResult && (
-            <View style={s.recentsRow}>
-              {recents.slice(0, 4).map(r => (
-                <Pressable
-                  key={r}
-                  onPress={() => {
-                    trackRecentCityTapped(r);
-                    setCity(r);
-                    handleConsult(r);
-                  }}
-                  style={s.recentChip}
-                >
-                  <Text style={s.recentText}>{r.toUpperCase()}</Text>
-                </Pressable>
-              ))}
-            </View>
           )}
 
           {/* ── GENDER ── */}
@@ -427,6 +458,42 @@ export function MondrianOracleScreen() {
           </View>
           <GridLine />
 
+          {/* ── RECENT CITIES ── */}
+          {recents.length > 0 && (
+            <>
+              <SectionBar label="RECENT" bg={black} textColor={yellow} />
+              <View style={s.recentsRow}>
+                {recents.slice(0, 4).map(r => (
+                  <View key={r} style={s.recentChip}>
+                    <Pressable
+                      onPress={() => {
+                        trackRecentCityTapped(r);
+                        setSuggestionsArmed(false);
+                        setSuggestions([]);
+                        setCity(r);
+                        handleConsult(r);
+                      }}
+                      style={({ pressed }) => [s.recentCityButton, pressed && s.recentChipPressed]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Search ${r} again`}
+                    >
+                      <Text style={s.recentText} numberOfLines={1}>{r.toUpperCase()}</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => { Haptics.selectionAsync(); removeCity(r); }}
+                      style={s.recentRemove}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${r} from recent cities`}
+                    >
+                      <Text style={s.recentRemoveText}>X</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+
           {/* ── WEEKLY CHALLENGE ── */}
           {weeklyChallenge.challenge && (
             <>
@@ -444,7 +511,7 @@ export function MondrianOracleScreen() {
                     <Text style={s.challengeBrief}>{weeklyChallenge.challenge.brief}</Text>
                   )}
                   {weeklyChallenge.completed && (
-                    <Text style={s.challengeDone}>The Oracle acknowledges your devotion.</Text>
+                    <Text style={s.challengeDone}>The Oracle notes the consistency.</Text>
                   )}
                 </View>
                 <Text style={[s.challengeDays, weeklyChallenge.completed && { color: red }]}>
@@ -499,8 +566,8 @@ export function MondrianOracleScreen() {
                 <View style={s.cacheBadge}>
                   <Text style={s.cacheBadgeText}>
                     {isOffline
-                      ? `OFFLINE — CACHED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                      : `LAST CONSULTED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      ? `OFFLINE — CACHED · ${cachedAtLabel}`
+                      : `LAST CONSULTED · ${cachedAtLabel}`}
                   </Text>
                   {!isOffline && (
                     <Pressable onPress={() => handleConsult(city)}>
@@ -511,19 +578,35 @@ export function MondrianOracleScreen() {
               )}
 
               {/* Wear again */}
-              {wearAgainMatches.length > 0 && (
+              {showWearAgain && (
                 <View style={s.wearAgainBanner}>
                   <Text style={s.wearAgainLabel}>WEAR THIS AGAIN</Text>
-                  <Text style={s.wearAgainText}>
-                    {wearAgainMatches.length === 1
-                      ? `You saved a look for ${city} in similar conditions.`
-                      : `You have ${wearAgainMatches.length} saved looks for ${city} in similar conditions.`}
-                  </Text>
+                  {bestArchiveMatch ? (
+                    <>
+                      <Text style={s.wearAgainVibe}>{bestArchiveMatch.verdict.vibe}</Text>
+                      {bestArchiveMatch.note ? (
+                        <Text style={s.wearAgainNote}>"{bestArchiveMatch.note}"</Text>
+                      ) : (
+                        <Text style={s.wearAgainText}>
+                          {archiveWearMatches.length === 1
+                            ? `Saved look for ${city} in similar conditions.`
+                            : `${archiveWearMatches.length} saved looks for ${city} in similar conditions.`}
+                        </Text>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={s.wearAgainText}>
+                      {wearAgainMatches.length === 1
+                        ? `You saved a look for ${city} in similar conditions.`
+                        : `You have ${wearAgainMatches.length} saved looks for ${city} in similar conditions.`}
+                    </Text>
+                  )}
                 </View>
               )}
 
               {/* Weather summary */}
               <SectionBar label="WEATHER BRIEF" bg={black} textColor={yellow} />
+              <WeatherAlertBanner alerts={weather.alerts} />
               <View style={{ flexDirection: 'row', minHeight: 80 }}>
                 <View style={{ flex: 1, backgroundColor: red, padding: 14 }}>
                   <Text style={s.weatherTemp}>{formatTemp(weather.temp)}</Text>
@@ -538,6 +621,9 @@ export function MondrianOracleScreen() {
                   <Text style={s.weatherWind}>{weather.windSpeed} KM/H</Text>
                 </View>
               </View>
+              <GridLine />
+              <DressingLogicCard weather={weather} formatTemp={formatTemp} style={s.logicPanel} />
+              <GridLine />
 
               {/* Verdict */}
               <SectionBar label="THE VERDICT" bg={red} textColor={white} />
@@ -552,7 +638,7 @@ export function MondrianOracleScreen() {
               </View>
 
               {/* Look toggle */}
-              {verdict.outfitsAlt?.length ? (
+              {hasNightLook ? (
                 <>
                   <GridLine />
                   <View style={{ flexDirection: 'row' }}>
@@ -659,7 +745,6 @@ const s = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: white,
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   scroll: { flex: 1, backgroundColor: white },
   content: { paddingBottom: 20 },
@@ -718,17 +803,42 @@ const s = StyleSheet.create({
     borderBottomColor: black,
   },
   recentChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRightWidth: gridLine,
     borderRightColor: black,
+    borderBottomWidth: gridLine,
+    borderBottomColor: black,
     backgroundColor: white,
+  },
+  recentCityButton: {
+    maxWidth: 180,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 8,
+  },
+  recentChipPressed: {
+    backgroundColor: yellow,
   },
   recentText: {
     fontFamily: 'IBMPlexMono_400Regular',
     fontSize: 11,
     color: black,
     letterSpacing: 1.5,
+  },
+  recentRemove: {
+    width: 32,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: gridLine,
+    borderLeftColor: black,
+  },
+  recentRemoveText: {
+    fontFamily: 'Montserrat_900Black',
+    fontSize: 11,
+    color: red,
+    letterSpacing: 1,
   },
 
   chipsRow: {
@@ -867,6 +977,14 @@ const s = StyleSheet.create({
     letterSpacing: 1,
     marginTop: 2,
   },
+  logicPanel: {
+    marginBottom: 0,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    borderTopWidth: 0,
+    borderBottomWidth: 0,
+    backgroundColor: white,
+  },
 
   // Verdict
   verdictPanel: {
@@ -977,11 +1095,25 @@ const s = StyleSheet.create({
     color: red,
     marginBottom: 3,
   },
+  wearAgainVibe: {
+    fontFamily: 'Montserrat_900Black',
+    fontSize: 15,
+    color: black,
+    letterSpacing: -0.2,
+    marginBottom: 3,
+  },
   wearAgainText: {
     fontFamily: 'IBMPlexMono_400Regular',
     fontSize: 11,
     color: '#333333',
     lineHeight: 16,
+  },
+  wearAgainNote: {
+    fontFamily: 'IBMPlexMono_400Regular',
+    fontSize: 12,
+    color: '#333333',
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
 
   // Share

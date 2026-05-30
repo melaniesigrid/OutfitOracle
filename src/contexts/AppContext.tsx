@@ -1,4 +1,5 @@
 import React, { createContext, useContext, ReactNode, useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import * as Location from 'expo-location';
 import { useOracle } from '../hooks/useOracle';
 import { useStyleProfile } from '../hooks/useStyleProfile';
 import { useOutfitHistory } from '../hooks/useOutfitHistory';
@@ -7,8 +8,6 @@ import { useSavedOutfits } from '../hooks/useSavedOutfits';
 import { useWeatherBadges, WeatherBadge } from '../hooks/useWeatherBadges';
 import { useOracleImage, OracleImageState } from '../hooks/useOracleImage';
 import { useArchive } from '../hooks/useArchive';
-
-const CLAUDE_API_KEY = process.env.EXPO_PUBLIC_CLAUDE_API_KEY ?? '';
 
 type AppContextValue = {
   oracle: ReturnType<typeof useOracle>;
@@ -31,7 +30,7 @@ type AppContextValue = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
-  const oracle     = useOracle(CLAUDE_API_KEY);
+  const oracle     = useOracle();
   const profileCtx = useStyleProfile();
   const historyCtx = useOutfitHistory();
   const streakCtx  = useConsultStreak();
@@ -72,6 +71,38 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [badges, historyCtx.historyLoaded, savedCtx.savedLoaded, streakCtx.streakLoaded]);
 
   const dismissBadgeToast = useCallback(() => setNewBadgeQueue(prev => prev.slice(1)), []);
+
+  // Auto-consult on app open using device location, so Today tab is pre-populated.
+  // Only fires when: cache check is done, no valid cache exists, and profile is loaded.
+  const autoConsultFiredRef = useRef(false);
+  useEffect(() => {
+    if (!oracle.cacheLoaded) return;
+    if (oracle.status !== 'idle') return;
+    if (profileCtx.profileState.status === 'loading') return;
+    if (autoConsultFiredRef.current) return;
+    autoConsultFiredRef.current = true;
+
+    (async () => {
+      try {
+        const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
+        if (permStatus !== 'granted') return;
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const results = await Location.reverseGeocodeAsync(loc.coords);
+        if (!results.length) return;
+        const place = results[0];
+        const detectedCity    = place.city ?? place.subregion ?? place.region ?? '';
+        const detectedCountry = place.isoCountryCode ?? place.country ?? '';
+        if (!detectedCity) return;
+        oracle.consultByCoords(
+          loc.coords.latitude, loc.coords.longitude,
+          detectedCity, detectedCountry,
+          'Women', profileCtx.profile ?? undefined,
+        );
+      } catch {
+        // Location unavailable — silent fail, user can consult manually from Oracle tab
+      }
+    })();
+  }, [oracle.cacheLoaded, oracle.status, profileCtx.profileState.status]);
 
   const contextValue = useMemo(
     () => ({

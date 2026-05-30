@@ -7,9 +7,10 @@ import {
   StyleSheet,
   Platform,
   StatusBar,
+  TextInput,
 } from 'react-native';
-import { StyleProfile, STYLE_KEYWORDS, BUDGET_TIERS, BudgetTier } from '../hooks/useStyleProfile';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { StyleProfile, STYLE_KEYWORDS, BUDGET_TIERS, SIZE_OPTIONS, CLOTHING_CATEGORIES, BudgetTier, ClothingSize } from '../hooks/useStyleProfile';
+import { AppColors, AppFonts, ThemeName, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface Props {
@@ -17,11 +18,18 @@ interface Props {
 }
 
 export function StyleOnboarding({ onSave }: Props) {
-  const { colors, fonts } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
-  const [step, setStep] = useState<1 | 2>(1);
+  const { colors, fonts, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [budget, setBudget] = useState<BudgetTier | null>(null);
+  const [name, setName] = useState('');
+  const [size, setSize] = useState<ClothingSize | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  const toggleCategory = (cat: string) => {
+    setCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  };
 
   const toggleKeyword = (kw: string) => {
     setKeywords(prev =>
@@ -33,7 +41,7 @@ export function StyleOnboarding({ onSave }: Props) {
 
   const handleSave = () => {
     if (!budget) return;
-    onSave({ keywords, budget });
+    onSave({ keywords, budget, name: name.trim() || undefined, size: size ?? undefined, categories: categories.length ? categories : undefined });
   };
 
   return (
@@ -45,7 +53,7 @@ export function StyleOnboarding({ onSave }: Props) {
         <Text style={styles.mastheadTitle1}>OUTFIT</Text>
         <Text style={styles.mastheadTitle2}>Oracle</Text>
         <View style={styles.mastheadRule} />
-        <Text style={styles.mastheadStep}>Step {step} of 2</Text>
+        <Text style={styles.mastheadStep}>Step {step} of 3</Text>
       </View>
 
       <ScrollView
@@ -59,7 +67,7 @@ export function StyleOnboarding({ onSave }: Props) {
             <Text style={styles.stepLabel}>YOUR AESTHETIC</Text>
             <Text style={styles.stepTitle}>Pick up to 3 styles</Text>
             <Text style={styles.stepNote}>
-              The Oracle will tailor every recommendation to your taste.
+              The Oracle will tailor every verdict to your taste.
             </Text>
 
             <View style={styles.keywordGrid}>
@@ -94,12 +102,12 @@ export function StyleOnboarding({ onSave }: Props) {
               <Text style={styles.primaryBtnArrow}>→</Text>
             </Pressable>
           </>
-        ) : (
+        ) : step === 2 ? (
           <>
             <Text style={styles.stepLabel}>YOUR BUDGET</Text>
             <Text style={styles.stepTitle}>Choose your tier</Text>
             <Text style={styles.stepNote}>
-              The Oracle sources suggestions that fit your investment level.
+              The Oracle shops your tier — not above it without saying so.
             </Text>
 
             <View style={styles.budgetList}>
@@ -137,13 +145,103 @@ export function StyleOnboarding({ onSave }: Props) {
               </Pressable>
               <Pressable
                 style={[styles.primaryBtn, !budget && styles.btnDisabled]}
-                onPress={handleSave}
+                onPress={() => setStep(3)}
                 disabled={!budget}
                 accessibilityRole="button"
-                accessibilityLabel="Save style profile"
+                accessibilityLabel="Next: add your name"
                 accessibilityState={{ disabled: !budget }}
               >
-                <Text style={styles.primaryBtnText}>Save</Text>
+                <Text style={styles.primaryBtnText}>Next</Text>
+                <Text style={styles.primaryBtnArrow}>→</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.stepLabel}>YOUR SIZE</Text>
+            <Text style={styles.stepTitle}>How do you fit?</Text>
+            <Text style={styles.stepNote}>
+              Optional. Helps the Oracle tailor picks to your proportions and fit preferences.
+            </Text>
+
+            <View style={styles.sizeRow}>
+              {SIZE_OPTIONS.map(s => {
+                const selected = size === s;
+                return (
+                  <Pressable
+                    key={s}
+                    style={[styles.sizeChip, selected && styles.sizeChipSelected]}
+                    onPress={() => setSize(selected ? null : s)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={s}
+                  >
+                    <Text style={[styles.sizeChipText, selected && styles.sizeChipTextSelected]}>
+                      {s}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.stepLabel, { marginTop: 28 }]}>WHAT DO YOU WEAR?</Text>
+            <Text style={styles.stepNote}>
+              Optional. Select the pieces you actually wear — the Oracle will favour these categories.
+            </Text>
+            <View style={styles.categoryGrid}>
+              {CLOTHING_CATEGORIES.map(cat => {
+                const selected = categories.includes(cat);
+                return (
+                  <Pressable
+                    key={cat}
+                    style={[styles.categoryChip, selected && styles.categoryChipSelected]}
+                    onPress={() => toggleCategory(cat)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={cat}
+                  >
+                    <Text style={[styles.categoryChipText, selected && styles.categoryChipTextSelected]}>
+                      {cat}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.stepLabel, { marginTop: 28 }]}>YOUR NAME</Text>
+            <Text style={styles.stepNote}>
+              Optional. You can change it later in your profile.
+            </Text>
+
+            <TextInput
+              style={styles.nameInput}
+              value={name}
+              onChangeText={setName}
+              placeholder="Melanie"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleSave}
+              accessibilityLabel="Your name"
+            />
+
+            <View style={styles.stepActions}>
+              <Pressable
+                style={styles.backBtn}
+                onPress={() => setStep(2)}
+                accessibilityRole="button"
+                accessibilityLabel="Go back to budget"
+              >
+                <Text style={styles.backBtnText}>← Back</Text>
+              </Pressable>
+              <Pressable
+                style={styles.primaryBtn}
+                onPress={handleSave}
+                accessibilityRole="button"
+                accessibilityLabel={name.trim() ? 'Save style profile' : 'Skip name and save style profile'}
+              >
+                <Text style={styles.primaryBtnText}>{name.trim() ? 'Save' : 'Skip'}</Text>
                 <Text style={styles.primaryBtnArrow}>→</Text>
               </Pressable>
             </View>
@@ -155,7 +253,10 @@ export function StyleOnboarding({ onSave }: Props) {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.create({
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isY2K = isY2KTheme(themeName);
+
+  return StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgDark,
@@ -179,14 +280,14 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.displayLight,
     fontSize: 58,
     color: '#FAF9F6',
-    lineHeight: 56,
+    lineHeight: isY2K ? 74 : 56,
     letterSpacing: 8,
   },
   mastheadTitle2: {
     fontFamily: fonts.display,
     fontSize: 80,
     color: '#FAF9F6',
-    lineHeight: 82,
+    lineHeight: isY2K ? 102 : 82,
     letterSpacing: -3,
   },
   mastheadRule: {
@@ -224,6 +325,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.display,
     fontSize: 34,
     color: colors.textPrimary,
+    lineHeight: isY2K ? 44 : 40,
     letterSpacing: -0.5,
     marginBottom: spacing.sm,
   },
@@ -261,6 +363,60 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     color: '#FAF9F6',
   },
 
+  sizeRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+    flexWrap: 'wrap',
+  },
+  sizeChip: {
+    minWidth: 48,
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  sizeChipSelected: {
+    backgroundColor: colors.bgDark,
+    borderColor: colors.bgDark,
+  },
+  sizeChipText: {
+    fontFamily: fonts.mono,
+    fontSize: 13,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  sizeChipTextSelected: {
+    color: '#FAF9F6',
+  },
+
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  categoryChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  categoryChipSelected: {
+    backgroundColor: colors.bgDark,
+    borderColor: colors.bgDark,
+  },
+  categoryChipText: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+  categoryChipTextSelected: {
+    color: '#FAF9F6',
+  },
+
   budgetList: {
     gap: spacing.sm,
     marginBottom: spacing.xl,
@@ -286,6 +442,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.serif,
     fontSize: 24,
     color: colors.textPrimary,
+    lineHeight: isY2K ? 34 : 30,
     letterSpacing: 0.2,
   },
   budgetLabelSelected: {
@@ -303,6 +460,18 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontSize: 16,
     color: colors.scarlet,
     marginLeft: spacing.sm,
+  },
+
+  nameInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderHard,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.xl,
+    fontFamily: fonts.display,
+    fontSize: 34,
+    color: colors.textPrimary,
+    lineHeight: isY2K ? 44 : 40,
+    letterSpacing: -0.5,
   },
 
   stepActions: {
@@ -336,6 +505,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     fontFamily: fonts.serif,
     fontSize: 18,
     color: '#FAF9F6',
+    lineHeight: isY2K ? 28 : 24,
     letterSpacing: 0.3,
   },
   primaryBtnArrow: {
@@ -344,4 +514,5 @@ function makeStyles(colors: AppColors, fonts: AppFonts) { return StyleSheet.crea
     color: 'rgba(250,249,246,0.55)',
   },
 
-}); }
+  });
+}

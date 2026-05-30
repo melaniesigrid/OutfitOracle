@@ -16,6 +16,9 @@ import { Y2KCard } from '../../components/y2k/Y2KCard';
 import { Y2KBadge } from '../../components/y2k/Y2KBadge';
 import { Y2KSticker } from '../../components/y2k/Y2KSticker';
 import { Y2KSignature } from '../../components/y2k/Y2KSignature';
+import { WeatherAlertBanner } from '../../components/WeatherAlertBanner';
+import { fashionUsageFor } from '../../utils/wordUsage';
+import { formatLocationTimeWithCue } from '../../utils/locationTime';
 
 // ─── Word of the Day (same deterministic list) ────────────────────────────────
 
@@ -125,7 +128,9 @@ export function Y2KTodayScreen() {
   const showResult = !!weather && !!verdict;
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const hoursAgo   = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
+  const lastResultTime = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
   const word       = WORDS[dayOfYear() % WORDS.length];
+  const wordUsage  = fashionUsageFor(word.word);
   const today      = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
 
   return (
@@ -174,6 +179,10 @@ export function Y2KTodayScreen() {
               <Text style={styles.wotdWord}>{word.word}</Text>
               <Text style={styles.wotdOrigin}>{word.origin}</Text>
               <Text style={styles.wotdDef}>{word.definition}</Text>
+              <View style={styles.wotdUsageBox}>
+                <Text style={styles.wotdUsageLabel}>STYLE NOTE</Text>
+                <Text style={styles.wotdUsage}>{wordUsage}</Text>
+              </View>
             </View>
           </Y2KCard>
         </View>
@@ -183,6 +192,7 @@ export function Y2KTodayScreen() {
 
             {/* ── WEATHER HERO ── */}
             <SectionLabel left="FOR THE RECORD ♡" right="// ON FILE" typo={typo} />
+            <WeatherAlertBanner alerts={weather.alerts} />
             <View style={styles.section}>
               <Y2KCard shadow innerStyle={styles.weatherCardInner}>
                 <View style={styles.weatherCardContent}>
@@ -264,7 +274,7 @@ export function Y2KTodayScreen() {
                   {/* Rating + signature row */}
                   <View style={styles.verdictFooter}>
                     <View style={styles.ratingRow}>
-                      <Text style={styles.ratingLabel}>EFFORT</Text>
+                      <Text style={styles.ratingLabel}>POLISH</Text>
                       <View style={styles.pips}>
                         {Array.from({ length: 5 }, (_, i) => (
                           <View
@@ -429,7 +439,7 @@ export function Y2KTodayScreen() {
             <View style={styles.refreshRow}>
               {hoursAgo !== null && (
                 <Text style={styles.refreshMeta}>
-                  {hoursAgo === 0 ? 'just now' : `${hoursAgo}h ago`} · {cachedCity}
+                  {lastResultTime ? `last ${lastResultTime.toLowerCase()}` : hoursAgo === 0 ? 'just now' : `${hoursAgo}h ago`} · {cachedCity}
                 </Text>
               )}
               <Pressable
@@ -502,6 +512,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   wordmark: {
     fontFamily: typo.displayMicro.fontFamily,
     fontSize: 15,
+    lineHeight: 22,
     letterSpacing: typo.displayMicro.letterSpacing,
     color: y2kTokens.cream,
   },
@@ -596,6 +607,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   wotdWord: {
     fontFamily: typo.displayMedium.fontFamily,
     fontSize: 32,
+    lineHeight: 42,
     color: y2kTokens.deepPurple,
     letterSpacing: typo.displayMedium.letterSpacing,
     marginTop: spacing.sm,
@@ -613,6 +625,25 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontSize: 15,
     color: y2kTokens.mutedPurple,
     lineHeight: 22,
+  },
+  wotdUsageBox: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: y2kTokens.deepPurple,
+  },
+  wotdUsageLabel: {
+    fontFamily: typo.monoLabel.fontFamily,
+    fontSize: 10,
+    color: y2kTokens.hotPink,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  wotdUsage: {
+    fontFamily: typo.monoData.fontFamily,
+    fontSize: 12,
+    color: y2kTokens.ink,
+    lineHeight: 18,
   },
 
   // Weather hero — cream outer frame, deep purple interior, tangerine accents
@@ -635,7 +666,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontSize: 20,
     color: y2kTokens.cream,
     letterSpacing: typo.displaySmall.letterSpacing,
-    lineHeight: 24,
+    lineHeight: 30,
   },
   heroCondition: {
     fontFamily: typo.monoMicro.fontFamily,
@@ -655,6 +686,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   heroTemp: {
     fontFamily: typo.displayHero.fontFamily,
     fontSize: 96,
+    lineHeight: 118,
     color: y2kTokens.lime,
     letterSpacing: typo.displayHero.letterSpacing,
   },
@@ -690,6 +722,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   statChipVal: {
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 16,
+    lineHeight: 24,
     color: y2kTokens.cream,
     letterSpacing: typo.displaySmall.letterSpacing,
   },
@@ -713,6 +746,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   vibeHeadline: {
     fontFamily: typo.displayLarge.fontFamily,
     fontSize: 40,
+    lineHeight: 54,
     color: y2kTokens.hotPink,
     letterSpacing: typo.displayLarge.letterSpacing,
     marginBottom: 4,
@@ -792,7 +826,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 17,
     color: y2kTokens.ink,
-    lineHeight: 22,
+    lineHeight: 26,
     letterSpacing: typo.displaySmall.letterSpacing,
   },
 
@@ -844,11 +878,13 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   dailyMax: {
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 15,
+    lineHeight: 22,
     color: y2kTokens.deepPurple,
   },
   dailyMin: {
     fontFamily: typo.displayMicro.fontFamily,
     fontSize: 15,
+    lineHeight: 22,
     color: y2kTokens.mutedPurple,
   },
 
@@ -862,7 +898,9 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   condItem: {
     flex: 1,
     minWidth: 70,
+    minHeight: 92,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     backgroundColor: y2kTokens.blush,
     borderRadius: 10,
@@ -874,6 +912,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   condVal: {
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 18,
+    lineHeight: 26,
     color: y2kTokens.deepPurple,
     letterSpacing: typo.displaySmall.letterSpacing,
   },
@@ -895,6 +934,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   aqiVal: {
     fontFamily: typo.displayMedium.fontFamily,
     fontSize: 36,
+    lineHeight: 48,
     color: y2kTokens.deepPurple,
     letterSpacing: typo.displayMedium.letterSpacing,
   },
@@ -924,7 +964,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
     fontFamily: typo.displaySmall.fontFamily,
     fontSize: 18,
     color: y2kTokens.deepPurple,
-    lineHeight: 22,
+    lineHeight: 26,
   },
   pollenSub: {
     fontFamily: typo.monoMicro.fontFamily,
@@ -983,6 +1023,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   emptyTitle: {
     fontFamily: typo.displayMedium.fontFamily,
     fontSize: 28,
+    lineHeight: 38,
     color: y2kTokens.ink,
     letterSpacing: typo.displayMedium.letterSpacing,
     textAlign: 'center',

@@ -4,8 +4,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAppData } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import { BadgeToast } from '../components/BadgeToast';
 import { Confetti } from '../components/Confetti';
+import { AuthScreen } from '../screens/AuthScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { OnboardingCarousel } from '../screens/OnboardingCarousel';
 import { PersonalityScreen } from '../screens/PersonalityScreen';
@@ -59,6 +61,7 @@ function MainStack() {
 
 export function AppNavigator() {
   const { profileCtx } = useAppData();
+  const { state: authState } = useAuth();
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [pendingPersonality, setPendingPersonality] = useState<OraclePersonality>('editorial');
@@ -82,7 +85,7 @@ export function AppNavigator() {
     trackOnboardingCompleted();
   };
 
-  const hydrated = onboardingDone !== null && profileCtx.profileState.status !== 'loading';
+  const hydrated = onboardingDone !== null && profileCtx.profileState.status !== 'loading' && authState.status !== 'loading';
 
   // Hide splash only after both AsyncStorage and profile context have hydrated,
   // so the user never sees a blank frame between splash dismiss and first screen.
@@ -91,6 +94,10 @@ export function AppNavigator() {
   }, [hydrated]);
 
   if (!hydrated) return null;
+
+  if (authState.status === 'unauthenticated') {
+    return <AuthScreen />;
+  }
 
   // Gate: show onboarding if fresh install OR returning user who previously skipped
   const needsOnboarding = !onboardingDone

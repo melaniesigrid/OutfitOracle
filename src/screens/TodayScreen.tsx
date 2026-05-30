@@ -1,21 +1,26 @@
 import React, { useRef, useMemo, useState, useCallback } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView,
-  Platform, StatusBar, Animated, LayoutChangeEvent, ActivityIndicator,
+  Platform, StatusBar, Animated, Easing, LayoutChangeEvent, ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useAppData } from '../contexts/AppContext';
-import { AppColors, AppFonts, AppMetrics, AppFlags, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, isWeatherGlanceTheme, isDarkColor, spacing } from '../theme';
+import { AppColors, AppFonts, AppMetrics, AppFlags, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, usesWeatherWidget, isDarkColor, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTempUnit } from '../contexts/TemperatureContext';
 import { HourlyGraph } from '../components/HourlyGraph';
 import { WeatherGlanceCard } from '../components/WeatherGlanceCard';
+import { WeatherAlertBanner } from '../components/WeatherAlertBanner';
+import { LoadingOracle } from '../components/LoadingOracle';
 import { Y2KTodayScreen } from './y2k/Y2KTodayScreen';
 import { MondrianTodayScreen } from './mondrian/MondrianTodayScreen';
 import { HistoryEntry } from '../hooks/useOutfitHistory';
 import { SavedOutfit } from '../hooks/useSavedOutfits';
+import { fashionUsageFor } from '../utils/wordUsage';
+import { formatLocationTimeWithCue } from '../utils/locationTime';
+import { localHour } from '../services/weather';
 
 // ─── Theme icon mapping ───────────────────────────────────────────────────────
 // Each warm theme substitutes a curated set of MCIcons for the base weather icons.
@@ -196,6 +201,34 @@ function pollenLevel(val: number): string {
   return 'Very High';
 }
 
+const AQI_SCALE = [
+  { label: 'Good',      color: '#5CB85C' },
+  { label: 'Fair',      color: '#A8C840' },
+  { label: 'Moderate',  color: '#F0C040' },
+  { label: 'Poor',      color: '#D84040' },
+  { label: 'Very Poor', color: '#B040D0' },
+] as const;
+
+function aqiColor(label: string): string {
+  return AQI_SCALE.find(l => l.label === label)?.color ?? '#B040D0';
+}
+
+function aqiScaleIndex(label: string): number {
+  const idx = AQI_SCALE.findIndex(l => l.label === label);
+  return idx >= 0 ? idx : AQI_SCALE.length - 1;
+}
+
+function aqiInterpretation(label: string): string {
+  switch (label) {
+    case 'Good':      return 'Air is clean. No precautions needed.';
+    case 'Fair':      return 'Acceptable. Enjoy time outdoors freely.';
+    case 'Moderate':  return 'Sensitive groups should limit prolonged outdoor time.';
+    case 'Poor':      return 'Reduce outdoor activity. Consider keeping windows closed.';
+    case 'Very Poor': return 'Avoid extended outdoor exposure today.';
+    default:          return 'Stay indoors. Outdoor air quality is unsafe.';
+  }
+}
+
 // ─── Widget shell ─────────────────────────────────────────────────────────────
 
 // HourlyGraph is now in src/components/HourlyGraph.tsx (shared with Y2K screen)
@@ -241,8 +274,8 @@ function StandardTodayScreen() {
       heroOpacity.setValue(0);
       heroY.setValue(12);
       Animated.parallel([
-        Animated.timing(heroOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(heroY,       { toValue: 0, duration: 450, useNativeDriver: true }),
+        Animated.timing(heroOpacity, { toValue: 1, duration: 500, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.timing(heroY,       { toValue: 0, duration: 450, easing: Easing.out(Easing.ease), useNativeDriver: true }),
       ]).start();
     }, [heroOpacity, heroY])
   );
@@ -250,12 +283,24 @@ function StandardTodayScreen() {
   const showResult = !!weather && !!verdict;
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const hoursAgo   = cachedAt ? Math.round((Date.now() - cachedAt) / 3600000) : null;
+  const lastResultTime = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
   const word       = getWord();
+  const wordUsage  = fashionUsageFor(word.word);
 
   const isY2K         = themeName === 'y2k';
-  const isWeatherGlance = isWeatherGlanceTheme(themeName);
+  const showWeatherWidget = usesWeatherWidget(themeName);
   const isWarmTheme   = flags.isWarmTheme;
   const isBannerTheme = flags.isBannerTheme;
+
+  const greeting = useMemo(() => {
+    const name = profile?.name?.trim();
+    if (!name) return null;
+    const h = weather?.utcOffsetSeconds != null
+      ? localHour(weather.utcOffsetSeconds)
+      : new Date().getHours();
+    const salutation = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+    return `${salutation}, ${name}.`;
+  }, [profile?.name, weather?.utcOffsetSeconds]);
   // Widget surface direction: computed from the actual widget background, not flags.
   // This works for every theme automatically — no per-theme checks needed.
   const widgetIsDark  = isDarkColor(colors.widgetBg);
@@ -264,7 +309,7 @@ function StandardTodayScreen() {
   const graphIconColor  = widgetIsDark ? heroIconColor : colors.textMuted;
   const condIconColor   = widgetIsDark ? 'rgba(250,249,246,0.50)' : colors.textMuted;
   // Precipitation color: Electric has vivid-blue bg — light-blue #4FA3D4 blends in; use periwinkle textSecondary instead
-  const precipAccentColor = (themeName === 'electric' || isY2K) ? colors.textSecondary : '#4FA3D4';
+  const precipAccentColor = (themeName === 'electric' || themeName === 'void' || isY2K) ? colors.textSecondary : '#4FA3D4';
 
   return (
     <View style={styles.root}>
@@ -273,7 +318,11 @@ function StandardTodayScreen() {
       {/* ── COMPACT HEADER ── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.wordmark}>Outfit Oracle</Text>
+          {greeting ? (
+            <Text style={styles.greeting}>{greeting}</Text>
+          ) : (
+            <Text style={styles.wordmark}>Outfit Oracle</Text>
+          )}
           {streak > 0 && (
             <Text style={styles.streakLabel}>{streak}-DAY {(rankTitle ?? '').toUpperCase()}</Text>
           )}
@@ -290,6 +339,10 @@ function StandardTodayScreen() {
         ) : null}
       </View>
 
+      {showResult && weather?.alerts && weather.alerts.length > 0 && (
+        <WeatherAlertBanner alerts={weather.alerts} weather={weather} />
+      )}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -304,6 +357,7 @@ function StandardTodayScreen() {
                 <Text style={[styles.wotdWord, { paddingHorizontal: 0, paddingTop: 0 }]}>{word.word}</Text>
                 <Text style={[styles.wotdOrigin, { paddingHorizontal: 0 }]}>{word.origin}</Text>
                 <Text style={[styles.wotdDef, { paddingHorizontal: 0, paddingBottom: 0 }]}>{word.definition}</Text>
+                <Text style={[styles.wotdUsage, { paddingHorizontal: 0, paddingBottom: 0 }]}>WEAR IT: {wordUsage}</Text>
               </View>
             </View>
           ) : (
@@ -312,6 +366,7 @@ function StandardTodayScreen() {
               <Text style={styles.wotdWord}>{word.word}</Text>
               <Text style={styles.wotdOrigin}>{word.origin}</Text>
               <Text style={styles.wotdDef}>{word.definition}</Text>
+              <Text style={styles.wotdUsage}>WEAR IT: {wordUsage}</Text>
             </>
           )}
         </Widget>
@@ -325,7 +380,7 @@ function StandardTodayScreen() {
               </Text>
               <Text style={styles.weeklyBody}>
                 {weeklyOracle.count === 1
-                  ? 'A single strong signal is enough. The week has chosen a direction.'
+                  ? 'A single strong signal is enough. The week has found its direction.'
                   : `${weeklyOracle.count} signals agree. This is the mood to build around.`}
               </Text>
             </View>
@@ -344,12 +399,13 @@ function StandardTodayScreen() {
           <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroY }] }}>
 
             {/* ── WEATHER HERO ── */}
-            {isWeatherGlance ? (
+            {showWeatherWidget ? (
               <WeatherGlanceCard
                 weather={weather}
                 formatTemp={formatTemp}
                 mode="hero"
                 style={styles.weatherGlanceHero}
+                lastConsultedAt={cachedAt}
               />
             ) : (
               <View style={styles.weatherHero}>
@@ -491,10 +547,27 @@ function StandardTodayScreen() {
               <Widget label="ALLERGENS & AIR" styles={styles}>
                 <View style={styles.aqiRow}>
                   <View style={styles.aqiValRow}>
-                    <MaterialCommunityIcons name="bee" size={22} color={styles.aqiVal.color as string} />
-                    <Text style={styles.aqiVal}>{weather.pollen.aqi}</Text>
+                    <MaterialCommunityIcons name="bee" size={22} color={aqiColor(weather.pollen.aqiLabel)} />
+                    <Text style={[styles.aqiVal, { color: aqiColor(weather.pollen.aqiLabel) }]}>{weather.pollen.aqi}</Text>
                   </View>
                   <Text style={styles.aqiLabel}>AQI — {weather.pollen.aqiLabel.toUpperCase()}</Text>
+                  <View style={styles.aqiScale}>
+                    {AQI_SCALE.map((level, i) => {
+                      const activeIdx = aqiScaleIndex(weather.pollen!.aqiLabel);
+                      const isActive = i === activeIdx;
+                      return (
+                        <View
+                          key={level.label}
+                          style={[
+                            styles.aqiScaleSeg,
+                            { backgroundColor: i <= activeIdx ? level.color : level.color + '28' },
+                            isActive && styles.aqiScaleSegActive,
+                          ]}
+                        />
+                      );
+                    })}
+                  </View>
+                  <Text style={styles.aqiInterpret}>{aqiInterpretation(weather.pollen.aqiLabel)}</Text>
                 </View>
                 <View style={styles.pollenGrid}>
                   {[
@@ -524,7 +597,7 @@ function StandardTodayScreen() {
                   <Text style={styles.verdictVibe}>{verdict.vibe}</Text>
                 </View>
                 <View style={styles.ratingBlock}>
-                  <Text style={styles.verdictMetaLabel}>EFFORT</Text>
+                  <Text style={styles.verdictMetaLabel}>POLISH</Text>
                   <View style={styles.ratingDashes}>
                     {Array.from({ length: 5 }, (_, i) => (
                       <View key={i} style={[styles.dash, i < verdict.rating ? styles.dashFilled : styles.dashEmpty]} />
@@ -564,7 +637,7 @@ function StandardTodayScreen() {
               )}
               {!isOffline && hoursAgo !== null && (
                 <Text style={styles.refreshMeta}>
-                  {hoursAgo === 0 ? 'Just now' : `${hoursAgo}h ago`} · {cachedCity}
+                  {lastResultTime ? `Last ${lastResultTime}` : hoursAgo === 0 ? 'Just now' : `${hoursAgo}h ago`} · {cachedCity}
                 </Text>
               )}
               <Pressable
@@ -585,17 +658,20 @@ function StandardTodayScreen() {
           </Animated.View>
         ) : isLoading ? (
           /* ── CONSULTING STATE ── */
-          <View style={styles.emptyState}>
-            <View style={styles.emptyEyeWrap}>
-              <ActivityIndicator size="large" color={colors.scarlet} />
-            </View>
-            <View style={styles.emptyRule} />
-            <Text style={styles.emptyTitle}>Consulting.</Text>
-            <Text style={styles.emptySub}>
-              {status === 'fetching-weather'
-                ? 'Reading the conditions.\nWeather data incoming.'
-                : 'The Oracle deliberates.\nYour verdict is being prepared.'}
+          <View style={styles.consultingState}>
+            <Text style={styles.consultingTitle}>
+              {status === 'fetching-weather' ? 'Reading the conditions.' : 'The Oracle deliberates.'}
             </Text>
+            <View style={styles.consultingSteps}>
+              <Text style={[styles.consultingStep, status === 'fetching-weather' && styles.consultingStepActive]}>
+                I — WEATHER
+              </Text>
+              <Text style={styles.consultingStepSep}>·</Text>
+              <Text style={[styles.consultingStep, status === 'fetching-verdict' && styles.consultingStepActive]}>
+                II — VERDICT
+              </Text>
+            </View>
+            <LoadingOracle status={status} />
           </View>
         ) : (
           /* ── EMPTY STATE ── */
@@ -618,15 +694,20 @@ function StandardTodayScreen() {
         )}
 
         {/* ── GREETING ── */}
-        {profile?.name ? (
-          <View style={styles.greetingRow}>
-            <Text style={styles.greetingSub}>
-              {streak > 0
-                ? `${streak} consecutive days of devotion.`
-                : 'The Oracle is ready when you are.'}
-            </Text>
-          </View>
-        ) : null}
+        {profile?.name ? (() => {
+          const hour = new Date().getHours();
+          const salutation = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+          return (
+            <View style={styles.greetingRow}>
+              <Text style={styles.greetingName}>{salutation}, {profile.name}.</Text>
+              <Text style={styles.greetingSub}>
+                {streak > 0
+                  ? `${streak} consecutive days styled.`
+                  : 'The Oracle is ready when you are.'}
+              </Text>
+            </View>
+          );
+        })() : null}
 
       </ScrollView>
     </View>
@@ -638,8 +719,8 @@ function StandardTodayScreen() {
 function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, flags: AppFlags, themeName: ThemeName) {
   const isWarm       = flags.isWarmTheme;
   const isBanner     = flags.isBannerTheme;
-  const isElectric   = themeName === 'electric';
-  const precipColor  = themeName === 'electric' ? colors.textSecondary : '#4FA3D4';
+  const isElectric   = themeName === 'electric' || themeName === 'void';
+  const precipColor  = (themeName === 'electric' || themeName === 'void') ? colors.textSecondary : '#4FA3D4';
 
   // ── Surface token set ───────────────────────────────────────────────────────
   // Derived from the actual widget background — no flags needed.
@@ -661,7 +742,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, fla
   const heroTempColor =
     themeName === 'golden-hour' ? colors.scarlet :
     themeName === 'terra-firma' ? '#D4873A' :
-    themeName === 'electric'    ? colors.scarlet :
+    (themeName === 'electric' || themeName === 'void') ? colors.scarlet :
     '#FAF9F6';
 
   const heroTempSize =
@@ -717,6 +798,12 @@ return StyleSheet.create({
     fontSize: 22,
     color: '#FAF9F6',
     letterSpacing: -0.3,
+  },
+  greeting: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: '#FAF9F6',
+    letterSpacing: -0.2,
   },
   streakLabel: {
     fontFamily: fonts.mono,
@@ -813,6 +900,15 @@ return StyleSheet.create({
     color: S.low,
     lineHeight: isWarm ? 22 : 18,
     letterSpacing: isWarm ? 0.1 : 0.2,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  wotdUsage: {
+    fontFamily: fonts.monoMedium,
+    fontSize: 11,
+    color: widgetIsDark ? 'rgba(250,249,246,0.62)' : colors.textSecondary,
+    lineHeight: 17,
+    letterSpacing: 0.8,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
@@ -989,7 +1085,9 @@ return StyleSheet.create({
   condCard: {
     flex: 1,
     minWidth: 70,
+    minHeight: 92,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 5,
     borderWidth: 1,
     borderColor: S.divider,
@@ -1092,6 +1190,28 @@ return StyleSheet.create({
     color: S.label,
     letterSpacing: 1.5,
     marginTop: 2,
+  },
+  aqiScale: {
+    flexDirection: 'row',
+    gap: 3,
+    marginTop: spacing.sm,
+    marginBottom: 6,
+  },
+  aqiScaleSeg: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+  },
+  aqiScaleSegActive: {
+    height: 7,
+    borderRadius: 2,
+  },
+  aqiInterpret: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: S.low,
+    letterSpacing: 0.3,
+    lineHeight: 15,
   },
   pollenGrid: {
     flexDirection: 'row',
@@ -1309,6 +1429,41 @@ return StyleSheet.create({
     textAlign: 'center',
   },
 
+  /* ── Consulting state ── */
+  consultingState: {
+    paddingVertical: 56,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+  },
+  consultingTitle: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: S.med,
+    letterSpacing: -0.4,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  consultingSteps: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  consultingStep: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: S.ghost,
+    letterSpacing: 2,
+  },
+  consultingStepActive: {
+    color: colors.scarlet,
+  },
+  consultingStepSep: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: S.ghost,
+  },
+
   /* ── Greeting ── */
   greetingRow: {
     marginHorizontal: spacing.lg,
@@ -1316,6 +1471,13 @@ return StyleSheet.create({
     paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  greetingName: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+    marginBottom: 4,
   },
   greetingSub: {
     fontFamily: fonts.mono,

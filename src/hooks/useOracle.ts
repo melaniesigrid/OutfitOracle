@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Sentry from '@sentry/react-native';
-import { fetchWeather, fetchWeatherByCoords, WeatherData } from '../services/weather';
-import { fetchOracleVerdict, OracleVerdict } from '../services/oracle';
+import { fetchActiveWeatherAlerts, fetchWeather, fetchWeatherByCoords, WeatherData } from '../services/weather';
+import { fetchOracleVerdict, normalizeVerdictShopItems, OracleVerdict } from '../services/oracle';
 import { StyleProfile } from './useStyleProfile';
 import {
   trackConsultStarted,
@@ -22,7 +22,7 @@ interface CachedResult {
 
 export type OracleStatus = 'idle' | 'fetching-weather' | 'fetching-verdict' | 'done' | 'error';
 
-export function useOracle(apiKey: string) {
+export function useOracle() {
   const [status, setStatus]   = useState<OracleStatus>('idle');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [verdict, setVerdict] = useState<OracleVerdict | null>(null);
@@ -30,24 +30,55 @@ export function useOracle(apiKey: string) {
   const [cachedCity, setCachedCity]     = useState<string | null>(null);
   const [cachedAt, setCachedAt]         = useState<number | null>(null);
   const [isOffline, setIsOffline]       = useState(false);
+  const [lastOccasion, setLastOccasion] = useState<string | undefined>(undefined);
+  const [lastGender, setLastGender]     = useState<string>('Women');
+  const [cacheLoaded, setCacheLoaded]   = useState(false);
   const isFromCacheRef = useRef(false);
+  const consultIdRef   = useRef(0);
 
   useEffect(() => {
+    const refreshCachedAlerts = async (parsed: CachedResult) => {
+      const cachedWeather = parsed.weather;
+      if (typeof cachedWeather.latitude !== 'number' || typeof cachedWeather.longitude !== 'number') return;
+
+      try {
+        const alerts = await fetchActiveWeatherAlerts(cachedWeather.latitude, cachedWeather.longitude, cachedWeather.country);
+        const updatedWeather: WeatherData = {
+          ...cachedWeather,
+          alerts: alerts.length ? alerts : undefined,
+        };
+
+        if (!isFromCacheRef.current) return;
+        setWeather(current => {
+          if (!current) return current;
+          if (current.city !== cachedWeather.city) return current;
+          if (current.latitude !== cachedWeather.latitude || current.longitude !== cachedWeather.longitude) return current;
+          return updatedWeather;
+        });
+        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ ...parsed, weather: updatedWeather }));
+      } catch {
+        // Cached weather is still usable if alert refresh is unavailable.
+      }
+    };
+
     AsyncStorage.getItem(CACHE_KEY).then(raw => {
-      if (!raw) return;
+      if (!raw) { setCacheLoaded(true); return; }
       try {
         const parsed: CachedResult = JSON.parse(raw);
         if (Date.now() - parsed.timestamp < CACHE_TTL) {
+          parsed.verdict = normalizeVerdictShopItems(parsed.verdict);
           isFromCacheRef.current = true;
           setWeather(parsed.weather);
           setVerdict(parsed.verdict);
           setCachedCity(parsed.city);
           setCachedAt(parsed.timestamp);
           setStatus('done');
+          refreshCachedAlerts(parsed);
         }
       } catch {
         AsyncStorage.removeItem(CACHE_KEY);
       }
+      setCacheLoaded(true);
     });
   }, []);
 
@@ -58,6 +89,8 @@ export function useOracle(apiKey: string) {
     styleProfile?: StyleProfile,
     occasion?: string,
   ) => {
+    const consultId = ++consultIdRef.current;
+
     isFromCacheRef.current = false;
     setError(null);
     setVerdict(null);
@@ -65,6 +98,8 @@ export function useOracle(apiKey: string) {
     setCachedCity(null);
     setCachedAt(null);
     setIsOffline(false);
+    setLastOccasion(occasion);
+    setLastGender(gender);
 
     const startedAt = Date.now();
     trackConsultStarted(city, gender);
@@ -72,18 +107,24 @@ export function useOracle(apiKey: string) {
     try {
       setStatus('fetching-weather');
       const wx = await wxFetch;
+      if (consultIdRef.current !== consultId) return;
       setWeather(wx);
 
       setStatus('fetching-verdict');
-      const v = await fetchOracleVerdict(wx, gender, apiKey, styleProfile, occasion);
+      const v = await fetchOracleVerdict(wx, gender, styleProfile, occasion);
+      if (consultIdRef.current !== consultId) return;
+      const completedAt = Date.now();
+      setCachedCity(city);
+      setCachedAt(completedAt);
       setVerdict(v);
       setStatus('done');
 
-      trackConsultCompleted(city, gender, wx.conditionLabel, wx.temp, v.vibe, v.rating, Date.now() - startedAt);
+      trackConsultCompleted(city, gender, wx.conditionLabel, wx.temp, v.vibe, v.rating, completedAt - startedAt);
 
-      const toCache: CachedResult = { city, weather: wx, verdict: v, timestamp: Date.now() };
+      const toCache: CachedResult = { city, weather: wx, verdict: v, timestamp: completedAt };
       AsyncStorage.setItem(CACHE_KEY, JSON.stringify(toCache));
     } catch (e: unknown) {
+      if (consultIdRef.current !== consultId) return;
       const phase = weather ? 'verdict' : 'weather';
       const msg = e instanceof Error ? e.message : 'Something went wrong. The Oracle is displeased.';
       const isNetworkError = /signal|Network request failed/i.test(msg);
@@ -94,6 +135,7 @@ export function useOracle(apiKey: string) {
           const raw = await AsyncStorage.getItem(CACHE_KEY);
           if (raw) {
             const parsed: CachedResult = JSON.parse(raw);
+            parsed.verdict = normalizeVerdictShopItems(parsed.verdict);
             isFromCacheRef.current = true;
             setWeather(parsed.weather);
             setVerdict(parsed.verdict);
@@ -113,7 +155,7 @@ export function useOracle(apiKey: string) {
       trackConsultError(city, phase, msg);
       setStatus('error');
     }
-  }, [apiKey]);
+  }, []);
 
   const consult = useCallback(
     (city: string, gender: string, styleProfile?: StyleProfile, occasion?: string) =>
@@ -136,6 +178,8 @@ export function useOracle(apiKey: string) {
     setCachedCity(null);
     setCachedAt(null);
     setIsOffline(false);
+    setLastOccasion(undefined);
+    setLastGender('Women');
   }, []);
 
   return {
@@ -150,5 +194,8 @@ export function useOracle(apiKey: string) {
     cachedAt,
     isFromCache: isFromCacheRef.current,
     isOffline,
+    cacheLoaded,
+    occasion: lastOccasion,
+    gender: lastGender,
   };
 }

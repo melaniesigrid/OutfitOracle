@@ -1,13 +1,14 @@
 /**
  * oracleProxy.test.ts
  *
- * Tests the runtime behaviour introduced in this diff for oracle.ts:
+ * Tests oracle.ts proxy behaviour:
  *
- *   1. viaProxy() now reads DEVICE_ID_KEY from AsyncStorage and attaches it as
+ *   1. viaProxy() reads DEVICE_ID_KEY from AsyncStorage and attaches it as
  *      X-Device-ID header when present.
  *   2. viaProxy() omits X-Device-ID when AsyncStorage returns null.
- *   3. fetchOracleVerdict() routes to viaProxy() when EXPO_PUBLIC_PROXY_URL is set.
- *   4. fetchOracleVerdict() routes to viaDirect() when EXPO_PUBLIC_PROXY_URL is unset.
+ *   3. fetchOracleVerdict() always routes through the Cloudflare Worker proxy.
+ *      The viaDirect path was removed — direct Anthropic calls 403 without the
+ *      removed dangerous-direct-browser-access header.
  *
  * The Cloudflare Worker changes (hybrid rate-limit key, Founding Member counter)
  * run in a V8 isolate and cannot be unit-tested with ts-jest — see GAP notes.
@@ -81,7 +82,7 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
       json: () => Promise.resolve(fakeVerdict),
     });
 
-    await oracle.fetchOracleVerdict(fakeWeather, 'female', '');
+    await oracle.fetchOracleVerdict(fakeWeather, 'female');
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [_url, init] = mockFetch.mock.calls[0];
@@ -96,7 +97,7 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
       json: () => Promise.resolve(fakeVerdict),
     });
 
-    await oracle.fetchOracleVerdict(fakeWeather, 'female', '');
+    await oracle.fetchOracleVerdict(fakeWeather, 'female');
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [_url, init] = mockFetch.mock.calls[0];
@@ -111,7 +112,7 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
       json: () => Promise.resolve(fakeVerdict),
     });
 
-    await oracle.fetchOracleVerdict(fakeWeather, 'male', '');
+    await oracle.fetchOracleVerdict(fakeWeather, 'male');
 
     const [_url, init] = mockFetch.mock.calls[0];
     expect(init.headers['Content-Type']).toBe('application/json');
@@ -125,7 +126,7 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
       json: () => Promise.resolve(fakeVerdict),
     });
 
-    await oracle.fetchOracleVerdict(fakeWeather, 'female', '');
+    await oracle.fetchOracleVerdict(fakeWeather, 'female');
 
     const [_url, init] = mockFetch.mock.calls[0];
     expect(init.headers).not.toHaveProperty('X-Device-ID');
@@ -140,7 +141,7 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
     });
 
     const fakeProfile = { keywords: ['minimal'], budget: 'high-street' as const, personality: 'editorial' as const };
-    await oracle.fetchOracleVerdict(fakeWeather, 'female', '', fakeProfile, 'Work');
+    await oracle.fetchOracleVerdict(fakeWeather, 'female', fakeProfile, 'Work');
 
     const [_url, init] = mockFetch.mock.calls[0];
     const body = JSON.parse(init.body);
@@ -160,7 +161,7 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
       json: () => Promise.resolve({ error: 'Rate limited' }),
     });
 
-    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle has spoken enough today');
+    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male')).rejects.toThrow('The Oracle has spoken enough today');
   });
 
   it('retries transient proxy failures before throwing overloaded message', async () => {
@@ -172,11 +173,11 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
       json: () => Promise.resolve({}),
     });
 
-    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle is momentarily overwhelmed');
+    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male')).rejects.toThrow('The Oracle is momentarily overwhelmed');
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 
-  it('throws with fallback message when proxy returns non-retryable server error with no error field', async () => {
+  it('throws with fallback message when proxy returns non-retryable server error', async () => {
     const { oracle, asyncStorage } = loadOracleModule('https://fake-proxy.example.com/api');
     asyncStorage.getItem.mockResolvedValueOnce(null);
     mockFetch.mockResolvedValueOnce({
@@ -185,16 +186,16 @@ describe('viaProxy() — X-Device-ID header (new in this diff)', () => {
       json: () => Promise.resolve({}),
     });
 
-    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male', '')).rejects.toThrow('The Oracle is momentarily unavailable');
+    await expect(oracle.fetchOracleVerdict(fakeWeather, 'male')).rejects.toThrow('The Oracle is momentarily unavailable');
   });
 });
 
 // ---------------------------------------------------------------------------
-// fetchOracleVerdict — routing logic
+// fetchOracleVerdict — always routes through proxy
 // ---------------------------------------------------------------------------
 
-describe('fetchOracleVerdict() — routing (PROXY_URL set vs unset)', () => {
-  it('calls proxy URL (not Claude API) when EXPO_PUBLIC_PROXY_URL is set', async () => {
+describe('fetchOracleVerdict() — proxy routing', () => {
+  it('always calls the configured proxy URL', async () => {
     const proxyUrl = 'https://my-worker.workers.dev';
     const { oracle, asyncStorage } = loadOracleModule(proxyUrl);
     asyncStorage.getItem.mockResolvedValueOnce(null);
@@ -203,97 +204,10 @@ describe('fetchOracleVerdict() — routing (PROXY_URL set vs unset)', () => {
       json: () => Promise.resolve(fakeVerdict),
     });
 
-    await oracle.fetchOracleVerdict(fakeWeather, 'female', 'sk-test-key');
+    await oracle.fetchOracleVerdict(fakeWeather, 'female');
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url] = mockFetch.mock.calls[0];
     expect(url).toBe(proxyUrl);
-  });
-
-  it('calls Claude API directly when EXPO_PUBLIC_PROXY_URL is empty string', async () => {
-    const { oracle } = loadOracleModule('');
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        content: [{ type: 'text', text: JSON.stringify(fakeVerdict) }],
-      }),
-    });
-
-    await oracle.fetchOracleVerdict(fakeWeather, 'female', 'sk-direct-key');
-
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [url] = mockFetch.mock.calls[0];
-    expect(url).toBe('https://api.anthropic.com/v1/messages');
-  });
-
-  it('viaDirect treats budget as guidance and prohibits brand names by default', async () => {
-    const { oracle } = loadOracleModule('');
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        content: [{ type: 'text', text: JSON.stringify(fakeVerdict) }],
-      }),
-    });
-
-    await oracle.fetchOracleVerdict(
-      fakeWeather,
-      'female',
-      'sk-direct-key',
-      { keywords: ['minimal'], budget: 'contemporary', personality: 'editorial' },
-      'Work',
-    );
-
-    const [_url, init] = mockFetch.mock.calls[0];
-    const body = JSON.parse(init.body);
-    const prompt = body.messages[0].content;
-
-    expect(prompt).toContain('BRAND RULE');
-    expect(prompt).toContain('default to zero brand names');
-    expect(prompt).toContain('Budget tier: contemporary');
-    expect(prompt).toContain('mid-range investment pieces');
-    expect(prompt).not.toMatch(/\b(ASOS|Zara|Reiss|AllSaints|COS|Bottega|The Row)\b/);
-  });
-
-  it('viaDirect parses JSON from Claude content blocks', async () => {
-    const { oracle } = loadOracleModule('');
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        content: [
-          { type: 'text', text: JSON.stringify(fakeVerdict) },
-        ],
-      }),
-    });
-
-    const result = await oracle.fetchOracleVerdict(fakeWeather, 'female', 'sk-key');
-    expect(result.vibe).toBe('Grey Eminence');
-    expect(result.rating).toBe(2);
-  });
-
-  it('viaDirect throws if Claude returns malformed JSON text', async () => {
-    const { oracle } = loadOracleModule('');
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({
-        content: [{ type: 'text', text: 'NOT JSON AT ALL' }],
-      }),
-    });
-
-    await expect(oracle.fetchOracleVerdict(fakeWeather, 'female', 'sk-key')).rejects.toThrow(
-      'The Oracle returned an unreadable response. Please try again.',
-    );
-  });
-
-  it('viaDirect throws if Claude returns non-ok status', async () => {
-    const { oracle } = loadOracleModule('');
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      json: () => Promise.resolve({ error: { message: 'Invalid API key' } }),
-    });
-
-    await expect(oracle.fetchOracleVerdict(fakeWeather, 'female', 'bad-key')).rejects.toThrow(
-      'Invalid API key',
-    );
   });
 });

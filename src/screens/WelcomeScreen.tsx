@@ -3,7 +3,7 @@ import {
   View, Text, Pressable, StyleSheet, Platform,
   StatusBar, Animated, Image, Dimensions,
 } from 'react-native';
-import { AppColors, AppFonts, spacing } from '../theme';
+import { AppColors, AppFonts, ThemeName, isY2KTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { height } = Dimensions.get('window');
@@ -13,8 +13,8 @@ interface Props {
 }
 
 export function WelcomeScreen({ onContinue }: Props) {
-  const { colors, fonts } = useTheme();
-  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
+  const { colors, fonts, themeName } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoY       = useRef(new Animated.Value(24)).current;
   const tagOpacity  = useRef(new Animated.Value(0)).current;
@@ -50,7 +50,7 @@ export function WelcomeScreen({ onContinue }: Props) {
         </Text>
         <View style={styles.rule} />
         <Text style={styles.sub}>
-          Weather-powered outfit verdicts,{'\n'}editorially curated by AI.
+          Weather-powered outfit verdicts,{'\n'}editorially created using AI and our custom algorithm that reads the weather and your style, and outputs a magazine-style guide to dressing today.
         </Text>
       </Animated.View>
 
@@ -69,7 +69,9 @@ export function WelcomeScreen({ onContinue }: Props) {
   );
 }
 
-function makeStyles(colors: AppColors, fonts: AppFonts) {
+function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
+  const isY2K = isY2KTheme(themeName);
+
   return StyleSheet.create({
     root: {
       flex: 1,
@@ -95,7 +97,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
       fontFamily: fonts.display,
       fontSize: 36,
       color: '#FAF9F6',
-      lineHeight: 42,
+      lineHeight: isY2K ? 50 : 42,
       letterSpacing: -0.5,
       marginBottom: spacing.lg,
     },
@@ -129,6 +131,7 @@ function makeStyles(colors: AppColors, fonts: AppFonts) {
       fontFamily: fonts.serif,
       fontSize: 20,
       color: colors.bgDark,
+      lineHeight: isY2K ? 30 : 24,
       letterSpacing: -0.2,
     },
     ctaArrow: {

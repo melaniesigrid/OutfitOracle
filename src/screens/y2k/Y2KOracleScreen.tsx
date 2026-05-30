@@ -16,10 +16,13 @@ import { CitySuggestions } from '../../components/CitySuggestions';
 import { LoadingOracle } from '../../components/LoadingOracle';
 import { SkeletonResults } from '../../components/SkeletonResults';
 import { ShareCard } from '../../components/ShareCard';
+import { DressingLogicCard } from '../../components/DressingLogicCard';
 import { searchCities, CitySuggestion } from '../../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../../services/analytics';
+import { hasNightOutfit, selectOutfitsForLook } from '../../utils/outfitSelection';
+import { formatLocationTimeWithCue } from '../../utils/locationTime';
 import { y2kTokens, spacing } from '../../theme';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getY2KTypography } from '../../theme/y2kTypography';
@@ -63,11 +66,15 @@ export function Y2KOracleScreen() {
   const resultTranslateX   = useRef(new Animated.Value(Dimensions.get('window').width)).current;
   const toggleFade         = useRef(new Animated.Value(1)).current;
   const isFirstToggle      = useRef(true);
+  const autoLocationStartedRef = useRef(false);
 
   const isLoading  = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && !!weather && !!verdict;
+  const hasNightLook = hasNightOutfit(verdict);
+  const currentOutfits = selectOutfitsForLook(verdict, lookMode);
+  const cachedAtLabel = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
 
-  const { recents, addCity } = useRecentCities();
+  const { recents, addCity, removeCity } = useRecentCities();
 
   // Pre-fill from cache
   useEffect(() => {
@@ -98,6 +105,10 @@ export function Y2KOracleScreen() {
   // Result wipe-in
   useEffect(() => {
     if (status === 'done') {
+      isFirstToggle.current = true;
+      toggleFade.stopAnimation();
+      toggleFade.setValue(1);
+      setLookMode('polished');
       resultTranslateX.setValue(Dimensions.get('window').width);
       Animated.timing(resultTranslateX, {
         toValue: 0, duration: 600,
@@ -105,7 +116,7 @@ export function Y2KOracleScreen() {
         useNativeDriver: true,
       }).start();
     }
-  }, [status]);
+  }, [status, verdict?.vibe, weather?.city]);
 
   // Toggle crossfade
   useEffect(() => {
@@ -178,6 +189,12 @@ export function Y2KOracleScreen() {
     finally { setLocationLoading(false); }
   };
 
+  useEffect(() => {
+    if (autoLocationStartedRef.current || profileCtx.profileState.status === 'loading') return;
+    autoLocationStartedRef.current = true;
+    handleUseLocation();
+  }, [profileCtx.profileState.status]);
+
   const handleShare = async () => {
     if (!shareCardRef.current || !verdict) return;
     trackShareTapped(city, verdict.vibe);
@@ -220,7 +237,7 @@ export function Y2KOracleScreen() {
               </View>
             </View>
             <View style={styles.headerSubRow}>
-              <Text style={[styles.headerSub, { fontFamily: typo.monoLabel.fontFamily }]}>// submit for judgment ♡</Text>
+              <Text style={[styles.headerSub, { fontFamily: typo.monoLabel.fontFamily }]}>// submit the brief ♡</Text>
               <Text style={[styles.headerDate, { fontFamily: typo.monoData.fontFamily }]}>
                 {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase()}
               </Text>
@@ -280,29 +297,38 @@ export function Y2KOracleScreen() {
             onSelect={name => { trackAutocompleteCitySelected(name); handleConsult(name); }}
           />
 
+          {/* Gender + Occasion — these use theme colors automatically */}
+          <GenderToggle selected={gender} onChange={setGender} />
+          <OccasionPicker selected={occasion} onChange={setOccasion} />
           {/* Recent cities */}
           {recents.length > 0 && (
             <View style={styles.recentsRow}>
               <Text style={styles.recentsLabel}>// RECENT CITIES</Text>
               <View style={styles.recentChips}>
                 {recents.map(c => (
-                  <Pressable
-                    key={c}
-                    style={({ pressed }) => [styles.recentChip, pressed && styles.recentChipPressed]}
-                    onPress={() => { trackRecentCityTapped(c); handleConsult(c); }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Search ${c} again`}
-                  >
-                    <Text style={styles.recentChipText}>{c} ♡</Text>
-                  </Pressable>
+                  <View key={c} style={styles.recentChip}>
+                    <Pressable
+                      style={({ pressed }) => [styles.recentCityButton, pressed && styles.recentChipPressed]}
+                      onPress={() => { trackRecentCityTapped(c); handleConsult(c); }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Search ${c} again`}
+                    >
+                      <Text style={styles.recentChipText} numberOfLines={1}>{c} ♡</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.recentRemove}
+                      onPress={() => { Haptics.selectionAsync(); removeCity(c); }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${c} from recent cities`}
+                    >
+                      <Text style={styles.recentRemoveText}>x</Text>
+                    </Pressable>
+                  </View>
                 ))}
               </View>
             </View>
           )}
-
-          {/* Gender + Occasion — these use theme colors automatically */}
-          <GenderToggle selected={gender} onChange={setGender} />
-          <OccasionPicker selected={occasion} onChange={setOccasion} />
 
           {/* ── CTA ── */}
           <Animated.View style={{ transform: [{ scale: btnScale }], marginHorizontal: spacing.lg, marginBottom: spacing.xl }}>
@@ -344,8 +370,8 @@ export function Y2KOracleScreen() {
                 <View style={styles.cacheBadge}>
                   <Text style={styles.cacheBadgeText}>
                     {isOffline
-                      ? `✕ OFFLINE — CACHED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                      : `// LAST CONSULTED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      ? `✕ OFFLINE — CACHED · ${cachedAtLabel}`
+                      : `// LAST CONSULTED · ${cachedAtLabel}`}
                   </Text>
                   {!isOffline && (
                     <Pressable onPress={() => handleConsult(city)} accessibilityRole="button" accessibilityLabel="Refresh result">
@@ -356,10 +382,11 @@ export function Y2KOracleScreen() {
               ) : null}
 
               <Y2KWeatherCard weather={weather} formatTemp={formatTemp} />
+              <DressingLogicCard weather={weather} formatTemp={formatTemp} style={styles.logicCard} />
               <Y2KDecreeCard verdict={verdict} />
 
               {/* Day / Night toggle */}
-              {verdict.outfitsAlt && (
+              {hasNightLook && (
                 <View style={styles.lookToggle}>
                   {([['polished', 'DAY LOOK'], ['casual', 'NIGHT LOOK']] as const).map(([mode, label]) => (
                     <Pressable
@@ -380,9 +407,9 @@ export function Y2KOracleScreen() {
 
               {/* Outfit cards */}
               <Animated.View style={{ opacity: toggleFade }}>
-                {(lookMode === 'casual' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits).map((item, i) => (
+                {currentOutfits.map((item, i) => (
                   <Y2KOutfitCard
-                    key={item.category}
+                    key={`${lookMode}-${item.category}-${i}`}
                     item={item}
                     index={i}
                     city={city}
@@ -400,7 +427,7 @@ export function Y2KOracleScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Share the Oracle's verdict"
               >
-                <Text style={styles.shareBtnText}>✦ SHARE THE LOOK ✦</Text>
+                <Text style={[styles.shareBtnText, { fontFamily: typo.scriptMedium.fontFamily }]}>✦ SHARE THE LOOK ✦</Text>
               </Pressable>
               <Pressable
                 style={styles.resetBtn}
@@ -467,7 +494,7 @@ const styles = StyleSheet.create({
     fontSize: 38,
     letterSpacing: 0,
     color: y2kTokens.deepPurple,
-    lineHeight: 42,
+    lineHeight: 50,
   },
   headerStickers: {
     flexDirection: 'row',
@@ -531,6 +558,7 @@ const styles = StyleSheet.create({
   input: {
     fontFamily: 'Baloo2_800ExtraBold',
     fontSize: 26,
+    lineHeight: 34,
     color: y2kTokens.ink,
     paddingVertical: spacing.sm,
     letterSpacing: 0,
@@ -569,12 +597,19 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   recentChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1.5,
     borderColor: y2kTokens.deepPurple,
     borderRadius: 20,
     backgroundColor: y2kTokens.cream,
+    overflow: 'hidden',
+  },
+  recentCityButton: {
+    maxWidth: 180,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 6,
   },
   recentChipPressed: {
     backgroundColor: y2kTokens.blush,
@@ -583,6 +618,20 @@ const styles = StyleSheet.create({
     fontFamily: 'IBMPlexMono_400Regular',
     fontSize: 12,
     color: y2kTokens.deepPurple,
+    letterSpacing: 0.5,
+  },
+  recentRemove: {
+    minWidth: 30,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: 1.5,
+    borderLeftColor: y2kTokens.deepPurple,
+  },
+  recentRemoveText: {
+    fontFamily: 'IBMPlexMono_500Medium',
+    fontSize: 12,
+    color: y2kTokens.hotPink,
     letterSpacing: 0.5,
   },
 
@@ -608,6 +657,7 @@ const styles = StyleSheet.create({
   ctaText: {
     fontFamily: 'Baloo2_800ExtraBold',
     fontSize: 16,
+    lineHeight: 24,
     color: y2kTokens.cream,
     letterSpacing: 0,
     flex: 1,
@@ -640,6 +690,7 @@ const styles = StyleSheet.create({
   retryText: {
     fontFamily: 'Knewave_400Regular',
     fontSize: 18,
+    lineHeight: 28,
     color: y2kTokens.hotPink,
   },
 
@@ -671,6 +722,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: y2kTokens.hotPink,
     letterSpacing: 0.5,
+  },
+  logicCard: {
+    paddingHorizontal: spacing.md,
+    backgroundColor: y2kTokens.cream,
+    borderWidth: 1.5,
+    borderColor: y2kTokens.deepPurple,
+    borderRadius: y2kTokens.radiusSm,
+    shadowColor: y2kTokens.deepPurple,
+    shadowOffset: { width: 3, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 0,
   },
   lookToggle: {
     flexDirection: 'row',
@@ -717,6 +779,7 @@ const styles = StyleSheet.create({
   shareBtnText: {
     fontFamily: 'Knewave_400Regular',
     fontSize: 16,
+    lineHeight: 24,
     color: y2kTokens.cream,
     letterSpacing: 1,
   },
@@ -728,6 +791,7 @@ const styles = StyleSheet.create({
   resetText: {
     fontFamily: 'Knewave_400Regular',
     fontSize: 22,
+    lineHeight: 32,
     color: y2kTokens.mutedPurple,
   },
   magicOverlay: {
@@ -750,6 +814,7 @@ const styles = StyleSheet.create({
   },
   magicCity: {
     fontSize: 48,
+    lineHeight: 62,
     color: y2kTokens.cream,
     letterSpacing: -0.5,
     textAlign: 'center',

@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppData } from '../contexts/AppContext';
 import { useRecentCities } from '../hooks/useRecentCities';
 import { useMagicMoment } from '../hooks/useMagicMoment';
@@ -15,6 +16,7 @@ import { GenderToggle, Gender } from '../components/GenderToggle';
 import { OccasionPicker, Occasion } from '../components/OccasionPicker';
 import { WeatherStrip } from '../components/WeatherStrip';
 import { VerdictCard } from '../components/VerdictCard';
+import { DressingLogicCard } from '../components/DressingLogicCard';
 import { OutfitCard } from '../components/OutfitCard';
 import { AvoidSection } from '../components/AvoidSection';
 import { LoadingOracle } from '../components/LoadingOracle';
@@ -22,43 +24,153 @@ import { CitySuggestions } from '../components/CitySuggestions';
 import { ShareCard } from '../components/ShareCard';
 import { SkeletonResults } from '../components/SkeletonResults';
 import { ChallengeCard } from '../components/ChallengeCard';
+import { UnlockToast } from '../components/UnlockToast';
+import { OutfitRatingPrompt } from '../components/OutfitRatingPrompt';
+import { OracleImage } from '../components/OracleImage';
+import { CityArrivalModal } from '../components/CityArrivalModal';
+import { CityReturnBanner } from '../components/CityReturnBanner';
+import { PassportPageCard } from '../components/PassportPageCard';
+import { scheduleRatingReminder } from '../hooks/useNotifications';
+import { useCityPassport } from '../hooks/useCityPassport';
+import { fetchCityDescriptor } from '../services/cityDescriptor';
 import { useWeeklyChallenge } from '../hooks/useWeeklyChallenge';
 import { searchCities, CitySuggestion } from '../services/weather';
 import {
   trackShareTapped, trackRecentCityTapped, trackAutocompleteCitySelected,
 } from '../services/analytics';
+import { hasNightOutfit, selectOutfitsForLook } from '../utils/outfitSelection';
+import { formatLocationTimeWithCue } from '../utils/locationTime';
 import { AppColors, AppFonts, ThemeName, isEditorialTheme, isY2KTheme, isMondrianTheme, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTempUnit } from '../contexts/TemperatureContext';
 import { Y2KOracleScreen } from './y2k/Y2KOracleScreen';
 import { MondrianOracleScreen } from './mondrian/MondrianOracleScreen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { ArchiveImages, Reaction } from '../hooks/useArchive';
 
 export function OracleScreen() {
   const { themeName } = useTheme();
-  if (isY2KTheme(themeName)) return <Y2KOracleScreen />;
-  if (isMondrianTheme(themeName)) return <MondrianOracleScreen />;
-  return <EditorialOracleScreen />;
+  const { oracle, historyCtx, archiveCtx } = useAppData();
+  const { formatTemp } = useTempUnit();
+
+  const passportCity = oracle.status === 'done' && oracle.weather ? oracle.weather.city : null;
+  const passport = useCityPassport(
+    passportCity,
+    historyCtx.history,
+    historyCtx.historyLoaded,
+    archiveCtx.entries,
+    archiveCtx.loaded,
+  );
+
+  const [showArrival, setShowArrival] = useState(false);
+  const [arrivalDescriptor, setArrivalDescriptor] = useState<string | null>(null);
+  const prevOracleStatus = useRef<string>('idle');
+  const passportCardRef = useRef<View>(null);
+
+  useEffect(() => {
+    const justDone = oracle.status === 'done' && prevOracleStatus.current !== 'done';
+    if (justDone && passport?.isNewCity && oracle.weather) {
+      const { city: arrCity, country: arrCountry } = oracle.weather;
+      if (passport.descriptor) {
+        // Returning city with cached descriptor — show immediately
+        setArrivalDescriptor(passport.descriptor);
+        setShowArrival(true);
+      } else {
+        // New city — wait for descriptor before opening modal so it never shows skeleton
+        const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 5000));
+        Promise.race([fetchCityDescriptor(arrCity, arrCountry), timeout])
+          .then(desc => { setArrivalDescriptor(desc); setShowArrival(true); })
+          .catch(() => { setArrivalDescriptor(null); setShowArrival(true); });
+      }
+    }
+    prevOracleStatus.current = oracle.status;
+  }, [oracle.status]);
+
+  const handlePassportCollect = async () => {
+    if (!passportCardRef.current || !oracle.weather || !oracle.verdict) {
+      setShowArrival(false);
+      return;
+    }
+    try {
+      const uri = await captureRef(passportCardRef, { format: 'png', quality: 1 });
+      setShowArrival(false);
+      await Share.share({ url: uri });
+    } catch {
+      setShowArrival(false);
+    }
+  };
+
+  const passportCard = oracle.weather && oracle.verdict && passport ? (
+    <View style={{ position: 'absolute', left: Dimensions.get('window').width + 10, top: 0 }}>
+      <PassportPageCard
+        ref={passportCardRef}
+        city={oracle.weather.city}
+        country={oracle.weather.country}
+        vibe={oracle.verdict.vibe}
+        visitCount={passport.visitCount}
+        descriptor={arrivalDescriptor}
+        tempLabel={formatTemp(oracle.weather.temp)}
+        conditionLabel={oracle.weather.conditionLabel}
+      />
+    </View>
+  ) : null;
+
+  const passportModal = oracle.weather ? (
+    <CityArrivalModal
+      city={oracle.weather.city}
+      country={oracle.weather.country}
+      isFashionCapital={passport?.isFashionCapital ?? false}
+      descriptor={arrivalDescriptor}
+      visible={showArrival}
+      onCollect={handlePassportCollect}
+      onDismiss={() => setShowArrival(false)}
+    />
+  ) : null;
+
+  if (isY2KTheme(themeName)) return <>{passportCard}{passportModal}<Y2KOracleScreen /></>;
+  if (isMondrianTheme(themeName)) return <>{passportCard}{passportModal}<MondrianOracleScreen /></>;
+  return <>{passportCard}{passportModal}<EditorialOracleScreen /></>;
 }
 
 function EditorialOracleScreen() {
   const { colors, fonts, isDark, themeName } = useTheme();
+  const { formatTemp } = useTempUnit();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
-  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx } = useAppData();
+  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx, oracleImages } = useAppData();
   const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache, isOffline } = oracle;
+  const { newMilestone, newRank, clearMilestone, clearRank } = streakCtx;
+  const findArchiveEntry = archiveCtx.findEntry;
+  const updateArchiveImages = archiveCtx.updateImages;
   const profile = profileCtx.profile;
 
   const [city, setCity]               = useState('');
   const [gender, setGender]           = useState<Gender>('Women');
   const [occasion, setOccasion]       = useState<Occasion>('Any');
+  const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
+
+  const returnPassport = useCityPassport(
+    city || null,
+    historyCtx.history,
+    historyCtx.historyLoaded,
+    archiveCtx.entries,
+    archiveCtx.loaded,
+  );
   const [lookMode, setLookMode]       = useState<'polished' | 'casual'>('polished');
+  const [imageView, setImageView]     = useState<'photo' | 'sketch'>('photo');
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
+  const [suggestionsArmed, setSuggestionsArmed] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
 
   const debounceRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressSuggestRef = useRef(false);
+  const searchSeqRef       = useRef(0);
+  const autoLocationStartedRef = useRef(false);
   const scrollRef          = useRef<ScrollView>(null);
   const shareCardRef       = useRef<View>(null);
   const btnScale           = useRef(new Animated.Value(1)).current;
   const resultTranslateX   = useRef(new Animated.Value(Dimensions.get('window').width)).current;
+  const resultOpacity      = useRef(new Animated.Value(0)).current;
   const toggleFade         = useRef(new Animated.Value(1)).current;
   const isFirstToggle      = useRef(true);
   const { magicOpacity, showMagicMoment, dismissMagicMoment, tryTriggerFirstConsult } = useMagicMoment();
@@ -66,10 +178,50 @@ function EditorialOracleScreen() {
   const isLoading = status === 'fetching-weather' || status === 'fetching-verdict';
   const showResult = status === 'done' && !!weather && !!verdict;
 
-  const { recents, addCity } = useRecentCities();
+  const { recents, addCity, removeCity } = useRecentCities();
   const weeklyChallenge = useWeeklyChallenge(historyCtx.history);
 
-  // Saved looks that match current weather (same city, temp within 5°C)
+  const hasNightLook = hasNightOutfit(verdict);
+  const activeLookMode = hasNightLook ? lookMode : 'polished';
+  const activePhotoImage = activeLookMode === 'casual' ? oracleImages.night : oracleImages.day;
+  const activeSketchImage = activeLookMode === 'casual' ? oracleImages.nightSketch : oracleImages.daySketch;
+  const activeImage = imageView === 'sketch' ? activeSketchImage : activePhotoImage;
+  const currentOutfits = selectOutfitsForLook(verdict, activeLookMode);
+  const cachedAtLabel = formatLocationTimeWithCue(cachedAt, weather?.utcOffsetSeconds);
+
+  const currentArchiveImages = useMemo<ArchiveImages>(() => ({
+    day: oracleImages.day.url ?? undefined,
+    night: oracleImages.night.url ?? undefined,
+    daySketch: oracleImages.daySketch.url ?? undefined,
+    nightSketch: oracleImages.nightSketch.url ?? undefined,
+  }), [
+    oracleImages.day.url,
+    oracleImages.night.url,
+    oracleImages.daySketch.url,
+    oracleImages.nightSketch.url,
+  ]);
+
+  const triggerImageForSelection = (
+    mode: 'polished' | 'casual',
+    view: 'photo' | 'sketch' = imageView,
+  ) => {
+    const nextImage =
+      mode === 'casual'
+        ? (view === 'sketch' ? oracleImages.nightSketch : oracleImages.night)
+        : (view === 'sketch' ? oracleImages.daySketch : oracleImages.day);
+
+    if (nextImage.status === 'idle') {
+      nextImage.trigger();
+    }
+  };
+
+  const handleLookModeChange = (mode: 'polished' | 'casual') => {
+    Haptics.selectionAsync();
+    setLookMode(mode);
+    triggerImageForSelection(mode);
+  };
+
+  // Saved items matching current city+temp (individual outfit pieces)
   const wearAgainMatches = showResult && weather
     ? savedCtx.saved.filter(s =>
         s.city.toLowerCase() === city.toLowerCase() &&
@@ -78,9 +230,24 @@ function EditorialOracleScreen() {
       )
     : [];
 
+  // Full saved looks (archive entries) matching current city+temp — richer data source
+  const archiveWearMatches = showResult && weather
+    ? archiveCtx.entries.filter(e =>
+        e.city.toLowerCase() === city.toLowerCase() &&
+        Math.abs(e.weather.temp - weather.temp) <= 5,
+      )
+    : [];
+  const bestArchiveMatch = archiveWearMatches[0] ?? null;
+  const showWearAgain    = wearAgainMatches.length > 0 || archiveWearMatches.length > 0;
+
   // Pre-fill city from cache
   useEffect(() => {
-    if (cachedCity && !city) setCity(cachedCity);
+    if (cachedCity && !city) {
+      suppressSuggestRef.current = true;
+      setSuggestionsArmed(false);
+      setSuggestions([]);
+      setCity(cachedCity);
+    }
   }, [cachedCity]);
 
   // Haptic on fresh result
@@ -93,27 +260,59 @@ function EditorialOracleScreen() {
   // Record consult in history + streak; persist founding member badge to dedicated key
   useEffect(() => {
     if (status === 'done' && !isFromCache && weather && verdict) {
+      const entryId = String(Date.now());
       tryTriggerFirstConsult(historyCtx.history.length);
       historyCtx.addEntry(city, gender, weather, verdict, occasion);
       streakCtx.recordConsult();
+      setCurrentEntryId(entryId);
+      scheduleRatingReminder(city, verdict.vibe).catch(() => {});
       if (verdict.foundingMember) {
         AsyncStorage.setItem('@outfit_oracle_founding_member', '1').catch(() => {});
       }
     }
   }, [status, isFromCache]);
 
-  // Verdict arrival: horizontal wipe from right edge, 600ms ease-in-out per motion spec
+  useEffect(() => {
+    if (!showResult || !weather || !verdict) return;
+    if (!Object.values(currentArchiveImages).some(Boolean)) return;
+    const existing = findArchiveEntry(verdict.vibe, city);
+    if (!existing) return;
+    updateArchiveImages(existing.id, currentArchiveImages);
+  }, [
+    showResult,
+    city,
+    weather,
+    verdict?.vibe,
+    currentArchiveImages,
+    findArchiveEntry,
+    updateArchiveImages,
+  ]);
+
+  // Verdict arrival: horizontal wipe from right edge + fade, 600ms ease-in-out per motion spec
   useEffect(() => {
     if (status === 'done') {
+      isFirstToggle.current = true;
+      toggleFade.stopAnimation();
+      toggleFade.setValue(1);
+      setLookMode('polished');
       resultTranslateX.setValue(Dimensions.get('window').width);
-      Animated.timing(resultTranslateX, {
-        toValue: 0,
-        duration: 600,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
-      }).start();
+      resultOpacity.setValue(0);
+      Animated.parallel([
+        Animated.timing(resultTranslateX, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(resultOpacity, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  }, [status]);
+  }, [status, verdict?.vibe, weather?.city]);
 
   // POLISHED/CASUAL toggle crossfade — skip on initial render, fade in on mode switch
   useEffect(() => {
@@ -124,26 +323,31 @@ function EditorialOracleScreen() {
 
   // City autocomplete debounce
   useEffect(() => {
-    if (isLoading || city.trim().length < 2 || suppressSuggestRef.current) {
+    const seq = ++searchSeqRef.current;
+    if (!suggestionsArmed || isLoading || city.trim().length < 2 || suppressSuggestRef.current) {
       setSuggestions([]);
       return;
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      if (suppressSuggestRef.current) return;
+      if (!suggestionsArmed || suppressSuggestRef.current) return;
       const results = await searchCities(city);
-      setSuggestions(results);
+      if (searchSeqRef.current === seq && suggestionsArmed && !suppressSuggestRef.current) {
+        setSuggestions(results);
+      }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [city, isLoading]);
+  }, [city, isLoading, suggestionsArmed]);
 
   const handleConsult = (overrideCity?: string) => {
     const target = (overrideCity ?? city).trim();
     if (!target || isLoading) return;
     suppressSuggestRef.current = true;
+    setSuggestionsArmed(false);
     setSuggestions([]);
     setCity(target);
     setLookMode('polished');
+    setImageView('photo');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     addCity(target);
     consult(target, gender, profile, occasion);
@@ -164,6 +368,7 @@ function EditorialOracleScreen() {
       const detectedCountry = place.isoCountryCode ?? place.country ?? '';
       if (!detectedCity) return;
       suppressSuggestRef.current = true;
+      setSuggestionsArmed(false);
       setSuggestions([]);
       setCity(detectedCity);
       addCity(detectedCity);
@@ -177,6 +382,13 @@ function EditorialOracleScreen() {
     }
   };
 
+  useEffect(() => {
+    if (autoLocationStartedRef.current || profileCtx.profileState.status === 'loading') return;
+    if (status !== 'idle') return; // AppContext already auto-consulted or cache loaded
+    autoLocationStartedRef.current = true;
+    handleUseLocation();
+  }, [profileCtx.profileState.status, status]);
+
   const handleShare = async () => {
     if (!shareCardRef.current || !verdict) return;
     trackShareTapped(city, verdict.vibe);
@@ -189,6 +401,13 @@ function EditorialOracleScreen() {
   return (
     <View style={styles.root}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
+      <UnlockToast
+        visible={!!(newRank || newMilestone)}
+        type={newRank ? 'rank' : 'milestone'}
+        value={newRank ?? newMilestone}
+        topInset={insets.top}
+        onDismiss={() => { if (newRank) clearRank(); else clearMilestone(); }}
+      />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           ref={scrollRef}
@@ -204,7 +423,7 @@ function EditorialOracleScreen() {
         >
 
           {/* ── HEADER ── */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
             <View style={styles.headerTop} />
             <View style={styles.headerRow}>
               <Text style={styles.headerTitle}>OUTFIT ORACLE</Text>
@@ -223,8 +442,15 @@ function EditorialOracleScreen() {
               value={city}
               onChangeText={text => {
                 suppressSuggestRef.current = false;
+                setSuggestionsArmed(true);
                 setCity(text);
                 if (!text.trim()) setSuggestions([]);
+              }}
+              onBlur={() => {
+                setTimeout(() => {
+                  setSuggestionsArmed(false);
+                  setSuggestions([]);
+                }, 120);
               }}
               placeholder="Toronto, London, Tokyo…"
               placeholderTextColor={colors.textMuted}
@@ -253,27 +479,40 @@ function EditorialOracleScreen() {
             onSelect={name => { trackAutocompleteCitySelected(name); handleConsult(name); }}
           />
 
+          <GenderToggle selected={gender} onChange={setGender} />
+          <OccasionPicker selected={occasion} onChange={setOccasion} />
           {recents.length > 0 && (
             <View style={styles.recentsRow}>
               <Text style={styles.recentsLabel}>RECENT</Text>
               <View style={styles.recentChips}>
-                {recents.map(c => (
-                  <Pressable
-                    key={c}
-                    style={({ pressed }) => [styles.recentChip, pressed && styles.recentChipPressed]}
-                    onPress={() => { trackRecentCityTapped(c); handleConsult(c); }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Search ${c} again`}
-                  >
-                    <Text style={styles.recentChipText}>{c}</Text>
-                  </Pressable>
-                ))}
+                {recents.map(c => {
+                  const isActive = !!weather?.city && weather.city.toLowerCase() === c.toLowerCase();
+                  return (
+                    <View key={c} style={[styles.recentChip, isActive && styles.recentChipActive]}>
+                      <Pressable
+                        style={({ pressed }) => [styles.recentCityButton, pressed && styles.recentChipPressed]}
+                        onPress={() => { trackRecentCityTapped(c); handleConsult(c); }}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isActive }}
+                        accessibilityLabel={`Search ${c} again`}
+                      >
+                        <Text style={[styles.recentChipText, isActive && styles.recentChipTextActive]} numberOfLines={1}>{c}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.recentRemove}
+                        onPress={() => { Haptics.selectionAsync(); removeCity(c); }}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${c} from recent cities`}
+                      >
+                        <MaterialCommunityIcons name="close" size={13} color={colors.textMuted} />
+                      </Pressable>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           )}
-
-          <GenderToggle selected={gender} onChange={setGender} />
-          <OccasionPicker selected={occasion} onChange={setOccasion} />
           <ChallengeCard state={weeklyChallenge} />
 
           {/* ── CTA ── */}
@@ -309,13 +548,13 @@ function EditorialOracleScreen() {
 
           {/* ── RESULTS ── */}
           {showResult ? (
-            <Animated.View style={[styles.results, { transform: [{ translateX: resultTranslateX }] }]}>
+            <Animated.View style={[styles.results, { opacity: resultOpacity, transform: [{ translateX: resultTranslateX }] }]}>
               {isFromCache && cachedAt ? (
                 <View style={styles.cacheBadge}>
                   <Text style={styles.cacheBadgeText}>
                     {isOffline
-                      ? `OFFLINE — CACHED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                      : `LAST CONSULTED · ${new Date(cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                      ? `OFFLINE — CACHED · ${cachedAtLabel}`
+                      : `LAST CONSULTED · ${cachedAtLabel}`}
                   </Text>
                   {!isOffline && (
                     <Pressable onPress={() => handleConsult(city)} accessibilityRole="button" accessibilityLabel="Refresh result">
@@ -324,25 +563,145 @@ function EditorialOracleScreen() {
                   )}
                 </View>
               ) : null}
-              {wearAgainMatches.length > 0 && (
+              {showWearAgain && (
                 <View style={styles.wearAgainBanner}>
                   <Text style={styles.wearAgainLabel}>WEAR THIS AGAIN</Text>
-                  <Text style={styles.wearAgainText}>
-                    {wearAgainMatches.length === 1
-                      ? `You saved a look for ${city} in similar conditions. The Oracle approves a repeat.`
-                      : `You have ${wearAgainMatches.length} saved looks for ${city} in similar conditions.`}
-                  </Text>
+                  {bestArchiveMatch ? (
+                    <>
+                      <Text style={styles.wearAgainVibe}>{bestArchiveMatch.verdict.vibe}</Text>
+                      {bestArchiveMatch.note ? (
+                        <Text style={styles.wearAgainNote}>"{bestArchiveMatch.note}"</Text>
+                      ) : (
+                        <Text style={styles.wearAgainText}>
+                          {archiveWearMatches.length === 1
+                            ? `Saved look for ${city} in similar conditions. The Oracle approves a repeat.`
+                            : `${archiveWearMatches.length} saved looks for ${city} in similar conditions.`}
+                        </Text>
+                      )}
+                    </>
+                  ) : (
+                    <Text style={styles.wearAgainText}>
+                      {wearAgainMatches.length === 1
+                        ? `You saved a look for ${city} in similar conditions. The Oracle approves a repeat.`
+                        : `You have ${wearAgainMatches.length} saved looks for ${city} in similar conditions.`}
+                    </Text>
+                  )}
                 </View>
               )}
-              <WeatherStrip weather={weather} />
+              <OracleImage
+                photoState={activePhotoImage}
+                sketchState={activeSketchImage}
+                activeView={imageView}
+                onViewChange={(view) => {
+                  setImageView(view);
+                  if (view === 'sketch' && activeSketchImage.status === 'idle') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    activeSketchImage.trigger();
+                  }
+                }}
+              />
+
+              {showResult && returnPassport && returnPassport.visitCount >= 2 && (
+                <CityReturnBanner
+                  city={weather.city}
+                  visitCount={returnPassport.visitCount}
+                  daysSinceLastVisit={returnPassport.daysSinceLastVisit}
+                  lastVibe={returnPassport.lastVibe}
+                />
+              )}
+              <WeatherStrip weather={weather} lastConsultedAt={cachedAt} />
+              <DressingLogicCard weather={weather} formatTemp={formatTemp} />
               <VerdictCard verdict={verdict} />
-              {verdict.outfitsAlt && (
+
+              {/* ── REACTION / ARCHIVE ROW ── */}
+              {(() => {
+                const existing = archiveCtx.findEntry(verdict.vibe, city);
+                const isArchived = !!existing;
+                const reaction = existing?.reaction ?? null;
+                const doSave = (r: Reaction) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  if (isArchived && existing) {
+                    if (existing.reaction === r) {
+                      archiveCtx.setReaction(existing.id, null);
+                    } else {
+                      archiveCtx.setReaction(existing.id, r);
+                    }
+                  } else {
+                    archiveCtx.addEntry(city, gender, weather!, verdict, currentArchiveImages, occasion, r);
+                    // Trigger night image so both day + night get patched into the entry
+                    // as they complete. updateArchiveImages effect handles the patch.
+                    oracleImages.night.trigger();
+                  }
+                };
+                const doArchive = () => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (!isArchived) {
+                    archiveCtx.addEntry(city, gender, weather!, verdict, currentArchiveImages, occasion, null);
+                    oracleImages.night.trigger();
+                  } else if (existing) {
+                    archiveCtx.removeEntry(existing.id);
+                  }
+                };
+                return (
+                  <View style={styles.reactionRow}>
+                    <Pressable
+                      style={styles.reactionBtn}
+                      onPress={() => doSave('liked')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Like this outfit"
+                    >
+                      <MaterialCommunityIcons
+                        name={reaction === 'liked' ? 'heart' : 'heart-outline'}
+                        size={20}
+                        color={reaction === 'liked' ? colors.scarletFg : colors.textMuted}
+                      />
+                      <Text style={[styles.reactionLabel, reaction === 'liked' && { color: colors.scarletFg }]}>
+                        LIKE
+                      </Text>
+                    </Pressable>
+                    <View style={styles.reactionDivider} />
+                    <Pressable
+                      style={styles.reactionBtn}
+                      onPress={() => doArchive()}
+                      accessibilityRole="button"
+                      accessibilityLabel={isArchived ? 'Remove from archive' : 'Save to archive'}
+                    >
+                      <MaterialCommunityIcons
+                        name={isArchived ? 'bookmark' : 'bookmark-outline'}
+                        size={20}
+                        color={isArchived ? colors.textSecondary : colors.textMuted}
+                      />
+                      <Text style={[styles.reactionLabel, isArchived && { color: colors.textSecondary }]}>
+                        {isArchived ? 'SAVED' : 'SAVE'}
+                      </Text>
+                    </Pressable>
+                    <View style={styles.reactionDivider} />
+                    <Pressable
+                      style={styles.reactionBtn}
+                      onPress={() => doSave('disliked')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Dislike this outfit"
+                    >
+                      <MaterialCommunityIcons
+                        name={reaction === 'disliked' ? 'thumb-down' : 'thumb-down-outline'}
+                        size={20}
+                        color={reaction === 'disliked' ? colors.textSecondary : colors.textMuted}
+                      />
+                      <Text style={[styles.reactionLabel, reaction === 'disliked' && { color: colors.textSecondary }]}>
+                        PASS
+                      </Text>
+                    </Pressable>
+                  </View>
+                );
+              })()}
+
+              {hasNightLook && (
                 <View style={styles.lookToggle}>
                   {([['polished', 'DAY'], ['casual', 'NIGHT']] as const).map(([mode, label]) => (
                     <Pressable
                       key={mode}
                       style={[styles.lookToggleBtn, lookMode === mode && styles.lookToggleBtnActive]}
-                      onPress={() => { Haptics.selectionAsync(); setLookMode(mode); }}
+                      onPress={() => handleLookModeChange(mode)}
                       accessibilityRole="radio"
                       accessibilityState={{ selected: lookMode === mode }}
                       accessibilityLabel={`${label} look`}
@@ -355,9 +714,9 @@ function EditorialOracleScreen() {
                 </View>
               )}
               <Animated.View style={{ opacity: toggleFade }}>
-                {(lookMode === 'casual' && verdict.outfitsAlt ? verdict.outfitsAlt : verdict.outfits).map((item, i) => (
+                {currentOutfits.map((item, i) => (
                   <OutfitCard
-                    key={item.category}
+                    key={`${lookMode}-${item.category}-${i}`}
                     item={item}
                     index={i}
                     city={city}
@@ -367,6 +726,11 @@ function EditorialOracleScreen() {
                 ))}
                 <AvoidSection items={verdict.avoid} />
               </Animated.View>
+              <OutfitRatingPrompt
+                entryId={currentEntryId}
+                existingRating={historyCtx.history.find(e => e.id === currentEntryId)?.userRating}
+                onRate={(id, rating) => historyCtx.setUserRating(id, rating)}
+              />
               <Pressable
                 style={styles.shareBtn}
                 onPress={handleShare}
@@ -413,7 +777,7 @@ function EditorialOracleScreen() {
 }
 
 function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
-  const isElectric = themeName === 'electric';
+  const isElectric = themeName === 'electric' || themeName === 'void';
   const isEditorial = isEditorialTheme(themeName);
   // Electric CTA: hot-pink button on cobalt — the one scarlet moment on the input screen
   const btnBg       = isElectric ? colors.scarlet : colors.bgDark;
@@ -425,7 +789,6 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   scroll: { flex: 1 },
   content: { paddingBottom: 60 },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 16 : 12,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
@@ -465,9 +828,13 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   recentsRow: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
   recentsLabel: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textMuted, marginBottom: spacing.sm },
   recentChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  recentChip: { paddingHorizontal: spacing.md, paddingVertical: 7, borderWidth: 1, borderColor: colors.border },
+  recentChip: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
+  recentChipActive: { borderColor: colors.borderHard, backgroundColor: colors.bgSurface },
+  recentCityButton: { maxWidth: 180, paddingLeft: spacing.md, paddingRight: spacing.sm, paddingVertical: 7 },
   recentChipPressed: { backgroundColor: colors.bgSurface },
   recentChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.textSecondary, letterSpacing: 0.3 },
+  recentChipTextActive: { color: colors.textPrimary },
+  recentRemove: { minWidth: 30, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: colors.border },
   btn: {
     backgroundColor: btnBg, paddingVertical: 18, paddingHorizontal: spacing.lg,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -522,6 +889,28 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
   shareBtnText: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 2.5, color: colors.textPrimary },
   resetBtn: { alignSelf: 'center', paddingVertical: spacing.md, marginBottom: spacing.lg },
   resetText: { fontFamily: fonts.serif, fontSize: 18, color: colors.textSecondary, letterSpacing: 0.3 },
+  reactionRow: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
+  },
+  reactionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 5,
+  },
+  reactionLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2,
+    color: colors.textMuted,
+  },
+  reactionDivider: {
+    width: 1,
+    backgroundColor: colors.border,
+  },
   wearAgainBanner: {
     borderLeftWidth: 2,
     borderLeftColor: colors.scarletFg,
@@ -537,11 +926,26 @@ function makeStyles(colors: AppColors, fonts: AppFonts, themeName: ThemeName) {
     color: colors.scarletFg,
     marginBottom: 4,
   },
+  wearAgainVibe: {
+    fontFamily: fonts.display,
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.textPrimary,
+    letterSpacing: -0.2,
+    marginBottom: 3,
+  },
   wearAgainText: {
     fontFamily: fonts.serif,
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 19,
+    fontStyle: 'italic',
+  },
+  wearAgainNote: {
+    fontFamily: fonts.serif,
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 21,
     fontStyle: 'italic',
   },
 

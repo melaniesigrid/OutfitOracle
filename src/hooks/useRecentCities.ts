@@ -22,7 +22,7 @@ export function useRecentCities() {
   }, [recents]);
 
   const removeCity = useCallback(async (city: string) => {
-    const updated = recents.filter(c => c !== city);
+    const updated = recents.filter(c => c.toLowerCase() !== city.toLowerCase());
     setRecents(updated);
     await AsyncStorage.setItem(KEY, JSON.stringify(updated));
   }, [recents]);

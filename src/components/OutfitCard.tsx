@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Linking, Animated } from 'react-native';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Linking, Animated, Easing, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { OutfitItem } from '../services/oracle';
 import { useAppData } from '../contexts/AppContext';
+import { fetchPexelsImage } from '../services/pexels';
+import { buildGoogleShoppingUrl, isNoneNeededItem, resolveShopQueries } from '../services/shoppingLinks';
 import { AppColors, AppFonts, AppMetrics, spacing } from '../theme';
 import { useTheme } from '../contexts/ThemeContext';
-
-const NONE_NEEDED_RE = /\bnone\b|not needed|no outer|skip the|universe has gifted|weather permits|too warm|unnecessary/i;
 
 interface Props {
   item: OutfitItem;
@@ -18,16 +18,7 @@ interface Props {
 }
 
 function openShop(itemName: string) {
-  const q = encodeURIComponent(itemName);
-  Linking.openURL(`https://www.google.com/search?tbm=shop&q=${q}`);
-}
-
-// Split "scarf, gloves and sunglasses" or "clutch + earrings + scarf" into individual items
-function splitItems(raw: string): string[] {
-  return raw
-    .split(/,\s*|\s+and\s+|\s*\+\s*/i)
-    .map(s => s.trim())
-    .filter(Boolean);
+  Linking.openURL(buildGoogleShoppingUrl(itemName));
 }
 
 export function OutfitCard({ item, index, city, vibe, weather }: Props) {
@@ -46,25 +37,38 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
   const styles = useMemo(() => makeStyles(colors, fonts, metrics, flags, accent), [colors, fonts, metrics, flags, accent]);
 
   const num = String(index + 1).padStart(2, '0');
-  const isNoneNeeded = NONE_NEEDED_RE.test(item.item);
-  const shopItems = splitItems(item.item);
+  const isNoneNeeded = isNoneNeededItem(item.item);
+  const shopItems = resolveShopQueries(item);
   const hearted = savedCtx.isSaved(item, city);
 
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isNoneNeeded) {
+      fetchPexelsImage(item.category, item.item).then(setImageUrl);
+    }
+  }, [item.category, item.item, isNoneNeeded]);
+
   const opacity    = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(16)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
+  const heartScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 420, delay: index * 90, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 420, delay: index * 90, useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 300, delay: index * 80, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 300, delay: index * 80, easing: Easing.out(Easing.ease), useNativeDriver: true }),
     ]).start();
   }, []);
 
   const toggleSave = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Animated.sequence([
+      Animated.timing(heartScale, { toValue: 1.35, duration: 130, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(heartScale, { toValue: 1.0,  duration: 170, easing: Easing.in(Easing.ease),  useNativeDriver: true }),
+    ]).start();
     if (hearted) {
+      Haptics.selectionAsync();
       savedCtx.removeOutfit(item, city);
     } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       savedCtx.saveOutfit(item, city, vibe, weather);
     }
   };
@@ -85,19 +89,33 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
               accessibilityLabel={hearted ? `Remove ${item.item} from saved looks` : `Save ${item.item}`}
               hitSlop={12}
             >
-              <MaterialCommunityIcons
-                name={hearted ? 'heart' : 'heart-outline'}
-                size={16}
-                color={hearted ? colors.scarletFg : colors.border}
-              />
+              <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                <MaterialCommunityIcons
+                  name={hearted ? 'heart' : 'heart-outline'}
+                  size={16}
+                  color={hearted ? colors.scarletFg : colors.border}
+                />
+              </Animated.View>
             </Pressable>
           </View>
-          <Text style={styles.itemName}>{item.item}</Text>
-          <Text style={styles.detail}>{item.detail}</Text>
+          <View style={styles.itemRow}>
+            <View style={styles.itemText}>
+              <Text style={styles.itemName}>{item.item}</Text>
+              <Text style={styles.detail}>{item.detail}</Text>
+            </View>
+            {imageUrl && !isNoneNeeded && (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.itemThumb}
+                resizeMode="cover"
+                accessibilityLabel={item.item}
+              />
+            )}
+          </View>
 
           {isNoneNeeded ? (
             <Text style={styles.blessingNote}>
-              The Oracle blesses your bare arms. Go forth. :)
+              The Oracle signs off on bare arms. Proceed. :)
             </Text>
           ) : (
             <View style={styles.shopBtns}>
@@ -110,8 +128,11 @@ export function OutfitCard({ item, index, city, vibe, weather }: Props) {
                   accessibilityLabel={`Shop ${piece}`}
                   accessibilityHint="Opens Google Shopping in your browser"
                 >
-                  <Text style={[styles.shopText, { color: flags.solidCardBackgrounds ? accent.text : accent.color }]}>
-                    {shopItems.length > 1 ? `SHOP ${piece.toUpperCase()}` : 'SHOP THIS PIECE'}
+                  <Text
+                    style={[styles.shopText, { color: flags.solidCardBackgrounds ? accent.text : accent.color }]}
+                    numberOfLines={1}
+                  >
+                    SHOP SIMILAR →
                   </Text>
                   <MaterialCommunityIcons
                     name="open-in-new"
@@ -186,6 +207,22 @@ function makeStyles(colors: AppColors, fonts: AppFonts, metrics: AppMetrics, fla
       fontFamily: fonts.mono,
       fontSize: 12,
       letterSpacing: 2.5,
+    },
+    itemRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    itemText: {
+      flex: 1,
+    },
+    itemThumb: {
+      width: 76,
+      height: 76,
+      flexShrink: 0,
+      borderWidth: 1,
+      borderColor: isSolid ? 'rgba(255,255,255,0.2)' : colors.border,
     },
     itemName: {
       fontFamily: fonts.display,

@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OutfitOracle Snow WeatherGlanceCard</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --ice: #eff6ff;
+      --ice-blue: #bfdbfe;
+      --frost: rgba(255, 255, 255, 0.82);
+      --glass-border: rgba(255, 255, 255, 0.62);
+      --snow: rgba(255, 255, 255, 0.92);
+      --snow-soft: rgba(255, 255, 255, 0.5);
+      --shadow: rgba(30, 64, 175, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at top left, rgba(191, 219, 254, 0.42), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(224, 242, 254, 0.4), transparent 38%),
+        #f8fbff;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .stage {
+      width: min(92vw, 430px);
+      padding: 20px;
+    }
+
+    .weather-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 560px;
+      border-radius: 38px;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 72% 16%, rgba(255, 255, 255, 0.78), transparent 14%),
+        linear-gradient(180deg, rgba(147, 197, 253, 0.92) 0%, rgba(219, 234, 254, 0.96) 38%, rgba(240, 249, 255, 0.94) 72%, rgba(186, 230, 253, 0.82) 100%);
+      box-shadow:
+        0 34px 92px var(--shadow),
+        inset 0 1px 0 rgba(255,255,255,0.72);
+      isolation: isolate;
+    }
+
+    .weather-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 14% 18%, rgba(255,255,255,0.66), transparent 16%),
+        radial-gradient(circle at 86% 30%, rgba(255,255,255,0.42), transparent 20%),
+        linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.34) 42%, transparent 66%);
+      pointer-events: none;
+      z-index: 0;
+      animation: winterLight 10s ease-in-out infinite;
+    }
+
+    .weather-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -34% -18% -34%;
+      height: 45%;
+      background:
+        radial-gradient(ellipse at 50% 100%, rgba(125, 211, 252, 0.46) 0%, rgba(255, 255, 255, 0.58) 46%, transparent 76%);
+      filter: blur(1px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 12;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: rgba(255,255,255,0.96);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 18px rgba(30,64,175,0.16);
+    }
+
+    .menu-button,
+    .save-button {
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255,255,255,0.54);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.22);
+      color: white;
+      display: grid;
+      place-items: center;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.38);
+    }
+
+    .brand {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 19px;
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+
+    .snow-scene,
+    .snow-layer,
+    .sparkle-layer,
+    .mist-layer {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .snow-scene {
+      z-index: 1;
+    }
+
+    .snow-layer.back {
+      z-index: 2;
+      opacity: 0.46;
+      filter: blur(0.8px);
+    }
+
+    .snow-layer.front {
+      z-index: 8;
+    }
+
+    .snowflake {
+      position: absolute;
+      top: -14%;
+      left: var(--left, 50%);
+      width: var(--size, 18px);
+      height: var(--size, 18px);
+      display: grid;
+      place-items: center;
+      opacity: var(--opacity, 0.78);
+      color: rgba(255, 255, 255, 0.96);
+      text-shadow:
+        0 0 10px rgba(255,255,255,0.9),
+        0 0 22px rgba(191,219,254,0.58);
+      animation:
+        snowFall var(--fall-speed, 9s) linear infinite,
+        snowSway var(--sway-speed, 3.8s) ease-in-out infinite,
+        flakeTwirl var(--spin-speed, 9s) linear infinite;
+      animation-delay: var(--delay, 0s), var(--sway-delay, 0s), var(--spin-delay, 0s);
+    }
+
+    .snowflake::before {
+      content: "❄";
+      font-size: var(--size, 18px);
+      line-height: 1;
+      font-family: Georgia, "Times New Roman", serif;
+    }
+
+    .snowflake::after {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(255,255,255,0.8), transparent 64%);
+      filter: blur(3px);
+      opacity: 0.46;
+    }
+
+    .snowflake::after {
+      transform: scale(0.46);
+      background: rgba(191, 219, 254, 0.7);
+      opacity: 0.72;
+    }
+
+    .crystal {
+      position: absolute;
+      width: var(--size, 18px);
+      height: var(--size, 18px);
+      left: var(--left, 50%);
+      top: -14%;
+      opacity: var(--opacity, 0.72);
+      animation:
+        crystalFall var(--fall-speed, 12s) linear infinite,
+        crystalSpin var(--spin-speed, 8s) linear infinite;
+      animation-delay: var(--delay, 0s), var(--spin-delay, 0s);
+      filter:
+        drop-shadow(0 0 8px rgba(255,255,255,0.72))
+        drop-shadow(0 0 18px rgba(191,219,254,0.44));
+    }
+
+    .crystal::before,
+    .crystal::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 2.5px;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.98), transparent);
+      transform-origin: 50% 50%;
+    }
+
+    .crystal::before {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+
+    .crystal::after {
+      transform: translate(-50%, -50%) rotate(60deg);
+    }
+
+    .crystal span {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 2.5px;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9), transparent);
+      transform-origin: 50% 50%;
+    }
+
+    .crystal span:nth-child(1) { transform: translate(-50%, -50%) rotate(120deg); }
+    .crystal span:nth-child(2) { transform: translate(-50%, -50%) rotate(90deg); opacity: 0.62; }
+
+    .cloud-bank {
+      position: absolute;
+      top: 72px;
+      left: 50%;
+      width: 306px;
+      height: 130px;
+      transform: translateX(-50%);
+      z-index: 3;
+      animation: snowCloudFloat 7s ease-in-out infinite;
+    }
+
+    .cloud-piece {
+      position: absolute;
+      border-radius: 999px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.78), rgba(219, 234, 254, 0.5) 62%, rgba(147, 197, 253, 0.24));
+      border: 1px solid rgba(255,255,255,0.52);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.78),
+        0 22px 54px rgba(59, 130, 246, 0.14);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .cloud-piece.base { width: 248px; height: 68px; left: 30px; bottom: 14px; }
+    .cloud-piece.a { width: 96px; height: 96px; left: 52px; bottom: 48px; }
+    .cloud-piece.b { width: 130px; height: 130px; left: 118px; bottom: 28px; }
+    .cloud-piece.c { width: 82px; height: 82px; right: 24px; bottom: 44px; }
+    .cloud-piece.d { width: 72px; height: 72px; left: 4px; bottom: 26px; opacity: 0.72; }
+
+    .frost-edge {
+      position: absolute;
+      inset: 0;
+      z-index: 9;
+      border-radius: inherit;
+      pointer-events: none;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.84), transparent 15%) top left / 46% 46% no-repeat,
+        linear-gradient(225deg, rgba(255,255,255,0.72), transparent 16%) top right / 44% 44% no-repeat,
+        linear-gradient(45deg, rgba(255,255,255,0.54), transparent 14%) bottom left / 42% 42% no-repeat,
+        linear-gradient(315deg, rgba(255,255,255,0.46), transparent 14%) bottom right / 42% 42% no-repeat;
+      opacity: 0.58;
+      mask: linear-gradient(#000, #000), linear-gradient(#000, #000);
+      -webkit-mask: linear-gradient(#000, #000), linear-gradient(#000, #000);
+      animation: frostBreathe 5.6s ease-in-out infinite;
+    }
+
+    .sparkle-layer {
+      z-index: 10;
+    }
+
+    .sparkle {
+      position: absolute;
+      left: var(--left, 50%);
+      top: var(--top, 50%);
+      width: var(--size, 8px);
+      height: var(--size, 8px);
+      opacity: 0;
+      animation: sparkle 3.2s ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+      filter: drop-shadow(0 0 8px rgba(255,255,255,0.8));
+    }
+
+    .sparkle::before,
+    .sparkle::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 2px;
+      height: 100%;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      transform: translate(-50%, -50%);
+    }
+
+    .sparkle::after {
+      transform: translate(-50%, -50%) rotate(90deg);
+    }
+
+    .mist {
+      position: absolute;
+      width: 100%;
+      height: 88px;
+      left: -24%;
+      border-radius: 999px;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.34), transparent 68%);
+      filter: blur(18px);
+      opacity: 0.48;
+      animation: frostMist 18s ease-in-out infinite;
+      z-index: 4;
+    }
+
+    .mist.one { top: 120px; animation-delay: -4s; }
+    .mist.two { top: 290px; width: 114%; opacity: 0.34; animation-duration: 24s; animation-delay: -10s; }
+    .mist.three { bottom: 44px; width: 96%; opacity: 0.38; animation-duration: 21s; animation-delay: -7s; }
+
+    .glass-panel {
+      position: relative;
+      z-index: 12;
+      margin-top: 110px;
+      border: 1px solid var(--glass-border);
+      border-radius: 30px;
+      padding: 22px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.58), rgba(255,255,255,0.24));
+      backdrop-filter: blur(32px) saturate(145%);
+      -webkit-backdrop-filter: blur(32px) saturate(145%);
+      box-shadow:
+        0 24px 80px rgba(30, 64, 175, 0.18),
+        inset 0 1px 0 rgba(255,255,255,0.76),
+        inset 0 -1px 0 rgba(255,255,255,0.22);
+    }
+
+    .glass-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 1px solid rgba(255,255,255,0.34);
+      pointer-events: none;
+    }
+
+    .glass-panel::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(110deg, transparent 0 30%, rgba(255,255,255,0.32) 43%, transparent 58% 100%);
+      opacity: 0;
+      transform: translateX(-70%);
+      animation: glassSweep 7.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .location-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255,255,255,0.98);
+      text-shadow: 0 1px 14px rgba(30,64,175,0.16);
+      font-weight: 650;
+      font-size: 14px;
+    }
+
+    .location {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .temp-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .temperature {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 92px;
+      line-height: 0.9;
+      letter-spacing: -0.08em;
+      color: rgba(255,255,255,0.98);
+      text-shadow: 0 16px 52px rgba(30,64,175,0.16);
+    }
+
+    .feels {
+      padding-top: 12px;
+      text-align: right;
+      color: rgba(255,255,255,0.9);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .feels strong {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 31px;
+      line-height: 1.05;
+      font-weight: 400;
+    }
+
+    .condition-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      color: rgba(255,255,255,0.96);
+    }
+
+    .mini-snow-icon {
+      width: 42px;
+      height: 38px;
+      position: relative;
+      display: inline-block;
+      flex: 0 0 auto;
+      animation: miniSnowFloat 3.4s ease-in-out infinite;
+    }
+
+    .mini-snow-icon::before,
+    .mini-snow-icon::after,
+    .mini-snow-icon span {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 3px;
+      height: 30px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.96);
+      box-shadow: 0 0 14px rgba(255,255,255,0.72);
+      transform-origin: 50% 50%;
+    }
+
+    .mini-snow-icon::before { transform: translate(-50%, -50%) rotate(0deg); }
+    .mini-snow-icon::after { transform: translate(-50%, -50%) rotate(60deg); }
+    .mini-snow-icon span { transform: translate(-50%, -50%) rotate(120deg); }
+
+    .condition-text strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .condition-text span {
+      display: block;
+      margin-top: 3px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.74);
+      font-weight: 600;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 20px 0 14px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.58), transparent);
+    }
+
+    .verdict-label {
+      color: rgba(15,23,42,0.46);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .verdict {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 5px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 25px;
+      line-height: 1.08;
+      color: rgba(15,23,42,0.82);
+      text-wrap: balance;
+    }
+
+    .snow-mark {
+      font-size: 25px;
+      display: inline-block;
+      animation: snowMark 3s ease-in-out infinite;
+      filter: drop-shadow(0 0 12px rgba(255,255,255,0.82));
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.34);
+      border: 1px solid rgba(255,255,255,0.48);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+
+    .stat-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.42);
+      color: rgba(15,23,42,0.62);
+      flex: 0 0 auto;
+    }
+
+    .stat-title {
+      font-size: 11px;
+      color: rgba(15,23,42,0.5);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+      margin-top: 1px;
+      font-size: 13px;
+      color: rgba(15,23,42,0.78);
+      font-weight: 760;
+    }
+
+    .outfit-strip {
+      position: relative;
+      z-index: 12;
+      margin-top: 18px;
+    }
+
+    .strip-title {
+      color: rgba(255,255,255,0.94);
+      font-size: 13px;
+      font-weight: 780;
+      text-shadow: 0 1px 18px rgba(30,64,175,0.16);
+    }
+
+    .chips {
+      display: flex;
+      gap: 9px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .chip {
+      flex: 1;
+      min-height: 70px;
+      border-radius: 20px;
+      padding: 10px;
+      background: rgba(255,255,255,0.34);
+      border: 1px solid rgba(255,255,255,0.46);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      color: rgba(15,23,42,0.76);
+      box-shadow: 0 12px 36px rgba(30,64,175,0.1), inset 0 1px 0 rgba(255,255,255,0.36);
+    }
+
+    .chip strong {
+      display: block;
+      font-size: 12px;
+    }
+
+    .chip span {
+      display: block;
+      margin-top: 5px;
+      font-size: 10px;
+      color: rgba(15,23,42,0.5);
+      font-weight: 700;
+    }
+
+    .bottom-note {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 24px;
+      z-index: 12;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: rgba(255,255,255,0.92);
+      font-size: 12px;
+      font-weight: 700;
+      text-shadow: 0 1px 18px rgba(30,64,175,0.16);
+    }
+
+    .motion-pill {
+      white-space: nowrap;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.28);
+      border: 1px solid rgba(255,255,255,0.42);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    @keyframes winterLight {
+      0%, 100% { opacity: 0.68; transform: translateX(-3%); }
+      50% { opacity: 1; transform: translateX(4%); }
+    }
+
+    @keyframes snowCloudFloat {
+      0%, 100% { transform: translateX(-50%) translateY(0) scale(1); }
+      50% { transform: translateX(-50%) translateY(7px) scale(1.015); }
+    }
+
+    @keyframes snowFall {
+      from { transform: translate3d(0, -16vh, 0); }
+      to { transform: translate3d(0, 124vh, 0); }
+    }
+
+    @keyframes snowSway {
+      0%, 100% { margin-left: -14px; }
+      50% { margin-left: 18px; }
+    }
+
+    @keyframes crystalFall {
+      from { transform: translate3d(0, -18vh, 0); }
+      to { transform: translate3d(0, 126vh, 0); }
+    }
+
+    @keyframes crystalSpin {
+      to { rotate: 360deg; }
+    }
+
+    @keyframes flakeTwirl {
+      0% { rotate: 0deg; }
+      50% { rotate: 16deg; }
+      100% { rotate: 360deg; }
+    }
+
+    @keyframes frostBreathe {
+      0%, 100% { opacity: 0.44; filter: blur(0); }
+      50% { opacity: 0.74; filter: blur(0.3px); }
+    }
+
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; transform: scale(0.35) rotate(0deg); }
+      45% { opacity: 0.92; transform: scale(1.06) rotate(45deg); }
+      70% { opacity: 0.18; transform: scale(0.76) rotate(90deg); }
+    }
+
+    @keyframes frostMist {
+      0%, 100% { transform: translateX(-4%) scaleX(1); }
+      50% { transform: translateX(34%) scaleX(1.12); }
+    }
+
+    @keyframes glassSweep {
+      0%, 32% { transform: translateX(-75%); opacity: 0; }
+      48% { opacity: 0.52; }
+      64%, 100% { transform: translateX(75%); opacity: 0; }
+    }
+
+    @keyframes miniSnowFloat {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-3px) rotate(6deg); }
+    }
+
+    @keyframes snowMark {
+      0%, 100% { transform: translateY(0) rotate(-5deg); }
+      50% { transform: translateY(-3px) rotate(5deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .stage { padding: 12px; }
+      .weather-card { min-height: 540px; border-radius: 32px; padding: 20px; }
+      .glass-panel { margin-top: 102px; padding: 18px; }
+      .temperature { font-size: 78px; }
+      .verdict { font-size: 22px; }
+      .cloud-bank { transform: translateX(-50%) scale(0.92); }
+    }
+  </style>
+  <link rel="stylesheet" href="./glance_card_parity.css" />
+  <script defer src="./glance_card_parity.js"></script>
+</head>
+<body>
+  <main class="stage" aria-label="OutfitOracle snow weather card animation demo">
+    <section class="weather-card">
+      <span class="frost-edge" aria-hidden="true"></span>
+
+      <header class="topbar">
+        <button class="menu-button" aria-label="Open menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+        <div class="brand">OutfitOracle</div>
+        <button class="save-button" aria-label="Save forecast">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 4h12v17l-6-3.5L6 21V4Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </header>
+
+      <div class="snow-scene" aria-hidden="true">
+        <div class="cloud-bank">
+          <span class="cloud-piece base"></span>
+          <span class="cloud-piece a"></span>
+          <span class="cloud-piece b"></span>
+          <span class="cloud-piece c"></span>
+          <span class="cloud-piece d"></span>
+        </div>
+      </div>
+
+      <div class="mist-layer" aria-hidden="true">
+        <span class="mist one"></span>
+        <span class="mist two"></span>
+        <span class="mist three"></span>
+      </div>
+
+      <div class="snow-layer back" id="backSnowLayer" aria-hidden="true"></div>
+      <div class="snow-layer front" id="frontSnowLayer" aria-hidden="true"></div>
+      <div class="sparkle-layer" id="sparkleLayer" aria-hidden="true"></div>
+
+      <article class="glass-panel">
+        <div class="location-row">
+          <span class="location">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z" stroke="currentColor" stroke-width="1.9" />
+              <circle cx="12" cy="9" r="2.4" stroke="currentColor" stroke-width="1.9" />
+            </svg>
+            Toronto, CA
+          </span>
+          <span id="timeLabel">9:41</span>
+        </div>
+
+        <div class="temp-row">
+          <div class="temperature">28°</div>
+          <div class="feels">Feels like<strong>22°</strong></div>
+        </div>
+
+        <div class="condition-row">
+          <span class="mini-snow-icon" aria-hidden="true"><span></span></span>
+          <div class="condition-text">
+            <strong>Light Snow</strong>
+            <span>Soft, pretty, and operationally annoying.</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="verdict-label">Verdict</div>
+        <div class="verdict">
+          <span>The coat is the outfit.</span>
+          <span class="snow-mark" aria-hidden="true">✦</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">❄</div>
+            <div>
+              <div class="stat-title">Snow</div>
+              <div class="stat-value">Light</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">≋</div>
+            <div>
+              <div class="stat-title">Wind</div>
+              <div class="stat-value">9 mph ↗</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="outfit-strip" aria-label="Outfit context">
+        <div class="strip-title">Outfit logic</div>
+        <div class="chips">
+          <div class="chip"><strong>Wool coat</strong><span>Warmth first</span></div>
+          <div class="chip"><strong>Boots</strong><span>Grip required</span></div>
+          <div class="chip"><strong>Scarf</strong><span>Drama + function</span></div>
+        </div>
+      </section>
+
+      <footer class="bottom-note">
+        <span>Layer like you’re in a beautiful problem.</span>
+        <span class="motion-pill">snow: float · frost: breathe</span>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    const timeLabel = document.getElementById("timeLabel");
+    const backSnowLayer = document.getElementById("backSnowLayer");
+    const frontSnowLayer = document.getElementById("frontSnowLayer");
+    const sparkleLayer = document.getElementById("sparkleLayer");
+
+    function updateTime() {
+      const now = new Date();
+      timeLabel.textContent = now.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+
+    function createSnowflakes(target, count, options) {
+      const fragment = document.createDocumentFragment();
+
+      for (let index = 0; index < count; index += 1) {
+        const flake = document.createElement("span");
+        flake.className = Math.random() > options.crystalChance ? "snowflake" : "crystal";
+
+        if (flake.className === "crystal") {
+          const spokeOne = document.createElement("span");
+          const spokeTwo = document.createElement("span");
+          flake.appendChild(spokeOne);
+          flake.appendChild(spokeTwo);
+        }
+
+        const left = Math.random() * 108 - 4;
+        const size = options.minSize + Math.random() * options.sizeVariance;
+        const fallSpeed = options.minFallSpeed + Math.random() * options.fallVariance;
+        const swaySpeed = options.minSwaySpeed + Math.random() * options.swayVariance;
+        const delay = Math.random() * options.delayMin;
+        const opacity = options.minOpacity + Math.random() * options.opacityVariance;
+
+        flake.style.setProperty("--left", `${left}%`);
+        flake.style.setProperty("--size", `${size}px`);
+        flake.style.setProperty("--fall-speed", `${fallSpeed}s`);
+        flake.style.setProperty("--sway-speed", `${swaySpeed}s`);
+        flake.style.setProperty("--spin-speed", `${swaySpeed * 2.4}s`);
+        flake.style.setProperty("--delay", `${delay}s`);
+        flake.style.setProperty("--sway-delay", `${Math.random() * -4}s`);
+        flake.style.setProperty("--spin-delay", `${Math.random() * -6}s`);
+        flake.style.setProperty("--opacity", opacity.toFixed(2));
+
+        fragment.appendChild(flake);
+      }
+
+      target.appendChild(fragment);
+    }
+
+    function createSparkles(count = 16) {
+      const fragment = document.createDocumentFragment();
+
+      for (let index = 0; index < count; index += 1) {
+        const sparkle = document.createElement("span");
+        sparkle.className = "sparkle";
+
+        sparkle.style.setProperty("--left", `${6 + Math.random() * 88}%`);
+        sparkle.style.setProperty("--top", `${10 + Math.random() * 78}%`);
+        sparkle.style.setProperty("--size", `${5 + Math.random() * 10}px`);
+        sparkle.style.setProperty("--delay", `${Math.random() * -4}s`);
+
+        fragment.appendChild(sparkle);
+      }
+
+      sparkleLayer.appendChild(fragment);
+    }
+
+    updateTime();
+    setInterval(updateTime, 30_000);
+
+    createSnowflakes(backSnowLayer, 30, {
+      minSize: 9,
+      sizeVariance: 10,
+      minFallSpeed: 11,
+      fallVariance: 8,
+      minSwaySpeed: 4,
+      swayVariance: 4,
+      delayMin: -14,
+      minOpacity: 0.2,
+      opacityVariance: 0.34,
+      crystalChance: 0.48,
+    });
+
+    createSnowflakes(frontSnowLayer, 38, {
+      minSize: 13,
+      sizeVariance: 16,
+      minFallSpeed: 7,
+      fallVariance: 7,
+      minSwaySpeed: 3,
+      swayVariance: 4,
+      delayMin: -12,
+      minOpacity: 0.42,
+      opacityVariance: 0.5,
+      crystalChance: 0.44,
+    });
+
+    createSparkles();
+  </script>
+</body>
+</html>

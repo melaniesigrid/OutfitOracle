@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WeatherData } from '../../services/weather';
 import { y2kTokens, spacing } from '../../theme';
 import { Y2KCard } from './Y2KCard';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getY2KTypography, Y2KTypography } from '../../theme/y2kTypography';
+import { WeatherAlertBanner } from '../WeatherAlertBanner';
 
 interface Props {
   weather: WeatherData;
@@ -22,8 +23,8 @@ export function Y2KWeatherCard({ weather, formatTemp }: Props) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(opacity,    { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(opacity,    { toValue: 1, duration: 400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -32,6 +33,7 @@ export function Y2KWeatherCard({ weather, formatTemp }: Props) {
 
   return (
     <Animated.View style={[{ opacity, transform: [{ translateY }] }, styles.wrapper]}>
+      <WeatherAlertBanner alerts={weather.alerts} />
       {/* Full-purple card — override Y2KCard's cream bg */}
       <Y2KCard shadow style={styles.cardOuter} innerStyle={styles.cardInner}>
         <View style={styles.content}>
@@ -120,7 +122,8 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   },
   cityName: {
     fontFamily: typo.displaySmall.fontFamily,
-    fontSize: 18,
+    fontSize: typo.displaySmall.fontSize,
+    lineHeight: typo.displaySmall.lineHeight,
     color: y2kTokens.cream,
     letterSpacing: typo.displaySmall.letterSpacing,
   },
@@ -143,6 +146,7 @@ function makeStyles(typo: Y2KTypography) { return StyleSheet.create({
   tempHero: {
     fontFamily: typo.displayHero.fontFamily,
     fontSize: 80,
+    lineHeight: 98,
     color: y2kTokens.lime,
     letterSpacing: typo.displayHero.letterSpacing,
   },

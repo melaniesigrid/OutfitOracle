@@ -14,7 +14,7 @@ export function Y2KAvoidSection({ items }: Props) {
       <Y2KCard shadow style={styles.card} innerStyle={{ backgroundColor: y2kTokens.blush }}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.stamp}>✕ ORACLE FORBIDS ✕</Text>
+            <Text style={styles.stamp}>✕ ORACLE VETOES ✕</Text>
             <Text style={styles.sub}>// DO NOT WEAR</Text>
           </View>
           <View style={styles.rule} />

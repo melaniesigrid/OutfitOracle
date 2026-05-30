@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OutfitOracle Windy WeatherGlanceCard</title>
+  <style>
+    :root {
+      --ink: #111318;
+      --glass-border: rgba(255, 255, 255, 0.52);
+      --wind: rgba(255, 255, 255, 0.82);
+      --wind-soft: rgba(255, 255, 255, 0.38);
+      --blue: #88abc0;
+      --blue-dark: #4e6979;
+      --sage: #9eb4a6;
+      --sand: #ddd4bd;
+      --shadow: rgba(15, 23, 42, 0.32);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at top left, rgba(136, 171, 192, 0.32), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(158, 180, 166, 0.26), transparent 38%),
+        #f8f3e8;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .stage {
+      width: min(92vw, 430px);
+      padding: 20px;
+    }
+
+    .weather-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 560px;
+      border-radius: 38px;
+      padding: 24px;
+      background:
+        linear-gradient(180deg, rgba(79, 112, 133, 0.98) 0%, rgba(142, 174, 191, 0.92) 36%, rgba(219, 211, 190, 0.88) 76%, rgba(132, 158, 140, 0.76) 100%);
+      box-shadow:
+        0 34px 90px var(--shadow),
+        inset 0 1px 0 rgba(255,255,255,0.42);
+      isolation: isolate;
+    }
+
+    .weather-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 12%, rgba(255,255,255,0.34), transparent 18%),
+        radial-gradient(circle at 82% 22%, rgba(255,255,255,0.22), transparent 22%),
+        linear-gradient(108deg, transparent 0%, rgba(255,255,255,0.16) 44%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: lightPush 8s ease-in-out infinite;
+    }
+
+    .weather-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -34% -18% -34%;
+      height: 43%;
+      background:
+        radial-gradient(ellipse at 50% 100%, rgba(61, 95, 73, 0.54) 0%, rgba(106, 130, 104, 0.3) 44%, transparent 74%);
+      filter: blur(1px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: rgba(255,255,255,0.94);
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 18px rgba(15,23,42,0.18);
+    }
+
+    .menu-button,
+    .save-button {
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255,255,255,0.42);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      color: white;
+      display: grid;
+      place-items: center;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.28);
+    }
+
+    .brand {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 19px;
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+
+    .wind-scene {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .wind-svg {
+      position: absolute;
+      inset: 36px -80px auto -90px;
+      width: calc(100% + 170px);
+      height: 330px;
+      z-index: 4;
+      opacity: 0.78;
+      transform: rotate(-3deg);
+    }
+
+    .wind-path {
+      fill: none;
+      stroke: rgba(255,255,255,0.76);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-dasharray: 120 420;
+      filter: drop-shadow(0 0 12px rgba(255,255,255,0.28));
+      animation: drawWind 5s ease-in-out infinite;
+    }
+
+    .wind-path:nth-child(2) {
+      stroke-width: 3;
+      opacity: 0.62;
+      animation-duration: 6.4s;
+      animation-delay: -2.2s;
+    }
+
+    .wind-path:nth-child(3) {
+      stroke-width: 2.5;
+      opacity: 0.42;
+      animation-duration: 7.2s;
+      animation-delay: -3.8s;
+    }
+
+    .gust {
+      position: absolute;
+      left: -46%;
+      top: var(--top, 140px);
+      width: var(--width, 220px);
+      height: var(--height, 3px);
+      opacity: var(--opacity, 0.58);
+      transform: rotate(var(--rotate, -4deg));
+      animation: gustSweep var(--duration, 3.2s) ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+      z-index: 5;
+    }
+
+    .gust::before,
+    .gust::after {
+      content: "";
+      position: absolute;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, var(--wind), transparent);
+      filter: drop-shadow(0 0 8px rgba(255,255,255,0.32));
+    }
+
+    .gust::before {
+      inset: 0;
+    }
+
+    .gust::after {
+      width: 46%;
+      right: 4%;
+      top: 10px;
+      opacity: 0.52;
+    }
+
+    .cloud {
+      position: absolute;
+      z-index: 1;
+      width: 176px;
+      height: 54px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.34);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 16px 42px rgba(255,255,255,0.16);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .cloud::before,
+    .cloud::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      background: inherit;
+    }
+
+    .cloud::before {
+      width: 76px;
+      height: 76px;
+      left: 28px;
+      bottom: 18px;
+    }
+
+    .cloud::after {
+      width: 92px;
+      height: 92px;
+      right: 22px;
+      bottom: 10px;
+    }
+
+    .cloud.one {
+      top: 122px;
+      left: -118px;
+      opacity: 0.44;
+      transform: scale(0.72);
+      animation: cloudLeft 18s linear infinite;
+    }
+
+    .cloud.two {
+      top: 198px;
+      right: -148px;
+      opacity: 0.3;
+      transform: scale(0.84);
+      animation: cloudRight 25s linear infinite;
+    }
+
+    .cloud.three {
+      bottom: 90px;
+      left: -170px;
+      opacity: 0.22;
+      transform: scale(0.98);
+      animation: lowCloud 27s linear infinite;
+    }
+
+    .scarf {
+      position: absolute;
+      top: 82px;
+      right: 18px;
+      width: 202px;
+      height: 118px;
+      z-index: 6;
+      transform-origin: 28px 50%;
+      animation: scarfBody 4.4s ease-in-out infinite;
+    }
+
+    .scarf svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      filter: drop-shadow(0 18px 26px rgba(15,23,42,0.14));
+    }
+
+    .scarf-path {
+      fill: none;
+      stroke: rgba(255,255,255,0.78);
+      stroke-width: 18;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      animation: scarfWave 3.4s ease-in-out infinite;
+    }
+
+    .scarf-path.back {
+      stroke: rgba(255,255,255,0.36);
+      stroke-width: 25;
+      animation-delay: -0.4s;
+    }
+
+    .scarf-knot {
+      position: absolute;
+      left: 8px;
+      top: 48px;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.86);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.92), 0 12px 22px rgba(15,23,42,0.12);
+    }
+
+    .leaf {
+      position: absolute;
+      left: -40px;
+      top: var(--top, 200px);
+      width: var(--size, 14px);
+      height: calc(var(--size, 14px) * 0.62);
+      border-radius: 100% 0 100% 0;
+      background: rgba(255, 250, 240, 0.66);
+      box-shadow: 0 6px 14px rgba(15,23,42,0.08);
+      opacity: var(--opacity, 0.5);
+      transform: rotate(var(--rotate, 20deg));
+      animation: leafFly var(--duration, 6s) cubic-bezier(.42,.02,.37,1) infinite;
+      animation-delay: var(--delay, 0s);
+      z-index: 7;
+    }
+
+    .compass {
+      position: absolute;
+      right: 30px;
+      bottom: 122px;
+      z-index: 7;
+      width: 70px;
+      height: 70px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.36);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 18px 42px rgba(15,23,42,0.14);
+      animation: compassFloat 4s ease-in-out infinite;
+    }
+
+    .compass::before {
+      content: "N";
+      position: absolute;
+      top: 8px;
+      font-size: 9px;
+      font-weight: 850;
+      color: rgba(255,255,255,0.66);
+      letter-spacing: 0.12em;
+    }
+
+    .compass-arrow {
+      width: 4px;
+      height: 36px;
+      border-radius: 999px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.96) 0 52%, rgba(17,19,24,0.5) 52% 100%);
+      transform-origin: 50% 50%;
+      animation: arrowNudge 2.5s ease-in-out infinite;
+    }
+
+    .glass-panel {
+      position: relative;
+      z-index: 10;
+      margin-top: 104px;
+      border: 1px solid var(--glass-border);
+      border-radius: 30px;
+      padding: 22px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.48), rgba(255,255,255,0.18));
+      backdrop-filter: blur(32px) saturate(140%);
+      -webkit-backdrop-filter: blur(32px) saturate(140%);
+      box-shadow:
+        0 24px 80px rgba(15, 23, 42, 0.22),
+        inset 0 1px 0 rgba(255,255,255,0.66),
+        inset 0 -1px 0 rgba(255,255,255,0.18);
+    }
+
+    .glass-panel::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(108deg, transparent 0 32%, rgba(255,255,255,0.2) 44%, transparent 56% 100%);
+      opacity: 0;
+      transform: translateX(-75%);
+      animation: glassSweep 7.4s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .location-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255,255,255,0.96);
+      text-shadow: 0 1px 14px rgba(15,23,42,0.2);
+      font-weight: 650;
+      font-size: 14px;
+    }
+
+    .location {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .temp-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .temperature {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 92px;
+      line-height: 0.9;
+      letter-spacing: -0.08em;
+      color: rgba(255,255,255,0.98);
+      text-shadow: 0 16px 52px rgba(15,23,42,0.22);
+    }
+
+    .feels {
+      padding-top: 12px;
+      text-align: right;
+      color: rgba(255,255,255,0.9);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .feels strong {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 31px;
+      line-height: 1.05;
+      font-weight: 400;
+    }
+
+    .condition-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      color: rgba(255,255,255,0.96);
+    }
+
+    .mini-wind-icon {
+      width: 42px;
+      height: 34px;
+      position: relative;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .mini-wind-icon span {
+      position: absolute;
+      left: 0;
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 12px rgba(255,255,255,0.44);
+      animation: miniWind 1.7s ease-in-out infinite;
+    }
+
+    .mini-wind-icon span:nth-child(1) { top: 8px; width: 36px; animation-delay: -0.2s; }
+    .mini-wind-icon span:nth-child(2) { top: 17px; width: 27px; left: 9px; animation-delay: -0.7s; }
+    .mini-wind-icon span:nth-child(3) { top: 26px; width: 38px; animation-delay: -1.1s; }
+
+    .condition-text strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.15;
+    }
+
+    .condition-text span {
+      display: block;
+      margin-top: 3px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.72);
+      font-weight: 600;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 20px 0 14px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.52), transparent);
+    }
+
+    .verdict-label {
+      color: rgba(18,20,23,0.48);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .verdict {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 5px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 25px;
+      line-height: 1.08;
+      color: rgba(18,20,23,0.84);
+      text-wrap: balance;
+    }
+
+    .wind-mark {
+      font-size: 25px;
+      display: inline-block;
+      animation: windMarkNudge 2.6s ease-in-out infinite;
+      filter: drop-shadow(0 8px 14px rgba(15,23,42,0.12));
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.32);
+      border: 1px solid rgba(255,255,255,0.42);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.34);
+    }
+
+    .stat-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,0.36);
+      color: rgba(18,20,23,0.62);
+      flex: 0 0 auto;
+    }
+
+    .stat-title {
+      font-size: 11px;
+      color: rgba(18,20,23,0.5);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+      margin-top: 1px;
+      font-size: 13px;
+      color: rgba(18,20,23,0.8);
+      font-weight: 760;
+    }
+
+    .outfit-strip {
+      position: relative;
+      z-index: 10;
+      margin-top: 18px;
+    }
+
+    .strip-title {
+      color: rgba(255,255,255,0.92);
+      font-size: 13px;
+      font-weight: 780;
+      text-shadow: 0 1px 18px rgba(15,23,42,0.18);
+    }
+
+    .chips {
+      display: flex;
+      gap: 9px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .chip {
+      flex: 1;
+      min-height: 70px;
+      border-radius: 20px;
+      padding: 10px;
+      background: rgba(255,255,255,0.32);
+      border: 1px solid rgba(255,255,255,0.42);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      color: rgba(18,20,23,0.76);
+      box-shadow: 0 12px 36px rgba(15,23,42,0.1), inset 0 1px 0 rgba(255,255,255,0.34);
+    }
+
+    .chip strong {
+      display: block;
+      font-size: 12px;
+    }
+
+    .chip span {
+      display: block;
+      margin-top: 5px;
+      font-size: 10px;
+      color: rgba(18,20,23,0.52);
+      font-weight: 700;
+    }
+
+    .bottom-note {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 24px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: rgba(255,255,255,0.9);
+      font-size: 12px;
+      font-weight: 700;
+      text-shadow: 0 1px 18px rgba(15,23,42,0.18);
+    }
+
+    .motion-pill {
+      white-space: nowrap;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.36);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    @keyframes lightPush {
+      0%, 100% { transform: translateX(-3%); opacity: 0.66; }
+      50% { transform: translateX(6%); opacity: 0.92; }
+    }
+
+    @keyframes drawWind {
+      0% { stroke-dashoffset: 540; opacity: 0; }
+      18% { opacity: 1; }
+      78% { opacity: 0.9; }
+      100% { stroke-dashoffset: -540; opacity: 0; }
+    }
+
+    @keyframes gustSweep {
+      0% { transform: translateX(0) rotate(var(--rotate, -4deg)); opacity: 0; }
+      16% { opacity: var(--opacity, 0.58); }
+      82% { opacity: var(--opacity, 0.58); }
+      100% { transform: translateX(175vw) rotate(var(--rotate, -4deg)); opacity: 0; }
+    }
+
+    @keyframes cloudLeft {
+      0% { transform: translateX(-20px) scale(0.72); }
+      100% { transform: translateX(620px) scale(0.72); }
+    }
+
+    @keyframes cloudRight {
+      0% { transform: translateX(0) scale(0.84); }
+      100% { transform: translateX(-650px) scale(0.84); }
+    }
+
+    @keyframes lowCloud {
+      0% { transform: translateX(-40px) scale(0.98); }
+      100% { transform: translateX(660px) scale(0.98); }
+    }
+
+    @keyframes scarfBody {
+      0%, 100% { transform: translate3d(0, 0, 0) rotate(-3deg); }
+      50% { transform: translate3d(-14px, 8px, 0) rotate(5deg); }
+    }
+
+    @keyframes scarfWave {
+      0%, 100% { stroke-dasharray: 190 30; stroke-dashoffset: 0; transform: translateY(0); }
+      50% { stroke-dasharray: 160 60; stroke-dashoffset: -28; transform: translateY(4px); }
+    }
+
+    @keyframes leafFly {
+      0% { transform: translate3d(0, 0, 0) rotate(var(--rotate, 20deg)); opacity: 0; }
+      12% { opacity: var(--opacity, 0.5); }
+      50% { transform: translate3d(56vw, -36px, 0) rotate(calc(var(--rotate, 20deg) + 210deg)); }
+      88% { opacity: var(--opacity, 0.5); }
+      100% { transform: translate3d(118vw, 38px, 0) rotate(calc(var(--rotate, 20deg) + 440deg)); opacity: 0; }
+    }
+
+    @keyframes compassFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    @keyframes arrowNudge {
+      0%, 100% { transform: rotate(42deg); }
+      50% { transform: rotate(57deg); }
+    }
+
+    @keyframes glassSweep {
+      0%, 32% { transform: translateX(-75%); opacity: 0; }
+      48% { opacity: 0.46; }
+      64%, 100% { transform: translateX(75%); opacity: 0; }
+    }
+
+    @keyframes miniWind {
+      0%, 100% { transform: translateX(0); opacity: 0.55; }
+      50% { transform: translateX(7px); opacity: 1; }
+    }
+
+    @keyframes windMarkNudge {
+      0%, 100% { transform: translateX(0) rotate(-5deg); }
+      50% { transform: translateX(4px) rotate(5deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .stage { padding: 12px; }
+      .weather-card { min-height: 540px; border-radius: 32px; padding: 20px; }
+      .glass-panel { margin-top: 96px; padding: 18px; }
+      .temperature { font-size: 78px; }
+      .verdict { font-size: 22px; }
+      .scarf { right: -10px; transform: scale(0.9); }
+      .compass { display: none; }
+    }
+  </style>
+  <link rel="stylesheet" href="./glance_card_parity.css" />
+  <script defer src="./glance_card_parity.js"></script>
+</head>
+<body>
+  <main class="stage" aria-label="OutfitOracle windy weather card animation demo">
+    <section class="weather-card">
+      <header class="topbar">
+        <button class="menu-button" aria-label="Open menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+        <div class="brand">OutfitOracle</div>
+        <button class="save-button" aria-label="Save forecast">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 4h12v17l-6-3.5L6 21V4Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </header>
+
+      <div class="wind-scene" id="windScene" aria-hidden="true">
+        <div class="cloud one"></div>
+        <div class="cloud two"></div>
+        <div class="cloud three"></div>
+
+        <svg class="wind-svg" viewBox="0 0 620 320" preserveAspectRatio="none">
+          <path class="wind-path" d="M5 82 C120 24 214 126 328 72 C418 30 486 34 615 90" />
+          <path class="wind-path" d="M22 176 C150 126 212 226 334 168 C426 124 502 138 616 188" />
+          <path class="wind-path" d="M8 252 C130 210 240 286 342 242 C452 194 520 216 616 250" />
+        </svg>
+
+        <div class="scarf">
+          <svg viewBox="0 0 220 120" aria-hidden="true">
+            <path class="scarf-path back" d="M20 62 C72 20 112 108 176 50 C194 34 204 34 214 42" />
+            <path class="scarf-path" d="M18 60 C72 24 112 102 174 48 C192 32 204 36 214 44" />
+          </svg>
+          <span class="scarf-knot"></span>
+        </div>
+
+        <div class="compass" aria-hidden="true">
+          <span class="compass-arrow"></span>
+        </div>
+      </div>
+
+      <article class="glass-panel">
+        <div class="location-row">
+          <span class="location">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z" stroke="currentColor" stroke-width="1.9" />
+              <circle cx="12" cy="9" r="2.4" stroke="currentColor" stroke-width="1.9" />
+            </svg>
+            Toronto, CA
+          </span>
+          <span id="timeLabel">9:41</span>
+        </div>
+
+        <div class="temp-row">
+          <div class="temperature">58°</div>
+          <div class="feels">Feels like<strong>52°</strong></div>
+        </div>
+
+        <div class="condition-row">
+          <span class="mini-wind-icon" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <div class="condition-text">
+            <strong>Windy</strong>
+            <span>Breezy. Directional. Slightly rude.</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="verdict-label">Verdict</div>
+        <div class="verdict">
+          <span>Secure the hair. Respect the silhouette.</span>
+          <span class="wind-mark" aria-hidden="true">≋</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">≋</div>
+            <div>
+              <div class="stat-title">Wind</div>
+              <div class="stat-value">22 mph ↗</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="stat-icon" aria-hidden="true">⌁</div>
+            <div>
+              <div class="stat-title">Gusts</div>
+              <div class="stat-value">34 mph</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="outfit-strip" aria-label="Outfit context">
+        <div class="strip-title">Outfit logic</div>
+        <div class="chips">
+          <div class="chip"><strong>Structured coat</strong><span>Holds shape</span></div>
+          <div class="chip"><strong>Fitted layers</strong><span>No escapes</span></div>
+          <div class="chip"><strong>Hair clip</strong><span>Not optional</span></div>
+        </div>
+      </section>
+
+      <footer class="bottom-note">
+        <span>Wind is styling you without consent.</span>
+        <span class="motion-pill">paths: draw · scarf: wave</span>
+      </footer>
+    </section>
+  </main>
+
+  <script>
+    const timeLabel = document.getElementById("timeLabel");
+    const windScene = document.getElementById("windScene");
+
+    function updateTime() {
+      const now = new Date();
+      timeLabel.textContent = now.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+
+    function createGusts(count = 18) {
+      const fragment = document.createDocumentFragment();
+
+      for (let index = 0; index < count; index += 1) {
+        const gust = document.createElement("span");
+        gust.className = "gust";
+
+        const top = 78 + Math.random() * 350;
+        const width = 120 + Math.random() * 240;
+        const height = 1.4 + Math.random() * 2.4;
+        const duration = 2.1 + Math.random() * 2.8;
+        const delay = Math.random() * -5.2;
+        const opacity = 0.16 + Math.random() * 0.44;
+        const rotate = -10 + Math.random() * 12;
+
+        gust.style.setProperty("--top", `${top}px`);
+        gust.style.setProperty("--width", `${width}px`);
+        gust.style.setProperty("--height", `${height}px`);
+        gust.style.setProperty("--duration", `${duration}s`);
+        gust.style.setProperty("--delay", `${delay}s`);
+        gust.style.setProperty("--opacity", opacity.toFixed(2));
+        gust.style.setProperty("--rotate", `${rotate}deg`);
+
+        fragment.appendChild(gust);
+      }
+
+      windScene.appendChild(fragment);
+    }
+
+    function createLeaves(count = 10) {
+      const fragment = document.createDocumentFragment();
+
+      for (let index = 0; index < count; index += 1) {
+        const leaf = document.createElement("span");
+        leaf.className = "leaf";
+
+        const top = 150 + Math.random() * 292;
+        const size = 8 + Math.random() * 12;
+        const duration = 4.2 + Math.random() * 3.6;
+        const delay = Math.random() * -7;
+        const opacity = 0.16 + Math.random() * 0.4;
+        const rotate = -45 + Math.random() * 120;
+
+        leaf.style.setProperty("--top", `${top}px`);
+        leaf.style.setProperty("--size", `${size}px`);
+        leaf.style.setProperty("--duration", `${duration}s`);
+        leaf.style.setProperty("--delay", `${delay}s`);
+        leaf.style.setProperty("--opacity", opacity.toFixed(2));
+        leaf.style.setProperty("--rotate", `${rotate}deg`);
+
+        fragment.appendChild(leaf);
+      }
+
+      windScene.appendChild(fragment);
+    }
+
+    updateTime();
+    setInterval(updateTime, 30_000);
+    createGusts();
+    createLeaves();
+  </script>
+</body>
+</html>

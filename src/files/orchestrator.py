@@ -49,7 +49,7 @@ class StyleProfile:
     budget: str = "contemporary"                          # high-street | contemporary | luxury
     personality: str = "editorial"                        # diplomatic | editorial | savage
     temp_sensitivity: str = "normal"                      # runs-cold | normal | runs-hot
-    name: str = "The Devotee"
+    name: str = "The Regular"
 
 
 @dataclass
@@ -164,7 +164,7 @@ No markdown, no backticks, no text outside the tags.
     {{ "category": "Footwear",    "item": "specific item", "detail": "practical+stylish reason", "accentColor": "lemon"    }},
     {{ "category": "Accessories", "item": "specific items","detail": "completes the look",       "accentColor": "iris"     }}
   ],
-  "avoid": ["item the Oracle forbids for this lens", "another mistake", "one more forbidden choice"]
+  "avoid": ["item the Oracle vetoes for this lens", "another mistake", "one more wrong choice"]
 }}
 </response>
 """

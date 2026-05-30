@@ -92,6 +92,48 @@ const electricColors = {
   widgetBg:      '#030629',
 };
 
+// Weather Glance — animated forecast widgets with sky-forward surfaces.
+const weatherGlanceColors = {
+  ...classicColors,
+  scarlet:       '#FFD166',
+  scarletFg:     '#F6A728',
+  scarletDim:    '#2D3E53',
+  scarletText:   '#17120C',
+  bg:            '#EAF4FF',
+  bgDark:        '#08111F',
+  bgSurface:     '#D7E9F8',
+  bgCard:        '#FFFFFF',
+  bgCardAlt:     '#F4FAFF',
+  textPrimary:   '#111827',
+  textSecondary: '#2D4F73',
+  textMuted:     '#5F7287',
+  border:        '#B7D2E6',
+  borderHard:    '#0F172A',
+  borderMid:     '#7FA6C4',
+  widgetBg:      '#0F172A',
+};
+
+// Weather Editorial — the mockup-inspired phone/glass treatment.
+const weatherEditorialColors = {
+  ...classicColors,
+  scarlet:       '#FFD166',
+  scarletFg:     '#B8871F',
+  scarletDim:    '#FFF3CB',
+  scarletText:   '#17120C',
+  bg:            '#F6F7F6',
+  bgDark:        '#182436',
+  bgSurface:     '#EEF2F4',
+  bgCard:        '#FFFFFF',
+  bgCardAlt:     '#F8FAFB',
+  textPrimary:   '#111827',
+  textSecondary: '#35465C',
+  textMuted:     '#6A7481',
+  border:        '#D8DEE4',
+  borderHard:    '#111827',
+  borderMid:     '#B9C4CE',
+  widgetBg:      '#FFFFFF',
+};
+
 // Warm organic themes — accent replaces scarlet; same breadth of use as Classic.
 
 const terraFirmaColors = {
@@ -286,6 +328,27 @@ const neoBrutalDarkColors = {
   irisText:    '#000000',
 };
 
+// Void — electric editorial in deep indigo-violet. Cyan accent on void, hot-pink energy.
+const voidColors = {
+  ...electricColors,
+  scarlet:       '#22D3EE',  // electric cyan — the primary structural accent
+  scarletFg:     '#22D3EE',
+  scarletDim:    '#061E26',  // dark tint for cyan on void surfaces
+  scarletText:   '#000000',  // black text on cyan fills
+  bg:            '#0A0614',  // deep indigo-void — primary reading surface
+  bgDark:        '#050208',  // near-black void — header and hero panels
+  bgSurface:     '#0F0A1E',  // slightly raised void surface
+  bgCard:        '#140C28',  // violet-tinted card surface
+  bgCardAlt:     '#100820',
+  textPrimary:   '#FAFAFA',
+  textSecondary: '#D4CCF0',  // periwinkle-white with violet cast
+  textMuted:     '#8B7DC0',  // muted violet — labels and captions
+  border:        '#2D1B6B',  // violet divider on void
+  borderHard:    '#FAFAFA',
+  borderMid:     '#5930C2',  // mid-strength violet
+  widgetBg:      '#060310',
+};
+
 // ── Font sets ─────────────────────────────────────────────────────────────
 
 const cormorantFonts = {
@@ -357,10 +420,13 @@ export type ThemeName =
   | 'morning-paper'
   | 'golden-hour'
   | 'electric'
+  | 'weather-glance'
+  | 'weather-editorial'
   | 'y2k'
   | 'neo-brutal-light'
   | 'neo-brutal-dark'
-  | 'mondrian';
+  | 'mondrian'
+  | 'void';
 
 // ThemeFamily groups themes by visual/structural lineage.
 // Use this (via THEMES[name].family) instead of per-name predicate functions
@@ -370,6 +436,7 @@ export type ThemeFamily =
   | 'editorial'  // Scarlet-discipline variants (light + dark)
   | 'warm'       // Organic accent themes (terra-firma, morning-paper, golden-hour)
   | 'electric'   // TREVO-inspired dark vivid themes
+  | 'weather'    // Animated forecast widgets
   | 'y2k'        // Digital zine / fashion club
   | 'neo-brutal' // Thick borders, offset shadows, solid card backgrounds
   | 'mondrian';  // de Stijl grid — primary colours, thick black dividers, Memphis pattern
@@ -420,6 +487,25 @@ export const mondrianTokens = {
   black:       '#000000',
   white:       '#FFFFFF',
   gridLine:    4,          // thickness of black grid dividers
+} as const;
+
+// Extra decorative tokens used by the animated Weather Glance widgets.
+export const weatherGlanceTokens = {
+  ink:          '#111827',
+  cream:        '#FFFDF2',
+  nightInk:     '#F8FAFC',
+  skyBlue:      '#49A7F2',
+  skyDeep:      '#0F4FA8',
+  sun:          '#FFD166',
+  coral:        '#FF8F70',
+  rain:         '#DDEEFF',
+  snow:         '#F8FBFF',
+  storm:        '#C4B5FD',
+  cloud:        'rgba(255,255,255,0.54)',
+  glass:        'rgba(255,255,255,0.18)',
+  glassStrong:  'rgba(255,255,255,0.28)',
+  glassBorder:  'rgba(255,255,255,0.34)',
+  radius:       8,
 } as const;
 
 // Base metrics and flags
@@ -495,6 +581,30 @@ export const THEMES: Record<ThemeName, { colors: AppColors; fonts: AppFonts; met
     isDark: true,
     family: 'electric',
   },
+  'void': {
+    colors: voidColors,
+    fonts:  electricFonts,  // Syne ExtraBold — already loaded with Electric
+    metrics: { ...baseMetrics, borderWidth: 0 },
+    flags: bannerFlags,
+    isDark: true,
+    family: 'electric',
+  },
+  'weather-glance': {
+    colors: weatherGlanceColors,
+    fonts:  syneFonts,
+    metrics: { ...baseMetrics, borderWidth: 0, radius: weatherGlanceTokens.radius },
+    flags: baseFlags,
+    isDark: false,
+    family: 'weather',
+  },
+  'weather-editorial': {
+    colors: weatherEditorialColors,
+    fonts:  classicFonts,
+    metrics: { ...baseMetrics, borderWidth: 0, radius: weatherGlanceTokens.radius },
+    flags: baseFlags,
+    isDark: false,
+    family: 'weather',
+  },
   'y2k': {
     colors: y2kColors,
     fonts:  y2kFonts,
@@ -529,6 +639,23 @@ export const THEMES: Record<ThemeName, { colors: AppColors; fonts: AppFonts; met
   },
 };
 
+export const THEME_OPTIONS: ReadonlyArray<{ id: ThemeName; label: string }> = [
+  { id: 'weather-glance',   label: 'Weather Glance' },
+  { id: 'weather-editorial', label: 'Weather Editorial' },
+  { id: 'classic',          label: 'Classic' },
+  { id: 'editorial-light',  label: 'Editorial Light' },
+  { id: 'editorial-dark',   label: 'Editorial Dark' },
+  { id: 'terra-firma',      label: 'Terra Firma' },
+  { id: 'morning-paper',    label: 'Morning Paper' },
+  { id: 'golden-hour',      label: 'Golden Hour' },
+  { id: 'electric',         label: 'Electric' },
+  { id: 'void',             label: 'Void' },
+  { id: 'y2k',              label: 'Y2K ♡' },
+  { id: 'neo-brutal-light', label: 'Neo-Brutal Light' },
+  { id: 'neo-brutal-dark',  label: 'Neo-Brutal Dark' },
+  { id: 'mondrian',         label: 'Mondrian' },
+] as const;
+
 export function getThemeTokens(name: ThemeName) {
   return THEMES[name];
 }
@@ -557,6 +684,14 @@ export function isY2KTheme(name: ThemeName): boolean {
 
 export function isNeoBrutalTheme(name: ThemeName): boolean {
   return THEMES[name].family === 'neo-brutal';
+}
+
+export function isWeatherGlanceTheme(name: ThemeName): boolean {
+  return THEMES[name].family === 'weather';
+}
+
+export function usesWeatherWidget(name: ThemeName): boolean {
+  return name === 'classic' || isWeatherGlanceTheme(name);
 }
 
 export function isMondrianTheme(name: ThemeName): boolean {
