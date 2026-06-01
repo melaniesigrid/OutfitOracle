@@ -86,6 +86,6 @@ We may update this policy as the app evolves. Material changes will be noted wit
 
 Questions or concerns about this policy:
 
-**Email:** melaniesigridab@gmail.com
+**Email:** hello@outfitoracle.fashion
 
 We will respond within 30 days.

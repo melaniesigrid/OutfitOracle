@@ -92,20 +92,16 @@ async function viaProxy(weather: WeatherData, gender: string, profile?: StylePro
       const hours = Math.ceil(retrySeconds / 3600);
       throw new Error(`The Oracle has spoken enough today. Available again in ${hours === 1 ? '1 hour' : `${hours} hours`}.`);
     }
-    // 504 = Anthropic API gateway timeout — don't retry, fail immediately
-    if (resp.status === 504) {
-      throw new Error('The Oracle is unreachable right now. Anthropic may be experiencing issues — try again in a few minutes.');
-    }
-    // 529 = Cloudflare/Anthropic overloaded, 503/502 = transient upstream failure — auto-retry
-    if ((resp.status === 529 || resp.status === 503 || resp.status === 502) && attempt < 2) {
+    // 504/529/503/502 = transient failure — auto-retry up to 2 times
+    if ((resp.status === 504 || resp.status === 529 || resp.status === 503 || resp.status === 502) && attempt < 2) {
       await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
       return viaProxy(weather, gender, profile, occasion, attempt + 1);
     }
-    if (resp.status === 529 || resp.status === 503 || resp.status === 502) {
-      // Surface Anthropic's actual message (e.g. "credit limit reached") if present
+    if (resp.status === 504 || resp.status === 529 || resp.status === 503 || resp.status === 502) {
       const body = await resp.json().catch(() => ({})) as { error?: string };
       const detail = typeof body.error === 'string' ? ` ${body.error}` : '';
-      throw new Error(`The Oracle is momentarily overwhelmed.${detail} Please try again in a moment.`);
+      const base = resp.status === 504 ? 'The Oracle timed out.' : 'The Oracle is momentarily overwhelmed.';
+      throw new Error(`${base}${detail} Please try again in a moment.`);
     }
     if (resp.status >= 500) {
       throw new Error('The Oracle is momentarily unavailable. The fashion world waits.');

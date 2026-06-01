@@ -118,6 +118,11 @@ export interface WeatherData {
   conditionLabel: string;
   conditionIcon: string;
   description: string;
+  cloudCoverPercent?: number;
+  /** Instantaneous precipitation rate in mm/h (rain + showers + snowfall-equivalent) */
+  precipRate?: number;
+  /** Meteorological visibility in metres (0–24000) */
+  visibility?: number;
   latitude?: number;
   longitude?: number;
   utcOffsetSeconds?: number;
@@ -140,36 +145,43 @@ export function localHour(utcOffsetSeconds: number): number {
 
 function wmoCondition(code: number): [string, string, string] {
   const map: Record<number, [string, string, string]> = {
-    0:  ['weather-sunny',           'Clear',          'Crystal clear skies'],
-    1:  ['weather-sunny',           'Mostly Clear',   'Mostly clear'],
-    2:  ['weather-partly-cloudy',   'Partly Cloudy',  'Some cloud cover'],
-    3:  ['weather-cloudy',          'Overcast',       'Fully overcast'],
-    45: ['weather-fog',             'Foggy',          'Dense fog'],
-    48: ['weather-fog',             'Icy Fog',        'Depositing rime fog'],
-    51: ['weather-partly-rainy',    'Light Drizzle',    'Light drizzle'],
-    53: ['weather-rainy',           'Drizzle',          'Moderate drizzle'],
-    55: ['weather-pouring',         'Heavy Drizzle',    'Dense drizzle'],
-    56: ['weather-snowy-rainy',     'Freezing Drizzle', 'Freezing light drizzle'],
-    57: ['weather-snowy-rainy',     'Freezing Drizzle', 'Freezing dense drizzle'],
-    61: ['weather-partly-rainy',    'Light Rain',       'Slight rain'],
-    63: ['weather-rainy',           'Rain',             'Moderate rain'],
-    65: ['weather-pouring',         'Heavy Rain',       'Heavy rain'],
-    66: ['weather-snowy-rainy',     'Freezing Rain',    'Freezing light rain'],
-    67: ['weather-snowy-rainy',     'Freezing Rain',    'Freezing heavy rain'],
-    71: ['weather-snowy',           'Light Snow',       'Light snowfall'],
-    73: ['weather-snowy',           'Snow',             'Moderate snow'],
-    75: ['weather-snowy-heavy',     'Heavy Snow',       'Heavy snowfall'],
-    77: ['weather-snowy',           'Snow Grains',      'Snow grains'],
-    80: ['weather-partly-rainy',    'Showers',          'Rain showers'],
-    81: ['weather-pouring',         'Heavy Showers',    'Moderate showers'],
-    82: ['weather-lightning-rainy', 'Storm Showers',    'Violent showers'],
-    85: ['weather-snowy',           'Snow Showers',     'Slight snow showers'],
-    86: ['weather-snowy-heavy',     'Heavy Snow Showers','Heavy snow showers'],
-    95: ['weather-lightning-rainy', 'Thunderstorm',     'Thunderstorm'],
-    96: ['weather-hail',            'Storm with Hail',  'Thunderstorm with slight hail'],
-    99: ['weather-hail',            'Severe Storm',     'Hail & thunder'],
+    // ── Clear ──────────────────────────────────────────────────────────────
+    0:  ['weather-sunny',           'Clear',              'Not a cloud in sight. Maximum sun exposure.'],
+    1:  ['weather-sunny',           'Mostly Clear',       'Clear with a few high clouds trailing through.'],
+    2:  ['weather-partly-cloudy',   'Partly Cloudy',      'Sun and cloud sharing the sky in shifts.'],
+    3:  ['weather-cloudy',          'Overcast',           'Grey canopy sealed overhead. No breaks expected.'],
+    // ── Fog ────────────────────────────────────────────────────────────────
+    45: ['weather-fog',             'Foggy',              'Dense fog pulling visibility down to metres.'],
+    48: ['weather-fog',             'Icy Fog',            'Fog with ice crystal deposit forming on surfaces.'],
+    // ── Drizzle ────────────────────────────────────────────────────────────
+    51: ['weather-partly-rainy',    'Light Drizzle',      'Fine mist in the air. Barely registers until it does.'],
+    53: ['weather-rainy',           'Drizzle',            'Steady drizzle. Quietly soaks everything given time.'],
+    55: ['weather-pouring',         'Heavy Drizzle',      'Dense drizzle. Not a shower — worse. Relentless.'],
+    56: ['weather-snowy-rainy',     'Freezing Drizzle',   'Light drizzle freezing on contact with surfaces.'],
+    57: ['weather-snowy-rainy',     'Freezing Drizzle',   'Heavy freezing drizzle glazing everything it touches.'],
+    // ── Rain ───────────────────────────────────────────────────────────────
+    61: ['weather-partly-rainy',    'Light Rain',         'Rain starting soft. Escalation possible.'],
+    63: ['weather-rainy',           'Rain',               'Rain in earnest. Steady, committed, unignorable.'],
+    65: ['weather-pouring',         'Heavy Rain',         'Downpour. Move fast or get comprehensively wet.'],
+    66: ['weather-snowy-rainy',     'Freezing Rain',      'Rain turning to ice on contact. Every surface treacherous.'],
+    67: ['weather-snowy-rainy',     'Freezing Rain',      'Heavy freezing rain. Ice accumulating on roads and walks.'],
+    // ── Snow ───────────────────────────────────────────────────────────────
+    71: ['weather-snowy',           'Light Snow',         'Soft flakes drifting down. Picturesque, briefly manageable.'],
+    73: ['weather-snowy',           'Snow',               'Snowfall steady and accumulating. Boots, not shoes.'],
+    75: ['weather-snowy-heavy',     'Heavy Snow',         'Heavy snowfall. Visibility dropping, roads compromised.'],
+    77: ['weather-snowy',           'Snow Grains',        'Fine granular snow. Low accumulation but icy underfoot.'],
+    // ── Showers ────────────────────────────────────────────────────────────
+    80: ['weather-partly-rainy',    'Showers',            'Rain showers moving through. Dry windows between.'],
+    81: ['weather-pouring',         'Heavy Showers',      'Sharp, heavy bursts of rain. Short but soaking.'],
+    82: ['weather-lightning-rainy', 'Storm Showers',      'Violent showers. Take cover and wait them out.'],
+    85: ['weather-snowy',           'Snow Showers',       'Snow showers drifting through. Some accumulation likely.'],
+    86: ['weather-snowy-heavy',     'Heavy Snow Showers', 'Intense snow showers piling up fast. Dress accordingly.'],
+    // ── Thunderstorm ───────────────────────────────────────────────────────
+    95: ['weather-lightning-rainy', 'Thunderstorm',       'Active thunderstorm. Lightning present, take shelter.'],
+    96: ['weather-hail',            'Storm with Hail',    'Thunderstorm releasing hail. Protect yourself and your car.'],
+    99: ['weather-hail',            'Severe Storm',       'Severe thunderstorm with significant hail. Stay indoors.'],
   };
-  return map[code] ?? ['thermometer-off', 'Unknown', 'Unknown conditions'];
+  return map[code] ?? ['thermometer-off', 'Unknown', 'Conditions unavailable.'];
 }
 
 function moonCalc(date: Date): { phase: number; name: string; icon: string } {
@@ -366,7 +378,7 @@ async function fetchPollen(lat: number, lon: number): Promise<PollenData | undef
 }
 
 const CURRENT_PARAMS =
-  'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,uv_index';
+  'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,uv_index,cloud_cover,visibility,precipitation';
 const HOURLY_PARAMS =
   'temperature_2m,precipitation_probability,weather_code,uv_index';
 const DAILY_PARAMS =
@@ -384,7 +396,11 @@ function buildWeatherResult(
   const hourlyRaw = wxData.hourly ?? {};
   const dailyRaw  = wxData.daily ?? {};
 
-  const [conditionIcon, conditionLabel, description] = wmoCondition(cur.weather_code ?? 0);
+  const cloudCoverPct: number | undefined = cur.cloud_cover != null ? Math.round(cur.cloud_cover) : undefined;
+  const effectiveCode = (cur.weather_code === 3 && cloudCoverPct !== undefined && cloudCoverPct < 88)
+    ? 2  // treat as "Partly Cloudy" when cloud cover is not truly full
+    : (cur.weather_code ?? 0);
+  const [conditionIcon, conditionLabel, description] = wmoCondition(effectiveCode);
 
   // Hourly: find entries starting from the current hour, take up to 24
   const nowPrefix = new Date().toISOString().slice(0, 13); // "2026-05-12T14"
@@ -436,6 +452,9 @@ function buildWeatherResult(
     conditionLabel,
     conditionIcon,
     description,
+    cloudCoverPercent: cloudCoverPct,
+    precipRate:   cur.precipitation != null ? Math.round(cur.precipitation * 10) / 10 : undefined,
+    visibility:   cur.visibility    != null ? Math.round(cur.visibility)            : undefined,
     utcOffsetSeconds: typeof wxData.utc_offset_seconds === 'number' ? wxData.utc_offset_seconds : undefined,
     uvIndex:       Math.round(cur.uv_index ?? 0),
     hourly:        hourly.length ? hourly : undefined,

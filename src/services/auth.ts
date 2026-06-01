@@ -287,6 +287,13 @@ export async function signOutLocalAccount(): Promise<void> {
   await SecureStore.deleteItemAsync(AUTH_SESSION_KEY).catch(() => {});
 }
 
+export async function deleteAllLocalAuth(): Promise<void> {
+  await Promise.all([
+    SecureStore.deleteItemAsync(AUTH_SESSION_KEY).catch(() => {}),
+    SecureStore.deleteItemAsync(AUTH_USERS_KEY).catch(() => {}),
+  ]);
+}
+
 export interface AppleCredential {
   user: string;
   identityToken?: string | null;

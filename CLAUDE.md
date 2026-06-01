@@ -155,26 +155,47 @@ In QA mode, flag any code that doesn't match the active theme's spec in DESIGN.m
 
 ## Learned Rules
 
+<!-- reap:start e20588a0 -->
+
 ## REAP
 
 This project uses REAP (Recursive Evolutionary Autonomous Pipeline).
-All work must follow the genome principles.
+All work must follow genome principles.
 
-### REAP Guide (must read at session start)
+### Knowledge Loading
 
-- `~/.reap/reap-guide.md` — REAP tool usage, architecture, lifecycle, rules
+REAP knowledge is loaded in two layers:
 
-### Genome (must read at session start)
+1. **Static knowledge** (genome, environment, vision, memory, reap-guide) is auto-loaded by Claude Code via the `@` import references below — no hook required.
+2. **Dynamic context** (current generation state, strict mode, language directive) is injected by the SessionStart hook (`reap load-context`).
 
-- `.reap/genome/application.md` — Project architecture, conventions, tech stack
-- `.reap/genome/evolution.md` — AI behavior guide, evolution principles
-- `.reap/genome/invariants.md` — Absolute constraints (never violate)
+If dynamic context was lost (e.g. after a context compaction), re-run the hook:
+```
+/reap.knowledge reload
+```
 
-### Environment (must read at session start)
+### Static Knowledge (auto-imported)
 
-- `.reap/environment/summary.md` — Source structure, build, tests, design decisions (always loaded)
-- `.reap/environment/domain/` — Domain knowledge (load on demand)
+@~/.reap/reap-guide.md
+@.reap/genome/application.md
+@.reap/genome/evolution.md
+@.reap/genome/invariants.md
+@.reap/environment/summary.md
+@.reap/vision/goals.md
+@.reap/vision/memory/longterm.md
+@.reap/vision/memory/midterm.md
+@.reap/vision/memory/shortterm.md
+
+### Termination Paths
+
+Generation은 세 가지 방식으로 종료할 수 있다:
+- `/reap.abort` — 실패/취소. life/ 삭제, lineage 미기록.
+- `/reap.early-close` — 부분 완료. lineage에 보존(`status: partial`), 미완 task는 자동 backlog 승계. implementation/validation에서만 호출 가능.
+- 정식 completion — validation 후 자연 흐름.
+
+사용자가 "중단/포기/스코프 축소" 의도를 표명하면 agent는 위 세 선택지를 안내하고 사용자가 선택하게 한다.
 
 ### Agent
 
-When delegating a generation to a subagent, use `subagent_type: "reap-evolve"`. This agent has the role, mindset, and rules for executing a REAP generation. Pass dynamic context (generation state, vision, memory) via the prompt parameter.
+When delegating a generation to a subagent, use `subagent_type: "reap-evolve"`. Dynamic context (generation state, vision, memory) is passed via prompt parameters.
+<!-- reap:end -->

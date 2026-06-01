@@ -105,7 +105,6 @@ export interface StyleProfile {
 type ProfileState =
   | { status: 'loading' }
   | { status: 'not-set' }
-  | { status: 'skipped' }
   | { status: 'set'; profile: StyleProfile };
 
 export function useStyleProfile() {
@@ -117,7 +116,6 @@ export function useStyleProfile() {
       if (!raw) { setState({ status: 'not-set' }); return; }
       try {
         const parsed = JSON.parse(raw);
-        if (parsed.skipped) { setState({ status: 'skipped' }); return; }
         if (!parsed.keywords) { setState({ status: 'not-set' }); return; }
         setState({ status: 'set', profile: parsed as StyleProfile });
       } catch {
@@ -145,14 +143,9 @@ export function useStyleProfile() {
     setState({ status: 'set', profile });
   };
 
-  const skip = () => {
-    AsyncStorage.setItem(KEY, JSON.stringify({ skipped: true }));
-    setState({ status: 'skipped' });
-  };
-
   const edit = () => setState({ status: 'not-set' });
 
   const profile = state.status === 'set' ? state.profile : undefined;
 
-  return { profileState: state, profile, saveProfile, skip, edit };
+  return { profileState: state, profile, saveProfile, edit };
 }

@@ -72,9 +72,9 @@ export function AppNavigator() {
     }).catch(() => setOnboardingDone(false));
   }, []);
 
-  // Returning skipped users: once both sources have loaded, jump straight to the style step
+  // Returning users with no profile: jump straight to the style step (skip welcome/carousel/personality)
   useEffect(() => {
-    if (onboardingDone === true && (profileCtx.profileState.status === 'not-set' || profileCtx.profileState.status === 'skipped')) {
+    if (onboardingDone === true && profileCtx.profileState.status === 'not-set') {
       setStep('style');
     }
   }, [onboardingDone, profileCtx.profileState.status]);
@@ -95,16 +95,8 @@ export function AppNavigator() {
 
   if (!hydrated) return null;
 
-  if (authState.status === 'unauthenticated') {
-    return <AuthScreen />;
-  }
-
-  // Gate: show onboarding if fresh install OR returning user who previously skipped
-  const needsOnboarding = !onboardingDone
-    || profileCtx.profileState.status === 'not-set'
-    || profileCtx.profileState.status === 'skipped';
-
-  if (needsOnboarding) {
+  // Gate: show welcome + onboarding for fresh installs BEFORE auth
+  if (!onboardingDone) {
     if (step === 'welcome') {
       return <WelcomeScreen onContinue={() => setStep('carousel')} />;
     }
@@ -126,6 +118,23 @@ export function AppNavigator() {
       );
     }
     // step === 'style'
+    return (
+      <StyleOnboarding
+        onSave={profile => {
+          profileCtx.saveProfile({ ...profile, personality: pendingPersonality });
+          completeOnboarding();
+        }}
+      />
+    );
+  }
+
+  // After onboarding, require auth
+  if (authState.status === 'unauthenticated') {
+    return <AuthScreen />;
+  }
+
+  // Authenticated user without a style profile — show questionnaire
+  if (profileCtx.profileState.status === 'not-set') {
     return (
       <StyleOnboarding
         onSave={profile => {
