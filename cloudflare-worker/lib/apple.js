@@ -92,7 +92,13 @@ export async function verifyAppleToken(identityToken, bundleId, env, rawNonce) {
     const nonceHash = Array.from(new Uint8Array(nonceHashBytes))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
-    if (!payload.nonce_supported || payload.nonce !== nonceHash) {
+    // nonce_supported: false means Apple did not include the nonce in the token.
+    // A rawNonce was sent — if the token lacks nonce support, reject it as the
+    // nonce cannot be verified (prevents nonce-bypass via replayed device credentials).
+    if (!payload.nonce_supported || !payload.nonce) {
+      throw new Error('Apple token does not contain nonce — cannot verify');
+    }
+    if (payload.nonce !== nonceHash) {
       throw new Error('Apple token nonce mismatch');
     }
   }

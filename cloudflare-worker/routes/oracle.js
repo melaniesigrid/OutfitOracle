@@ -22,11 +22,11 @@ function parseDeviceId(request) {
   return id && UUID_RE.test(id) ? id : null;
 }
 
-async function checkRateLimit(request, env) {
+async function checkRateLimit(request, env, keyPrefix = 'rl') {
   if (!env.RATE_LIMIT_KV) return { limited: false };
 
   const rateLimitKey = parseDeviceId(request) ?? request.headers.get('CF-Connecting-IP');
-  const key = `rl:${rateLimitKey}`;
+  const key = `${keyPrefix}:${rateLimitKey}`;
   const now = Date.now();
   const windowMs = RATE_LIMIT_WINDOW_S * 1000;
 
@@ -294,6 +294,13 @@ oracle.get('/ping', async (c) => {
 
 oracle.post('/city-descriptor', async (c) => {
   const env = c.env;
+  const rawReq = c.req.raw;
+  const cityRateCheck = await checkRateLimit(rawReq, env, 'rl:cd');
+  if (cityRateCheck.limited) {
+    return c.json({ error: 'Daily limit reached. Try again tomorrow.' }, 429, {
+      'Retry-After': String(cityRateCheck.retryAfter ?? 86400),
+    });
+  }
   let body;
   try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON body' }, 400); }
   const { city: rawCity, country: rawCountry } = body ?? {};
@@ -422,7 +429,7 @@ oracle.post('/', async (c) => {
   }
 
   const claudeController = new AbortController();
-  const claudeTimer = setTimeout(() => claudeController.abort(), 40_000);
+  const claudeTimer = setTimeout(() => claudeController.abort(), 25_000);
   let claudeResp;
   try {
     claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -435,7 +442,7 @@ oracle.post('/', async (c) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2600,
+        max_tokens: 1800,
         messages: [{ role: 'user', content: buildPrompt(weather, gender, styleProfile, occasion) }],
       }),
     });
