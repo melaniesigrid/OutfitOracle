@@ -211,3 +211,46 @@ describe('fetchOracleVerdict() — proxy routing', () => {
     expect(url).toBe(proxyUrl);
   });
 });
+
+// ---------------------------------------------------------------------------
+// payload stripping — pollen/hourly/daily/moonPhase stripped before POST
+// ---------------------------------------------------------------------------
+
+describe('viaProxy() — strips large weather fields before POST', () => {
+  it('omits pollen, hourly, daily, sunrise, sunset, moonPhase from the proxied payload', async () => {
+    const { oracle, asyncStorage } = loadOracleModule('https://proxy.example.com');
+    asyncStorage.getItem.mockResolvedValue(null);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(fakeVerdict),
+    });
+
+    const richWeather = {
+      ...fakeWeather,
+      pollen: { grassPollen: 5 },
+      hourly: [{ time: '09:00', temp: 15 }],
+      daily: [{ date: 'Mon', high: 20 }],
+      sunrise: '06:00',
+      sunset: '20:00',
+      moonPhase: 0.5,
+      moonPhaseName: 'Full Moon',
+      moonPhaseIcon: 'moon-full',
+    };
+
+    await oracle.fetchOracleVerdict(richWeather, 'male');
+
+    const callArgs = mockFetch.mock.calls[0];
+    const options = callArgs[1] as RequestInit;
+    const body = JSON.parse(options.body as string);
+
+    expect(body.weather).not.toHaveProperty('pollen');
+    expect(body.weather).not.toHaveProperty('hourly');
+    expect(body.weather).not.toHaveProperty('daily');
+    expect(body.weather).not.toHaveProperty('sunrise');
+    expect(body.weather).not.toHaveProperty('sunset');
+    expect(body.weather).not.toHaveProperty('moonPhase');
+    expect(body.weather).not.toHaveProperty('moonPhaseName');
+    expect(body.weather).not.toHaveProperty('moonPhaseIcon');
+    expect(body.weather.city).toBe('London');
+  });
+});

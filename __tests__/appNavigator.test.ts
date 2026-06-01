@@ -57,10 +57,10 @@ describe('completeOnboarding contract', () => {
 });
 
 describe('needsOnboarding gate logic', () => {
-  type ProfileStatus = 'loading' | 'not-set' | 'skipped' | 'set';
+  type ProfileStatus = 'loading' | 'not-set' | 'set';
 
   function needsOnboarding(onboardingDone: boolean, status: ProfileStatus): boolean {
-    return !onboardingDone || status === 'not-set' || status === 'skipped';
+    return !onboardingDone || status === 'not-set';
   }
 
   it('fresh install (onboardingDone=false, status=not-set) → needs onboarding', () => {
@@ -71,17 +71,13 @@ describe('needsOnboarding gate logic', () => {
     expect(needsOnboarding(true, 'set')).toBe(false);
   });
 
-  it('completed onboarding + not-set profile → re-runs onboarding (mandatory style step)', () => {
+  it('completed onboarding + not-set profile → re-runs style questionnaire (mandatory)', () => {
     expect(needsOnboarding(true, 'not-set')).toBe(true);
-  });
-
-  it('completed onboarding + skipped profile → re-runs onboarding (mandatory style step)', () => {
-    expect(needsOnboarding(true, 'skipped')).toBe(true);
   });
 });
 
 describe('hydrated gate', () => {
-  type AnyStatus = 'loading' | 'not-set' | 'skipped' | 'set';
+  type AnyStatus = 'loading' | 'not-set' | 'set';
   type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated';
   function isHydrated(onboardingDone: boolean | null, status: AnyStatus, authStatus: AuthStatus): boolean {
     return onboardingDone !== null && status !== 'loading' && authStatus !== 'loading';
