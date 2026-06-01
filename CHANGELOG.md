@@ -4,6 +4,13 @@ All notable changes to Outfit Oracle are documented here.
 
 ---
 
+## [1.5.0.1] — 2026-06-01
+
+### Documentation
+- **ASO.md** — Extended App Store Optimization guide with 2026 algorithm research: two-engine model (metadata relevance + behavioral quality), Custom Product Pages strategy (70-page limit, organic search indexing, 156% CVR lift data), In-App Events playbook (7 event types mapped to Outfit Oracle use cases, keyword indexing strategy), Apple Search Ads integration guide (3-campaign launch structure, ASA → organic keyword feedback loop), Smart App Banners setup, market context ($1.2B AI stylist category, 47M users), updated competitive keyword gap table with emerging competitors (Alta, xlook, Whering).
+
+---
+
 ## [1.5.0.0] — 2026-06-01
 
 ### Added
