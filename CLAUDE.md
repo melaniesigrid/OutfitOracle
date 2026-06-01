@@ -56,7 +56,7 @@ npx expo run:android
 npx expo start
 ```
 
-Run tests: `npm test` (Jest + ts-jest, 61 tests across 6 suites). TypeScript checking: `npx tsc --noEmit`.
+Run tests: `npm test` (Jest + ts-jest, 201 tests across 22 suites). TypeScript checking: `npx tsc --noEmit`.
 
 After changing `.env`, you must fully restart the bundler — `EXPO_PUBLIC_*` vars are baked in at build time, not hot-reloaded.
 
@@ -93,7 +93,7 @@ Expo bare workflow app with React Navigation v6 (3 tabs: Today / Oracle / You). 
 
 ### Style profile (`src/hooks/useStyleProfile.ts`)
 
-`useStyleProfile` loads the user's aesthetic preferences (keywords + budget tier) from AsyncStorage. Status can be `loading | not-set | skipped | set`. `AppNavigator` gates the tab navigator on `status === 'set'` — both `not-set` and `skipped` users are routed through the mandatory onboarding flow. Profile is passed to Claude's prompt on every consult.
+`useStyleProfile` loads the user's aesthetic preferences (keywords, budget, size, categories) from AsyncStorage. Status can be `loading | not-set | set`. `AppNavigator` gates the tab navigator on `status === 'set'`. Profile is passed to Claude's prompt on every consult and syncs to the Worker via `cloudGet`/`cloudPut` when a social sign-in token is present.
 
 ### Claude integration (`src/services/oracle.ts`)
 
@@ -111,7 +111,7 @@ Emoji were removed because Unicode weather characters (`⛅`, `⛈`) render inco
 
 Editorial aesthetic — cream/ivory background (`#FAF9F6`), jet-black dark sections (`#0D0B08`), scarlet accent (`#C41230`). All design tokens (colors, fonts, spacing, radius) live here. `radius.sm` and `radius.md` are both `0` — sharp corners everywhere.
 
-**Fonts:** Cormorant Garamond (display/serif, editorial headlines) + IBM Plex Mono (labels, captions, data). Loaded via `useFonts` in `HomeScreen.tsx`. The app renders a blank view until fonts resolve.
+**Fonts:** Cormorant Garamond (display/serif, editorial headlines) + IBM Plex Mono (labels, captions, data). Loaded via `useFonts` in `App.tsx`. The app renders a blank view until fonts resolve.
 
 **Accent colors** (`mint`, `lavender`, `coral`, `lemon`, `iris`) are used by `OutfitCard` via `accentMap` — each outfit item from Claude specifies one of these five names.
 

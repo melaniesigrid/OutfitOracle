@@ -110,7 +110,7 @@ The Oracle tab shows a scarlet dot when the cached verdict is older than 2 hours
 | File | Responsibility |
 |------|----------------|
 | `AppContext.tsx` | Composes oracle, profile, history, streaks, saved outfits, badges, archive, oracle images |
-| `AuthContext.tsx` | Session over local AsyncStorage auth |
+| `AuthContext.tsx` | Session management; local + Apple/Google/Facebook social auth; cloud token for profile sync |
 | `ThemeContext.tsx` | Active visual theme + Y2K font subtheme |
 | `TemperatureContext.tsx` | °C / °F preference |
 
@@ -130,14 +130,19 @@ The Oracle tab shows a scarlet dot when the cached verdict is older than 2 hours
 | `useArchive.ts` | Archived consults with reactions |
 | `useRecentCities.ts` | City autocomplete memory |
 | `useWeeklyChallenge.ts` | ISO-week editorial challenge |
+| `useNotifications.ts` | Daily push notification scheduling (opt-in, deep-link) |
+| `useCityPassport.ts` | Per-city passport data: visit count, last vibe, fashion capital flag, Claude descriptor |
 
 ### `src/services/`
 
 | File | Purpose |
 |------|---------|
-| `weather.ts` | Geocoding + forecast; `conditionIcon` is a **MaterialCommunityIcons** name, not emoji |
+| `weather.ts` | Geocoding + forecast; `conditionIcon` is a **MaterialCommunityIcons** name, not emoji. Exports `uvLabel(uv)` and `localHour(utcOffsetSeconds)` utilities. |
 | `oracle.ts` | `OracleVerdict` type, proxy routing, dev-only `buildPrompt` |
-| `auth.ts` | Local email/password users in AsyncStorage (not a remote IdP) |
+| `auth.ts` | Local email/password + Apple/Google/Facebook auth; credentials stored in SecureStore |
+| `authApi.ts` | Cloud auth API (social sign-in, data migration to Worker) |
+| `cloudData.ts` | `cloudGet` / `cloudPut` — per-user data buckets via Worker `/data/*` endpoints |
+| `cityDescriptor.ts` | Claude-generated city descriptor, cached in AsyncStorage |
 | `imageGeneration.ts` | fal.ai integration |
 | `analytics.ts` | PostHog (no-op without key) |
 
@@ -159,13 +164,13 @@ The Oracle tab shows a scarlet dot when the cached verdict is older than 2 hours
 
 ### `src/components/`
 
-Shared UI: `VerdictCard`, `OutfitCard`, `WeatherStrip`, `WeatherGlanceCard`, `DressingLogicCard`, plus theme-specific `y2k/*` building blocks.
+Shared UI: `VerdictCard`, `OutfitCard`, `WeatherStrip`, `WeatherGlanceCard`, `DressingLogicCard`, `ColdWeatherAnimation`, `HotWeatherAnimation`, `CityArrivalModal`, plus theme-specific `y2k/*` building blocks.
 
 ### `cloudflare-worker/`
 
-Production brain: prompt construction, rate limiting (KV), founding-member cap, CORS.
+Production brain: prompt construction, rate limiting (KV, 20 req/day per device), founding-member cap, CORS. Oracle logic is extracted into `routes/oracle.js` (Hono router) mounted by `index.js`.
 
-**Keep prompts in sync:** when changing verdict shape, voice, or season logic, update both `cloudflare-worker/index.js` and `buildPrompt` in `src/services/oracle.ts` (dev direct path). `getSeason()` must match in both files.
+**Keep prompts in sync:** when changing verdict shape, voice, or season logic, update both `cloudflare-worker/routes/oracle.js` and `buildPrompt` in `src/services/oracle.ts` (dev direct path). `getSeason()` must match in both files.
 
 ### `__tests__/`
 
@@ -216,7 +221,7 @@ Claude must return **pure JSON** (no markdown fences). The app parses with `JSON
 
 ### Style profile (`useStyleProfile.ts`)
 
-Stored in AsyncStorage: keywords, budget tier, personality (`diplomatic` | `editorial` | `savage`), temperature sensitivity, color loves/avoids. Passed to the Worker on every consult.
+Stored in AsyncStorage: keywords, budget tier, personality (`diplomatic` | `editorial` | `savage`), temperature sensitivity, color loves/avoids, clothing size, and preferred categories. Passed to the Worker on every consult. When a social sign-in token is present, the profile syncs to/from the Worker via `cloudGet` / `cloudPut`.
 
 ---
 
@@ -278,9 +283,9 @@ Node ≥ 20.19.0 (SDK 54).
 
 | If you're changing… | Also read |
 |---------------------|-----------|
-| Oracle copy / JSON shape | `src/services/oracle.ts`, `cloudflare-worker/index.js` |
+| Oracle copy / JSON shape | `src/services/oracle.ts`, `cloudflare-worker/routes/oracle.js` |
 | Weather UI | `src/services/weather.ts`, `TodayScreen.tsx`, `animations/*.html` |
-| Onboarding / auth | `AppNavigator.tsx`, `useStyleProfile.ts`, `auth.ts`, `AuthScreen.tsx` |
+| Onboarding / auth | `AppNavigator.tsx`, `useStyleProfile.ts`, `auth.ts`, `authApi.ts`, `AuthScreen.tsx` |
 | Themes / visuals | `src/theme/index.ts`, `ThemeContext.tsx`, `DESIGN.md` |
 | Images / cost | `IMAGE_GENERATION.md`, `useOracleImage.ts`, `AppContext.tsx` |
 | Shipping / backlog | `Roadmap.md`, `CHANGELOG.md`, `TODOS.md` |
