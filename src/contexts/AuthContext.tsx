@@ -163,7 +163,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Cloud auth failed — continue with local auth only
       }
     }
-    const user = await signInWithGoogleLocal(credential);
+    // Use the server-verified userId (Google sub claim) if cloud auth succeeded,
+    // to avoid all Google users sharing the same local slot when userId is ''.
+    const localCredential = cloudResult?.userId
+      ? { ...credential, userId: cloudResult.userId }
+      : credential;
+    const user = await signInWithGoogleLocal(localCredential);
     setState({ status: 'authenticated', user });
     if (cloudResult?.isNewUser && cloudResult.token) {
       uploadLocalDataToCloud(cloudResult.token).catch(() => {});
@@ -181,7 +186,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Cloud auth failed — continue with local auth only
       }
     }
-    const user = await signInWithFacebookLocal(credential);
+    const localFbCredential = cloudResult?.userId
+      ? { ...credential, userId: cloudResult.userId }
+      : credential;
+    const user = await signInWithFacebookLocal(localFbCredential);
     setState({ status: 'authenticated', user });
     if (cloudResult?.isNewUser && cloudResult.token) {
       uploadLocalDataToCloud(cloudResult.token).catch(() => {});

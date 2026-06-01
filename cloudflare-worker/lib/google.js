@@ -30,6 +30,13 @@ export async function verifyGoogleToken(idToken, clientId) {
     throw new Error(`Google token error: ${payload.error_description}`);
   }
 
+  if (payload.iss !== 'https://accounts.google.com' && payload.iss !== 'accounts.google.com') {
+    throw new Error(`Google token invalid issuer: ${payload.iss}`);
+  }
+  if (payload.email_verified === false || payload.email_verified === 'false') {
+    throw new Error('Google account email is not verified');
+  }
+
   // Validate audience matches our client ID (can be web or iOS client ID)
   if (clientId && payload.aud !== clientId) {
     // Google ID tokens issued to iOS clients have audience = iosClientId.

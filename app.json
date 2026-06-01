@@ -17,7 +17,18 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.melaniesigrid.outfitoracle",
-      "usesAppleSignIn": true
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "outfitoracle",
+              "com.melaniesigrid.outfitoracle",
+              "com.googleusercontent.apps.5567358159392-e7me79n0acj4oh3hokou8hvip0hdvmvl",
+              "fb919930367739523"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +38,6 @@
       "package": "com.melaniesigrid.outfitoracle"
     },
     "plugins": [
-      "expo-apple-authentication",
       "expo-font",
       "expo-splash-screen",
       [
@@ -52,7 +62,8 @@
           "sounds": []
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "extra": {}
   }

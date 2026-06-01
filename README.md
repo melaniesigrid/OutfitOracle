@@ -28,7 +28,7 @@ A weather-powered AI fashion advisor with the energy of a Y2K fashion editor who
 | Navigation | React Navigation v6 (3 tabs: Today / Oracle / You) |
 | AI | Claude Sonnet 4.6 via Cloudflare Worker proxy |
 | Weather | Open-Meteo (geocoding + forecast + air quality — free, no key) |
-| Persistence | AsyncStorage |
+| Persistence | AsyncStorage + SecureStore (auth credentials) |
 | Icons | MaterialCommunityIcons (bundled with Expo SDK) |
 | Fonts | Cormorant Garamond (display) + IBM Plex Mono (labels/data) |
 | Crash reporting | Sentry (installed — no-ops without DSN) |
@@ -58,7 +58,7 @@ npx expo run:android
 
 TypeScript check: `npx tsc --noEmit`
 
-Run tests: `npm test` (Jest + ts-jest, 66 tests across 6 suites)
+Run tests: `npm test` (Jest + ts-jest, 201 tests across 22 suites)
 
 SDK 54 requires Node 20.19.0 or newer. Use an even-numbered LTS release such as Node 22 or Node 24 for the cleanest local tooling support.
 
@@ -135,7 +135,7 @@ The Worker (`cloudflare-worker/`) handles all Claude API calls:
 - Receives `{ weather, gender, styleProfile?, occasion? }` via POST
 - Calls `buildPrompt()` → `claude-sonnet-4-6` with structured JSON schema
 - Returns `OracleVerdict` (pure JSON — no markdown wrapping)
-- Rate-limits at 20 req/hr per IP via Cloudflare KV
+- Rate-limits at 20 req/day per device (UUID header) or IP via Cloudflare KV
 
 Deploy: `wrangler deploy`. Set the key: `wrangler secret put ANTHROPIC_API_KEY`.
 

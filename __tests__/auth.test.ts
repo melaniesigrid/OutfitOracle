@@ -14,6 +14,11 @@ beforeEach(() => {
 });
 
 describe('local auth service', () => {
+  it('uses keys accepted by Expo SecureStore', () => {
+    expect(AUTH_USERS_KEY).toMatch(/^[\w.-]+$/);
+    expect(AUTH_SESSION_KEY).toMatch(/^[\w.-]+$/);
+  });
+
   it('creates a normalized account and stores a session', async () => {
     const user = await createLocalAccount({
       name: 'Melanie',

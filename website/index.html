@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Outfit Oracle — Your Unsolicited Style Authority</title>
+  <meta name="description" content="Weather-aware outfit verdicts for any city. Enter a city, choose an occasion, receive the Oracle's verdict. iOS — coming soon.">
+  <meta property="og:title" content="Outfit Oracle">
+  <meta property="og:description" content="Your unsolicited style authority. Weather-aware outfit verdicts for any city.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://outfitoracle.fashion">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300;1,700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="wrap nav-inner">
+    <a href="/" class="nav-logo">Outfit Oracle</a>
+    <div class="nav-links">
+      <a href="/about.html">About</a>
+      <a href="/press.html">Press</a>
+      <a href="/privacy.html">Privacy</a>
+      <a href="#notify" class="nav-cta">Notify Me</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="wrap" style="display:contents;">
+    <div style="padding: 0 40px;">
+      <p class="hero-eyebrow">Outfit Oracle — iOS</p>
+      <h1 class="hero-headline">Your unsolicited<br>style authority.</h1>
+      <p class="hero-sub">
+        The version of Vogue<br>
+        that knows your weather.
+      </p>
+
+      <!-- Notify form — works with Netlify Forms out of the box.
+           For Cloudflare Pages, replace with a Pages Function or Formspree action. -->
+      <form class="hero-form" name="notify-hero" method="POST" data-netlify="true" id="hero-form">
+        <input type="hidden" name="form-name" value="notify-hero">
+        <input type="email" name="email" placeholder="your@email.com" required autocomplete="email">
+        <button type="submit">Notify&nbsp;Me</button>
+      </form>
+      <p class="hero-form-note" id="hero-form-note">Notified at launch. No spam — ever.</p>
+      <p class="hero-success" id="hero-success">You're on the list. The Oracle will find you.</p>
+    </div>
+
+    <div class="hero-visual" style="padding-right: 40px;">
+      <div class="phone">
+        <div class="phone-inner">
+          <p class="phone-city">London · 11°C</p>
+          <div class="phone-temp">11</div>
+          <div class="phone-rule"></div>
+          <p class="phone-vibe">Structured Authority</p>
+          <p class="phone-verdict">Overcast at 11°C — structure wins. Linen does not. A wool blazer is the call today.</p>
+          <div class="phone-items">
+            <div class="phone-item">
+              <span class="phone-item-cat">Outer</span>
+              <span class="phone-item-name">Charcoal wool blazer</span>
+            </div>
+            <div class="phone-item">
+              <span class="phone-item-cat">Shoes</span>
+              <span class="phone-item-name">Black Chelsea boot</span>
+            </div>
+            <div class="phone-item">
+              <span class="phone-item-cat">Avoid</span>
+              <span class="phone-item-name">Linen anything</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="wrap">
+    <p class="section-eyebrow">How it works</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <p class="step-label">Enter a city</p>
+        <h3 class="step-title">Any city,<br>anywhere.</h3>
+        <p class="step-desc">Type any city name — your home, your destination, or one you're curious about. The Oracle fetches live weather instantly via Open-Meteo.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <p class="step-label">Choose an occasion</p>
+        <h3 class="step-title">Work, date,<br>weekend.</h3>
+        <p class="step-desc">Work, Date, Event, Weekend, Active — or just the day. Context changes the verdict. A Saturday in 14°C is not the same as a Monday in 14°C.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <p class="step-label">Receive the verdict</p>
+        <h3 class="step-title">What to wear.<br>What to avoid.</h3>
+        <p class="step-desc">Structured outfit picks, an editorial vibe read, what not to wear, and why. No wardrobe upload. No catalog. Just the verdict.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATEMENT -->
+<section id="statement">
+  <div class="wrap">
+    <div class="statement-inner">
+      <p class="statement-pre">The difference</p>
+      <h2 class="statement-headline">Not a closet app.<br>An authority.</h2>
+      <div class="scarlet-rule"></div>
+      <div class="statement-body">
+        <p>Every other style app is a mirror. Upload your wardrobe. See your clothes reflected back. Swipe through endless options you already own.</p>
+        <p>Outfit Oracle is different. It doesn't ask what you have. It tells you what to wear — for the weather you're actually in, the occasion you're actually dressing for, and the aesthetic you've actually told it to respect.</p>
+        <p>It's a publication, not a wardrobe manager. An oracle speaking to you, not a catalog waiting to be browsed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <p class="section-eyebrow">What's inside</p>
+    <div class="features-grid">
+      <div class="feature">
+        <p class="feature-label">Oracle</p>
+        <h3 class="feature-title">AI verdict,<br>daily.</h3>
+        <p class="feature-desc">Claude Sonnet generates structured outfit picks tailored to your city's live weather, your occasion, your aesthetic profile, and your budget tier.</p>
+      </div>
+      <div class="feature">
+        <p class="feature-label">Today tab</p>
+        <h3 class="feature-title">Weather before<br>the fit.</h3>
+        <p class="feature-desc">Hourly and 7-day forecast, UV index, wind, humidity. Plus a Word of the Day — fashion vocabulary as considered as your coat.</p>
+      </div>
+      <div class="feature">
+        <p class="feature-label">Profiles</p>
+        <h3 class="feature-title">Tailored to<br>your taste.</h3>
+        <p class="feature-desc">Set your aesthetic keywords, budget tier, colour preferences, and occasion habits. Every verdict speaks to your specific aesthetic — not a generic outfit for any day.</p>
+      </div>
+      <div class="feature">
+        <p class="feature-label">13 Themes</p>
+        <h3 class="feature-title">An app that<br>looks the part.</h3>
+        <p class="feature-desc">Classic, Editorial, Y2K, Mondrian, Neo-Brutal, Electric, Terra Firma and more. Each theme is a complete visual world — not a color swap.</p>
+      </div>
+      <div class="feature">
+        <p class="feature-label">City Passport</p>
+        <h3 class="feature-title">Every city<br>remembered.</h3>
+        <p class="feature-desc">Every city you've consulted becomes a stamp in your passport. Saved looks, archived verdicts, and a history of every place the Oracle has weighed in on.</p>
+      </div>
+      <div class="feature">
+        <p class="feature-label">Achievements</p>
+        <h3 class="feature-title">127 badges,<br>15 categories.</h3>
+        <p class="feature-desc">Streaks, rank tiers, weekly editorial challenges, and achievements for weather bravery, city exploration, and outfit commitment. The Oracle rewards the dedicated.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICES -->
+<section id="voices">
+  <div class="wrap">
+    <p class="section-eyebrow" style="color: rgba(250,249,246,.35);">Three personalities</p>
+    <div class="voices-grid">
+      <div class="voice">
+        <p class="voice-name">Diplomatic</p>
+        <p class="voice-quote">"11°C and overcast. A structured layer is practical. Trousers or dark denim. Closed-toe footwear is advisable."</p>
+        <p class="voice-desc">Measured, clear, informative. Strong recommendations without the editorial savagery. Correct, always.</p>
+      </div>
+      <div class="voice">
+        <p class="voice-name">Editorial</p>
+        <p class="voice-quote">"Overcast at 11°C — structure wins. Linen does not. A wool blazer is the call; denim is permission to be human."</p>
+        <p class="voice-desc">Opinionated, direct, specific. The Oracle's default. Witty where it counts. The version you tell people about.</p>
+      </div>
+      <div class="voice">
+        <p class="voice-name">Savage</p>
+        <p class="voice-quote">"You walked out in that? 11°C, overcast, and you're considering those shoes? The Oracle has concerns. Many concerns."</p>
+        <p class="voice-desc">Ruthlessly honest. Weather crimes will be named. Fashion is a serious matter. You chose this.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- THEMES -->
+<section id="themes">
+  <div class="wrap">
+    <p class="section-eyebrow">13 Themes</p>
+    <p class="themes-intro">From the cream editorial authority of Classic to the de Stijl grid of Mondrian, every theme is a complete visual world. Switch at any time in Settings — the oracle stays the same; the surface changes entirely.</p>
+    <div class="themes-grid">
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#C41230;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Classic</div>
+          <div class="theme-mood">Warm cream · Scarlet</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#C41230;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Editorial Light</div>
+          <div class="theme-mood">Print publication · Cream</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#C41230;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Editorial Dark</div>
+          <div class="theme-mood">Maximum authority · Night</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#B5491A;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Terra Firma</div>
+          <div class="theme-mood">Marrakech editorial</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#6B7F5E;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Morning Paper</div>
+          <div class="theme-mood">Botanical · Porter × Kinfolk</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#C88040;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Golden Hour</div>
+          <div class="theme-mood">Loewe × The Row at dusk</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#FF1060;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Electric</div>
+          <div class="theme-mood">TREVO after midnight</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#FFD166;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Weather Glance</div>
+          <div class="theme-mood">Animated sky-forward</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#FFD166;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Weather Editorial</div>
+          <div class="theme-mood">Sky as magazine spread</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#EC1E79;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Y2K</div>
+          <div class="theme-mood">Digital zine · Fashion club</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#D4FA7B; border: 1px solid #E8E0D5;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Neo-Brutal Light</div>
+          <div class="theme-mood">Hand-stamped flyer</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#C9F7A1;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Neo-Brutal Dark</div>
+          <div class="theme-mood">Brutalist grammar · Night</div>
+        </div>
+      </div>
+      <div class="theme-tile">
+        <div class="theme-swatch" style="background:#D40000;"></div>
+        <div class="theme-info">
+          <div class="theme-name">Mondrian</div>
+          <div class="theme-mood">de Stijl grid · Primary</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NOTIFY (bottom CTA) -->
+<section id="notify">
+  <div class="wrap">
+    <div class="notify-content">
+      <h2 class="notify-headline">The Oracle is<br>launching soon.</h2>
+      <p class="notify-sub">iOS only. Free to download. The Oracle will find you.</p>
+
+      <form class="hero-form" name="notify-footer" method="POST" data-netlify="true" id="notify-form">
+        <input type="hidden" name="form-name" value="notify-footer">
+        <input type="email" name="email" placeholder="your@email.com" required autocomplete="email">
+        <button type="submit">Notify&nbsp;Me</button>
+      </form>
+      <p class="hero-form-note" id="notify-form-note">Notified at launch. No spam — ever.</p>
+      <p class="hero-success" id="notify-success">You're on the list. The Oracle will find you.</p>
+
+      <div class="notify-social">
+        <a href="https://instagram.com/outfitoracle.fashion" target="_blank" rel="noopener">@outfitoracle.fashion</a>
+        <span>·</span>
+        <a href="mailto:hello@outfitoracle.fashion">hello@outfitoracle.fashion</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <a href="/" class="footer-logo">Outfit Oracle</a>
+      <div class="footer-links">
+        <a href="/about.html">About</a>
+        <a href="/press.html">Press</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="mailto:hello@outfitoracle.fashion">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function handleForm(formId, noteId, successId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const data = new FormData(form);
+      try {
+        await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(data).toString() });
+        document.getElementById(noteId).style.display = 'none';
+        document.getElementById(successId).style.display = 'block';
+        form.style.display = 'none';
+      } catch {
+        form.submit();
+      }
+    });
+  }
+  handleForm('hero-form', 'hero-form-note', 'hero-success');
+  handleForm('notify-form', 'notify-form-note', 'notify-success');
+</script>
+
+</body>
+</html>

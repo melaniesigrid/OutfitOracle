@@ -124,3 +124,24 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 ### ~~Test coverage for formatTemp and offline cache fallback~~ — RESOLVED 2026-05-18
 `__tests__/formatTemp.test.ts` — 12 tests covering C/F conversion, rounding, edge cases (-40 convergence), and return type.
 `__tests__/oracleOffline.test.ts` — 6 tests covering the network-error regex classification and the CachedResult shape/TTL contract. Total: 152 tests across 13 suites.
+
+## Test Debt (v1.5.0.0 — social auth + notifications branch)
+
+### ~~Test coverage for weather utilities~~ — RESOLVED in 1.5.0.0
+`__tests__/weatherUtils.test.ts` — 14 tests covering `uvLabel` (boundary cases for all 5 tiers), `localHour` (UTC offsets), NWS US alert path (happy path + non-ok fallback). Oracle payload stripping tests added to `oracleProxy.test.ts`. Total: 201 tests across 22 suites.
+
+## Known Deferred Issues (from adversarial review v1.5.0.0)
+
+### Auth rate limiting on Worker
+**What:** `/auth/siwa`, `/auth/google`, `/auth/facebook`, `/auth/me` have no rate limiting. The oracle/image/city-descriptor endpoints are rate limited; auth is not.
+**Why deferred:** Auth endpoint rate limiting requires session-aware logic (don't limit already-authenticated refreshes) and separate KV key space design.
+**Priority:** P1
+
+### makeId() uses Math.random()
+**What:** `auth.ts:makeId()` generates local user IDs with `Math.random()` + `Date.now()`. Should use `fillSecureRandomBytes`.
+**Why deferred:** Low impact (device-local IDs), not security-critical at current scale.
+**Priority:** P3
+
+### autoLocationStartedRef never resets after app reset
+**What:** `OracleScreen.tsx` — if the user resets all data without unmounting the Oracle tab, auto-location never fires again in the same session.
+**Priority:** P3

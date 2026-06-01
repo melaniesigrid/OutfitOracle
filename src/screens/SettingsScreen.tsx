@@ -20,7 +20,7 @@ import {
   getAnalyticsEnabledPreference,
   setAnalyticsEnabledPreference,
 } from '../services/analytics';
-import { AUTH_SESSION_KEY, AUTH_USERS_KEY } from '../services/auth';
+import { deleteAllLocalAuth } from '../services/auth';
 import {
   NOTIF_ENABLED_KEY, NOTIF_HOUR_KEY, useNotifications,
 } from '../hooks/useNotifications';
@@ -40,8 +40,6 @@ const ALL_KEYS = [
   '@outfit_oracle_y2k_font_subtheme',
   '@outfit_oracle_magic_shown',
   ANALYTICS_ENABLED_KEY,
-  AUTH_USERS_KEY,
-  AUTH_SESSION_KEY,
   NOTIF_ENABLED_KEY,
   NOTIF_HOUR_KEY,
 ];
@@ -204,6 +202,7 @@ function EditorialSettingsScreen() {
               const imageKeys = all.filter(k => k.startsWith('@oracle_image_v1_'));
               if (imageKeys.length > 0) await AsyncStorage.multiRemove(imageKeys);
             } catch { /* non-fatal */ }
+            await deleteAllLocalAuth();
             historyCtx.clear();
             await signOut();
             Alert.alert('Done', 'All data removed.');

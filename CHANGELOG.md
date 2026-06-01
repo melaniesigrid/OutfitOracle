@@ -4,6 +4,39 @@ All notable changes to Outfit Oracle are documented here.
 
 ---
 
+## [1.5.0.0] — 2026-06-01
+
+### Added
+- **Google & Facebook sign-in** — Social authentication via Google and Facebook OAuth, with server-side token verification (Google iss/aud/email_verified, Facebook debug_token). Apple Sign In support stubbed and ready pending paid Apple Developer enrollment.
+- **Daily push notifications** — Opt-in daily reminder with city and temperature context. Three schedule options (8am, 12pm, 6pm). Permission prompt surfaces automatically after the first consult; deep-links directly to the Oracle tab.
+- **City passport expansion** — CityArrivalModal celebrates first-visit cities; city descriptor (editorial fashion territory prose) now generated server-side via Claude Haiku and gated behind the same rate limiter as oracle consults.
+- **Cloud profile sync** — Style profile uploads to the Cloudflare Worker on sign-in; syncs down on new device login without overwriting a locally set profile.
+- **Shopping links** — Outfit cards include searchable shop links generated server-side from Claude's verdict items.
+- **Weather Glance Card** — Full animated weather card with condition-matched palettes, hot/cold weather animations, UV label, hourly graph, moon phase, and editorial copy variants.
+- **WeatherUtils** — `uvLabel` and `localHour` exported from weather service; NWS (US) alert path added alongside existing ECCC (Canada) integration.
+
+### Changed
+- **Oracle Cloudflare Worker** — Migrated to Hono routing framework. City descriptor endpoint added. Rate limiting now uses separate key namespace per endpoint type to prevent city lookups burning oracle quota.
+- **Y2K & Mondrian theme refinements** — Settings screen layout overhauled (2-column chip grid, palette strip swatch), dozens of visual polish fixes across Y2K and Mondrian screens.
+- **DailyNotifPrompt** — `makeStyles` moved to `useMemo`; notification prompt handlers stabilised with `useCallback`.
+
+### Fixed
+- **Google/Facebook auth userId collision** — Empty `userId: ''` passed to local auth caused all social sign-in users on a shared device to land on the same local account slot. Now resolves to the server-verified `sub` claim from `cloudResult`.
+- **SIWA nonce bypass** — `nonce_supported: false` in Apple token payload no longer silently skips nonce verification; tokens without a nonce are now rejected.
+- **Google token `iss` validation** — Added issuer and `email_verified` checks to Google token verification in the Worker.
+- **`/city-descriptor` rate limit gap** — Endpoint was calling the Anthropic API without any rate limiting; now shares the same per-device 20 req/day limit as oracle and image routes.
+- **SecureStore key migration** — Auth keys migrated from AsyncStorage (plaintext) to `expo-secure-store` (Keychain/Keystore); invalid key strings (containing `@`) corrected.
+- **PBKDF2 Hermes compatibility** — Replaced `crypto.subtle` (unavailable in some Hermes builds) with a pure-JS PBKDF2-SHA256 implementation using `expo-crypto` for CSPRNG.
+- **Unused imports** — Removed dead `AUTH_SESSION_KEY`/`AUTH_USERS_KEY` imports from SettingsScreen and MondrianSettingsScreen after reset logic was refactored.
+
+### Security
+- **Auth SecureStore migration** — Session tokens and user records now stored in Keychain (iOS) / Keystore (Android) via `expo-secure-store`.
+- **Timing-safe password compare** — XOR-based `timingSafeEqual` replaces direct string comparison to prevent timing attacks on local password verification.
+- **SIWA nonce hardening** — `nonce_supported: false` no longer bypasses nonce check; missing nonce is a hard failure.
+- **Google OIDC compliance** — `iss` and `email_verified` claims validated server-side.
+
+---
+
 ## [1.4.0] — 2026-05-17
 
 ### Added
