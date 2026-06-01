@@ -14,12 +14,16 @@ import { AppFonts, AppMetrics, isY2KTheme, spacing, weatherGlanceTokens } from '
 import { useTheme } from '../contexts/ThemeContext';
 import { useTempUnit } from '../contexts/TemperatureContext';
 import { SunnyWeatherAnimation } from './SunnyWeatherAnimation';
+import { HotWeatherAnimation } from './HotWeatherAnimation';
+import { ColdWeatherAnimation } from './ColdWeatherAnimation';
 import { formatLocationTimeWithCue } from '../utils/locationTime';
 
 type WeatherGlanceMode = 'strip' | 'hero';
 type TempFormatter = (celsius: number) => string;
 type WeatherGlanceKind =
   | 'sunny'
+  | 'hot'
+  | 'cold'
   | 'partly-cloudy'
   | 'cloudy'
   | 'rain'
@@ -239,6 +243,8 @@ function weatherKind(weather: WeatherData): WeatherGlanceKind {
   if (/rain|drizzle|showers/.test(signal)) return 'rain';
   if (/fog|hazy|mist|rime/.test(signal)) return 'fog';
   if (weather.windSpeed >= 36) return 'wind';
+  if (weather.feelsLike >= 30) return 'hot';
+  if (weather.feelsLike <= -8) return 'cold';
   if (isNightWeather(weather) && /clear|sunny|partly|cloud/.test(signal)) return 'night';
   if (/partly/.test(signal)) return 'partly-cloudy';
   if (/cloud|overcast/.test(signal)) return 'cloudy';
@@ -248,6 +254,44 @@ function weatherKind(weather: WeatherData): WeatherGlanceKind {
 function paletteFor(kind: WeatherGlanceKind): GlancePalette {
   const t = weatherGlanceTokens;
   switch (kind) {
+    case 'hot':
+      return {
+        skyTop: '#7c2200',
+        skyMid: '#d45010',
+        skyLow: '#fabe68',
+        panel: 'rgba(255,255,255,0.28)',
+        panelStrong: 'rgba(255,255,255,0.36)',
+        border: 'rgba(255,255,255,0.44)',
+        sceneText: 'rgba(255,255,255,0.96)',
+        text: '#25120a',
+        muted: 'rgba(37,18,10,0.68)',
+        faint: 'rgba(37,18,10,0.46)',
+        accent: '#FFD166',
+        glow: 'rgba(255,180,60,0.44)',
+        cloud: 'rgba(255,255,255,0.38)',
+        precipitation: 'rgba(255,180,60,0.72)',
+        silhouette: 'rgba(60,12,0,0.72)',
+        shadow: 'rgba(80,18,0,0.38)',
+      };
+    case 'cold':
+      return {
+        skyTop: '#050d1e',
+        skyMid: '#1a4080',
+        skyLow: '#6aadda',
+        panel: 'rgba(255,255,255,0.32)',
+        panelStrong: 'rgba(255,255,255,0.40)',
+        border: 'rgba(255,255,255,0.50)',
+        sceneText: 'rgba(255,255,255,0.96)',
+        text: '#071120',
+        muted: 'rgba(7,17,32,0.68)',
+        faint: 'rgba(7,17,32,0.46)',
+        accent: '#DDEEFF',
+        glow: 'rgba(130,200,240,0.36)',
+        cloud: 'rgba(200,230,255,0.36)',
+        precipitation: 'rgba(200,230,255,0.80)',
+        silhouette: 'rgba(5,14,40,0.72)',
+        shadow: 'rgba(8,22,60,0.38)',
+      };
     case 'night':
       return {
         skyTop: '#071024',
@@ -376,88 +420,180 @@ function precipProbability(weather: WeatherData): number {
   return 0;
 }
 
+function formatVisibility(metres: number): string {
+  if (metres >= 10000) return '10+ km';
+  if (metres >= 1000) return `${(metres / 1000).toFixed(1)} km`;
+  return `${metres} m`;
+}
+
+function formatPrecipRate(mmh: number): string {
+  if (mmh === 0) return '0 mm/h';
+  if (mmh < 0.1) return '<0.1 mm/h';
+  return `${mmh.toFixed(1)} mm/h`;
+}
+
 function copyFor(kind: WeatherGlanceKind, weather: WeatherData): GlanceCopy {
   const precip = precipProbability(weather);
+  const code = weather.conditionCode;
+
   switch (kind) {
-    case 'snow':
+    case 'hot': {
+      const uvVal = weather.uvIndex !== undefined
+        ? `${weather.uvIndex} · ${uvLabel(weather.uvIndex)}`
+        : 'Very High';
       return {
-        summary: 'Cold, crisp, and dramatic.',
-        verdict: 'The coat is the outfit.',
+        summary: weather.feelsLike >= 38
+          ? 'Dangerous heat. Limit exposure, hydrate constantly.'
+          : 'High heat. Loose fabrics, minimal layers.',
+        verdict: weather.feelsLike >= 38 ? 'Linen or stay inside.' : 'Breathable fabrics only.',
+        verdictIcon: 'thermometer-high',
+        statOneLabel: 'UV Index',
+        statOneValue: uvVal,
+        statOneIcon: 'white-balance-sunny',
+      };
+    }
+    case 'cold': {
+      const windChill = weather.windChill !== undefined
+        ? `${weather.windChill}°`
+        : `${weather.feelsLike}°`;
+      return {
+        summary: weather.feelsLike <= -20
+          ? 'Extreme cold. Exposed skin at risk within minutes.'
+          : 'Sharp cold. Layers are load-bearing today.',
+        verdict: weather.feelsLike <= -20 ? 'Full coverage. No compromises.' : 'Coat, gloves, thermal base.',
+        verdictIcon: 'snowflake',
+        statOneLabel: 'Wind Chill',
+        statOneValue: windChill,
+        statOneIcon: 'thermometer-low',
+      };
+    }
+    case 'snow': {
+      const isHeavy  = code === 75 || code === 86;
+      const isGrains = code === 77;
+      const rateStr  = weather.precipRate !== undefined ? formatPrecipRate(weather.precipRate) : `${precip}%`;
+      return {
+        summary: isHeavy  ? 'Heavy snowfall. Visibility dropping, roads compromised.'
+                : isGrains ? 'Fine snow grains. Icy underfoot despite low accumulation.'
+                :            'Snow accumulating. Watch the ground, not the sky.',
+        verdict: isHeavy ? 'Maximum insulation. Waterproof everything.' : 'The coat is the outfit.',
         verdictIcon: 'hanger',
-        statOneLabel: 'Precip',
-        statOneValue: `${precip}%`,
+        statOneLabel: isHeavy ? 'Snowfall' : 'Precip',
+        statOneValue: rateStr,
         statOneIcon: 'snowflake',
       };
+    }
     case 'rain':
-    case 'heavy-rain':
+    case 'heavy-rain': {
+      const isFreezing = code === 66 || code === 67;
+      const isDrizzle  = code === 51 || code === 53 || code === 55 || code === 56 || code === 57;
+      const isViolent  = code === 65 || code === 82 || code === 81;
+      const rateStr    = weather.precipRate !== undefined ? formatPrecipRate(weather.precipRate) : `${precip}%`;
+      const summary    = isFreezing ? 'Rain freezing on contact. Every surface is a liability.'
+                       : isViolent  ? 'Heavy downpour. Move fast or get comprehensively wet.'
+                       : isDrizzle  ? 'Fine drizzle. Quietly soaks everything given time.'
+                       :              'Steady rain. Umbrella is non-negotiable.';
+      const verdict    = isFreezing ? 'Waterproof and grip-forward footwear.'
+                       : isViolent  ? 'Waterproof the whole look.'
+                       :              'Waterproof the fantasy.';
       return {
-        summary: kind === 'heavy-rain' ? 'Wet streets, sharper layers.' : 'Expect steady drizzle.',
-        verdict: 'Waterproof the fantasy.',
+        summary,
+        verdict,
         verdictIcon: 'umbrella-outline',
-        statOneLabel: 'Precip',
-        statOneValue: `${precip}%`,
+        statOneLabel: 'Rate',
+        statOneValue: rateStr,
         statOneIcon: 'water-outline',
       };
-    case 'storm':
+    }
+    case 'storm': {
+      const isHail = code === 96 || code === 99;
       return {
-        summary: 'Dramatic skies, practical shoes.',
-        verdict: 'Keep the look weatherproof.',
+        summary: isHail
+          ? 'Hail and lightning. Stay indoors until this passes.'
+          : 'Active thunderstorm. Lightning present.',
+        verdict: isHail ? 'Stay inside. Full stop.' : 'Shelter first, style later.',
         verdictIcon: 'weather-lightning',
         statOneLabel: 'Precip',
         statOneValue: `${precip}%`,
         statOneIcon: 'weather-lightning-rainy',
       };
+    }
     case 'cloudy':
-    case 'partly-cloudy':
+    case 'partly-cloudy': {
+      const cloudPct = weather.cloudCoverPercent;
+      const cloudStr = cloudPct !== undefined ? `${cloudPct}%` : weather.conditionLabel;
+      const summary  = kind === 'cloudy'
+        ? 'Grey sky sealed in. Muted light, flat shadows.'
+        : 'Sun and cloud trading places. Layers are smart.';
       return {
-        summary: 'Soft light, easy layers.',
+        summary,
         verdict: 'Layer with intent.',
         verdictIcon: 'tshirt-crew-outline',
-        statOneLabel: 'Clouds',
-        statOneValue: weather.conditionLabel,
+        statOneLabel: 'Cloud Cover',
+        statOneValue: cloudStr,
         statOneIcon: 'weather-cloudy',
       };
-    case 'fog':
+    }
+    case 'fog': {
+      const isIcy = code === 48;
+      const visStr = weather.visibility !== undefined
+        ? formatVisibility(weather.visibility)
+        : 'Very Low';
       return {
-        summary: 'Low visibility, quiet polish.',
-        verdict: 'Keep the lines clean.',
+        summary: isIcy
+          ? 'Icy fog. Ice crystal deposit forming on surfaces.'
+          : 'Dense fog. Visibility down to metres.',
+        verdict: 'Keep the lines clean. Visibility is a liability.',
         verdictIcon: 'blur',
         statOneLabel: 'Visibility',
-        statOneValue: 'Low',
+        statOneValue: visStr,
         statOneIcon: 'weather-fog',
       };
+    }
     case 'wind': {
       const gust = weather.windGust && weather.windGust > weather.windSpeed + 10
         ? ` · gusts ${weather.windGust}`
         : '';
+      const isStrong = weather.windSpeed >= 50;
       return {
-        summary: 'Breezy enough to edit volume.',
-        verdict: 'Anchor the silhouette.',
+        summary: isStrong
+          ? 'Strong wind. Loose items will not stay loose for long.'
+          : 'Breezy enough to make volume a decision.',
+        verdict: isStrong ? 'Anchor everything.' : 'Anchor the silhouette.',
         verdictIcon: 'weather-windy',
         statOneLabel: 'Wind',
         statOneValue: `${weather.windSpeed}${gust} km/h`,
         statOneIcon: 'weather-windy',
       };
     }
-    case 'night':
+    case 'night': {
+      const isLate = (() => {
+        if (weather.utcOffsetSeconds === undefined) return false;
+        const h = Math.floor((Date.now() / 1000 + weather.utcOffsetSeconds) / 3600) % 24;
+        return h >= 22 || h < 4;
+      })();
       return {
-        summary: 'Cooler air, sharper contrast.',
-        verdict: 'Bring the after-dark layer.',
+        summary: isLate
+          ? 'Late night. Temperature at its lowest, dressing accordingly.'
+          : 'Cooler air, sharper contrast.',
+        verdict: isLate ? 'The jacket is the look.' : 'Bring the after-dark layer.',
         verdictIcon: 'moon-waning-crescent',
         statOneLabel: 'Humidity',
         statOneValue: `${weather.humidity}%`,
         statOneIcon: 'water-percent',
       };
+    }
     case 'sunny':
     default: {
-      const isHot = weather.feelsLike >= 33;
       const uvVal = weather.uvIndex !== undefined
         ? `${weather.uvIndex} · ${uvLabel(weather.uvIndex)}`
-        : 'High';
+        : 'Moderate';
+      const isWarm = weather.feelsLike >= 26;
       return {
-        summary: isHot ? 'High heat today. Dress light, stay hydrated.' : 'Warm, dry, low wind.',
-        verdict: isHot ? 'Breathable fabrics only.' : 'Take the sunglasses.',
-        verdictIcon: isHot ? 'thermometer-high' : 'sunglasses',
+        summary: isWarm
+          ? 'Warm, dry, and fully committed to the look.'
+          : 'Clear sky. Low wind. High visibility.',
+        verdict: isWarm ? 'Take the sunglasses. Leave the layers.' : 'Take the sunglasses.',
+        verdictIcon: 'sunglasses',
         statOneLabel: 'UV Index',
         statOneValue: uvVal,
         statOneIcon: 'white-balance-sunny',
@@ -468,25 +604,19 @@ function copyFor(kind: WeatherGlanceKind, weather: WeatherData): GlanceCopy {
 
 function editorialStatus(kind: WeatherGlanceKind): string {
   switch (kind) {
+    case 'hot':         return 'HEAT ADVISORY';
+    case 'cold':        return 'COLD SNAP';
     case 'rain':
-    case 'heavy-rain':
-      return 'RAIN CHECK';
-    case 'storm':
-      return 'STORM WATCH';
-    case 'snow':
-      return 'SNOW MODE';
-    case 'fog':
-      return 'LOW VISIBILITY';
-    case 'wind':
-      return 'WIND CHECK';
-    case 'night':
-      return 'AFTER DARK';
+    case 'heavy-rain':  return 'RAIN CHECK';
+    case 'storm':       return 'STORM WATCH';
+    case 'snow':        return 'SNOW MODE';
+    case 'fog':         return 'LOW VISIBILITY';
+    case 'wind':        return 'WIND CHECK';
+    case 'night':       return 'AFTER DARK';
     case 'cloudy':
-    case 'partly-cloudy':
-      return 'LAYER CHECK';
+    case 'partly-cloudy': return 'LAYER CHECK';
     case 'sunny':
-    default:
-      return 'SUN CHECK';
+    default:            return 'SUN CHECK';
   }
 }
 
@@ -551,6 +681,10 @@ export function WeatherGlanceCard({ weather, formatTemp, mode = 'strip', style, 
       <View style={styles.card}>
         {kind === 'sunny' ? (
           <SunnyWeatherAnimation borderRadius={cardRadius} utcOffsetSeconds={weather.utcOffsetSeconds} />
+        ) : kind === 'hot' ? (
+          <HotWeatherAnimation borderRadius={cardRadius} />
+        ) : kind === 'cold' ? (
+          <ColdWeatherAnimation borderRadius={cardRadius} />
         ) : (
           <>
             <Atmosphere kind={kind} palette={palette} mode={mode} />
@@ -564,7 +698,7 @@ export function WeatherGlanceCard({ weather, formatTemp, mode = 'strip', style, 
           <View style={styles.editorialHeader}>
             <Text style={styles.editorialKicker} numberOfLines={1}>WEATHER EDITORIAL</Text>
             <Text style={styles.editorialStatus} numberOfLines={1}>
-              {kind === 'sunny' && weather.feelsLike >= 33 ? 'HEAT CHECK' : editorialStatus(kind)}
+              {kind === 'hot' ? 'HEAT ADVISORY' : kind === 'cold' ? 'COLD SNAP' : editorialStatus(kind)}
             </Text>
           </View>
 
@@ -597,7 +731,7 @@ export function WeatherGlanceCard({ weather, formatTemp, mode = 'strip', style, 
               <MaterialCommunityIcons
                 name={weather.conditionIcon as any}
                 size={mode === 'hero' ? 28 : 24}
-                color={kind === 'sunny' || kind === 'partly-cloudy' ? palette.accent : palette.text}
+                color={['sunny', 'hot', 'cold', 'partly-cloudy'].includes(kind) ? palette.accent : palette.text}
               />
               <View style={styles.conditionCopy}>
                 <Text style={styles.conditionLabel} numberOfLines={1}>{weather.conditionLabel}</Text>
@@ -676,6 +810,10 @@ function AnimatedWeatherWidget({
       <View style={styles.card}>
         {kind === 'sunny' ? (
           <SunnyWeatherAnimation borderRadius={cardRadius} utcOffsetSeconds={weather.utcOffsetSeconds} />
+        ) : kind === 'hot' ? (
+          <HotWeatherAnimation borderRadius={cardRadius} />
+        ) : kind === 'cold' ? (
+          <ColdWeatherAnimation borderRadius={cardRadius} />
         ) : (
           <>
             <Atmosphere kind={kind} palette={palette} mode={mode} />

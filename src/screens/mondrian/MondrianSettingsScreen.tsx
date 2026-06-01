@@ -17,7 +17,7 @@ import {
   setAnalyticsEnabledPreference,
   ANALYTICS_ENABLED_KEY,
 } from '../../services/analytics';
-import { AUTH_SESSION_KEY, AUTH_USERS_KEY } from '../../services/auth';
+import { deleteAllLocalAuth } from '../../services/auth';
 
 const { red, blue, yellow, black, white, gridLine } = mondrianTokens;
 
@@ -29,7 +29,6 @@ const ALL_KEYS = [
   '@outfit_oracle_founding_member', '@outfit_oracle_theme',
   '@outfit_oracle_temp_unit', '@outfit_oracle_y2k_font_subtheme',
   '@outfit_oracle_magic_shown', ANALYTICS_ENABLED_KEY,
-  AUTH_USERS_KEY, AUTH_SESSION_KEY,
 ];
 const SOFT_KEYS = [
   '@outfit_oracle_history', '@outfit_oracle_first_consult',
@@ -117,6 +116,7 @@ export function MondrianSettingsScreen() {
           text: 'Reset', style: 'destructive',
           onPress: async () => {
             await Promise.all(ALL_KEYS.map(k => AsyncStorage.removeItem(k)));
+            await deleteAllLocalAuth();
             historyCtx.clear();
             await signOut();
             Alert.alert('Done', 'All data removed.');

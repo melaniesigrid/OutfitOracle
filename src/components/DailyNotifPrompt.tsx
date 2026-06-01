@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated, Easing, Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -62,9 +62,9 @@ export function DailyNotifPrompt({ visible, city, tempLabel, onEnable, onDismiss
     onDismiss();
   }
 
-  if (!visible) return null;
+  const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
 
-  const styles = makeStyles(colors, fonts);
+  if (!visible) return null;
 
   return (
     <Modal transparent animationType="none" visible={visible} onRequestClose={handleDismiss}>

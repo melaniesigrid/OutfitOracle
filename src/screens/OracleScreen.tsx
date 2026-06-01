@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, TextInput, Pressable, ScrollView, RefreshControl,
   StyleSheet, KeyboardAvoidingView, Platform, StatusBar,
@@ -144,7 +144,7 @@ function EditorialOracleScreen() {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
   const { oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx, oracleImages } = useAppData();
-  const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache, isOffline } = oracle;
+  const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache, isOffline, cacheLoaded } = oracle;
   const { newMilestone, newRank, clearMilestone, clearRank } = streakCtx;
   const findArchiveEntry = archiveCtx.findEntry;
   const updateArchiveImages = archiveCtx.updateImages;
@@ -403,11 +403,11 @@ function EditorialOracleScreen() {
   };
 
   useEffect(() => {
+    if (!cacheLoaded) return; // wait for cache check to finish before fetching
     if (autoLocationStartedRef.current || profileCtx.profileState.status === 'loading') return;
-    if (status !== 'idle') return; // AppContext already auto-consulted or cache loaded
     autoLocationStartedRef.current = true;
     handleUseLocation();
-  }, [profileCtx.profileState.status, status]);
+  }, [cacheLoaded, profileCtx.profileState.status]);
 
   const handleShare = async () => {
     if (!shareCardRef.current || !verdict) return;
@@ -417,6 +417,17 @@ function EditorialOracleScreen() {
       await Share.share({ url: uri });
     } catch { /* cancelled */ }
   };
+
+  const handleNotifEnable = useCallback(async (hour: number) => {
+    setShowNotifPrompt(false);
+    await enableNotifs(hour, notifPromptCityRef.current, notifPromptTempRef.current).catch(() => {});
+    AsyncStorage.setItem(NOTIF_PROMPTED_KEY, 'true').catch(() => {});
+  }, [enableNotifs]);
+
+  const handleNotifDismiss = useCallback(() => {
+    setShowNotifPrompt(false);
+    AsyncStorage.setItem(NOTIF_PROMPTED_KEY, 'true').catch(() => {});
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -785,15 +796,8 @@ function EditorialOracleScreen() {
         visible={showNotifPrompt}
         city={notifPromptCityRef.current}
         tempLabel={notifPromptTempRef.current}
-        onEnable={async (hour) => {
-          setShowNotifPrompt(false);
-          await enableNotifs(hour, notifPromptCityRef.current, notifPromptTempRef.current).catch(() => {});
-          AsyncStorage.setItem(NOTIF_PROMPTED_KEY, 'true').catch(() => {});
-        }}
-        onDismiss={() => {
-          setShowNotifPrompt(false);
-          AsyncStorage.setItem(NOTIF_PROMPTED_KEY, 'true').catch(() => {});
-        }}
+        onEnable={handleNotifEnable}
+        onDismiss={handleNotifDismiss}
       />
 
       {/* ── FIRST-CONSULT MAGIC MOMENT ── */}
