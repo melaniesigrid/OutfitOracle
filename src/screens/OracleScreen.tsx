@@ -143,7 +143,7 @@ function EditorialOracleScreen() {
   const { formatTemp } = useTempUnit();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(colors, fonts, themeName), [colors, fonts, themeName]);
-  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx, oracleImages } = useAppData();
+  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx, oracleImages, dataResetEpoch } = useAppData();
   const { status, weather, verdict, error, consult, consultByCoords, reset, cachedCity, cachedAt, isFromCache, isOffline, cacheLoaded } = oracle;
   const { newMilestone, newRank, clearMilestone, clearRank } = streakCtx;
   const findArchiveEntry = archiveCtx.findEntry;
@@ -403,11 +403,15 @@ function EditorialOracleScreen() {
   };
 
   useEffect(() => {
+    autoLocationStartedRef.current = false;
+  }, [dataResetEpoch]);
+
+  useEffect(() => {
     if (!cacheLoaded) return; // wait for cache check to finish before fetching
-    if (autoLocationStartedRef.current || profileCtx.profileState.status === 'loading') return;
+    if (autoLocationStartedRef.current || profileCtx.profileState.status !== 'set') return;
     autoLocationStartedRef.current = true;
     handleUseLocation();
-  }, [cacheLoaded, profileCtx.profileState.status]);
+  }, [cacheLoaded, dataResetEpoch, profileCtx.profileState.status]);
 
   const handleShare = async () => {
     if (!shareCardRef.current || !verdict) return;

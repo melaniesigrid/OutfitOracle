@@ -42,7 +42,7 @@ export function Y2KOracleScreen() {
   const { formatTemp } = useTempUnit();
   const { magicOpacity, showMagicMoment, dismissMagicMoment, tryTriggerFirstConsult } = useMagicMoment();
 
-  const { oracle, profileCtx, historyCtx, streakCtx } = useAppData();
+  const { oracle, profileCtx, historyCtx, streakCtx, dataResetEpoch } = useAppData();
   const {
     status, weather, verdict, error, consult, consultByCoords,
     reset, cachedCity, cachedAt, isFromCache, isOffline,
@@ -190,10 +190,14 @@ export function Y2KOracleScreen() {
   };
 
   useEffect(() => {
-    if (autoLocationStartedRef.current || profileCtx.profileState.status === 'loading') return;
+    autoLocationStartedRef.current = false;
+  }, [dataResetEpoch]);
+
+  useEffect(() => {
+    if (autoLocationStartedRef.current || profileCtx.profileState.status !== 'set') return;
     autoLocationStartedRef.current = true;
     handleUseLocation();
-  }, [profileCtx.profileState.status]);
+  }, [dataResetEpoch, profileCtx.profileState.status]);
 
   const handleShare = async () => {
     if (!shareCardRef.current || !verdict) return;

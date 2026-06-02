@@ -4,6 +4,19 @@ All notable changes to Outfit Oracle are documented here.
 
 ---
 
+## [1.5.1.0] — 2026-06-02
+
+### Fixed
+- **Data reset completeness** — Full reset now clears every persisted key: look archive, device ID, notification state (last city, prompted flag, rating ID), generated image cache, and city descriptor cache. All three Oracle screen variants (Editorial, Y2K, Mondrian) and Settings screens aligned to the same `ALL_KEYS` list.
+- **Auto-location after reset** — Oracle screens now listen to `dataResetEpoch` from `AppContext`; the one-shot auto-location guard resets on each epoch tick so GPS consult fires correctly after a full data reset. Guard also waits for `profileState.status === 'set'` instead of `!== 'loading'` to prevent spurious triggers during onboarding.
+- **Hook `clear()` completeness** — `useOutfitHistory.clear()` now also clears `firstConsultAt` and its AsyncStorage key. `useArchive`, `useConsultStreak`, and `useStyleProfile` each expose a `clear()` method wired to `notifyDataReset()` so the reset signal propagates atomically.
+- **`makeId()` uses secure random bytes** — Local user ID suffix is now generated with `fillSecureRandomBytes` (24-hex-char suffix) instead of `Math.random().toString(36)`. Added `auth.test.ts` assertion proving `Math.random` is never called during account creation.
+
+### Documentation
+- **README screenshots** — Added 4 simulator screenshots (Oracle tab, Today tab, You tab, theme picker) displayed in a 4-column table near the top of the README.
+
+---
+
 ## [1.5.0.1] — 2026-06-01
 
 ### Documentation

@@ -128,7 +128,7 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 ## Test Debt (v1.5.0.0 — social auth + notifications branch)
 
 ### ~~Test coverage for weather utilities~~ — RESOLVED in 1.5.0.0
-`__tests__/weatherUtils.test.ts` — 14 tests covering `uvLabel` (boundary cases for all 5 tiers), `localHour` (UTC offsets), NWS US alert path (happy path + non-ok fallback). Oracle payload stripping tests added to `oracleProxy.test.ts`. Total: 201 tests across 22 suites.
+`__tests__/weatherUtils.test.ts` — 14 tests covering `uvLabel` (boundary cases for all 5 tiers), `localHour` (UTC offsets), NWS US alert path (happy path + non-ok fallback). Oracle payload stripping tests added to `oracleProxy.test.ts`. Total: 202 tests across 22 suites.
 
 ## Known Deferred Issues (from adversarial review v1.5.0.0)
 
@@ -137,11 +137,8 @@ ReadyPlayer.me SDK or Apple RealityKit (native Swift target). User configures a 
 **Why deferred:** Auth endpoint rate limiting requires session-aware logic (don't limit already-authenticated refreshes) and separate KV key space design.
 **Priority:** P1
 
-### makeId() uses Math.random()
-**What:** `auth.ts:makeId()` generates local user IDs with `Math.random()` + `Date.now()`. Should use `fillSecureRandomBytes`.
-**Why deferred:** Low impact (device-local IDs), not security-critical at current scale.
-**Priority:** P3
+### ~~makeId() uses Math.random()~~ — RESOLVED 2026-06-01
+`auth.ts:makeId()` now uses `fillSecureRandomBytes()` for the local user ID suffix instead of `Math.random()`. Added `auth.test.ts` coverage proving local account creation does not call `Math.random()` and still emits the expected `user_<timestamp>_<hex>` shape.
 
-### autoLocationStartedRef never resets after app reset
-**What:** `OracleScreen.tsx` — if the user resets all data without unmounting the Oracle tab, auto-location never fires again in the same session.
-**Priority:** P3
+### ~~autoLocationStartedRef never resets after app reset~~ — RESOLVED 2026-06-01
+Full data reset now emits a central `notifyDataReset()` signal from `AppContext`. The app-level auto-consult guard and all three Oracle screen variants (editorial, Y2K, Mondrian) clear their one-shot auto-location refs when that signal changes, and auto-location now waits for a set style profile instead of firing during loading/onboarding. The reset path also clears in-memory Oracle/profile/history/streak/saved/archive state plus missing persisted reset keys including look archive, notification state, device ID, generated image cache, and city descriptor cache.

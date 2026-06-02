@@ -10,6 +10,19 @@ A weather-powered AI fashion advisor with the energy of a Y2K fashion editor who
 
 ---
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/01-oracle.png" width="220" alt="Oracle tab" /><br/><sub>Oracle — consult interface</sub></td>
+    <td align="center"><img src="docs/screenshots/02-today.png" width="220" alt="Today tab" /><br/><sub>Today — word of the day &amp; weekly mood</sub></td>
+    <td align="center"><img src="docs/screenshots/03-you.png" width="220" alt="You tab" /><br/><sub>You — rank, passport &amp; badges</sub></td>
+    <td align="center"><img src="docs/screenshots/04-themes.png" width="220" alt="Theme picker" /><br/><sub>13 visual themes</sub></td>
+  </tr>
+</table>
+
+---
+
 ## What it does
 
 - Fetches live weather for any city via Open-Meteo (free, no key)

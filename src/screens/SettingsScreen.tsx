@@ -22,7 +22,12 @@ import {
 } from '../services/analytics';
 import { deleteAllLocalAuth } from '../services/auth';
 import {
-  NOTIF_ENABLED_KEY, NOTIF_HOUR_KEY, useNotifications,
+  NOTIF_ENABLED_KEY,
+  NOTIF_HOUR_KEY,
+  NOTIF_LAST_CITY_KEY,
+  NOTIF_PROMPTED_KEY,
+  NOTIF_RATING_ID_KEY,
+  useNotifications,
 } from '../hooks/useNotifications';
 
 const ALL_KEYS = [
@@ -33,15 +38,20 @@ const ALL_KEYS = [
   '@outfit_oracle_streak',
   '@outfit_oracle_style_profile',
   '@outfit_oracle_saved',
+  '@outfit_oracle_look_archive_v1',
   '@onboarding_complete',
   '@outfit_oracle_founding_member',
   '@outfit_oracle_theme',
   '@outfit_oracle_temp_unit',
   '@outfit_oracle_y2k_font_subtheme',
   '@outfit_oracle_magic_shown',
+  '@outfit_oracle_device_id',
   ANALYTICS_ENABLED_KEY,
   NOTIF_ENABLED_KEY,
   NOTIF_HOUR_KEY,
+  NOTIF_LAST_CITY_KEY,
+  NOTIF_PROMPTED_KEY,
+  NOTIF_RATING_ID_KEY,
 ];
 
 const SOFT_KEYS = [
@@ -83,7 +93,7 @@ function EditorialSettingsScreen() {
   const { unit: tempUnit, setUnit: setTempUnit } = useTempUnit();
   const styles = useMemo(() => makeStyles(colors, fonts), [colors, fonts]);
   const navigation = useNavigation<any>();
-  const { historyCtx } = useAppData();
+  const { historyCtx, notifyDataReset } = useAppData();
   const { user, signOut, updateProfile } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState('');
@@ -199,11 +209,14 @@ function EditorialSettingsScreen() {
             await Promise.all(ALL_KEYS.map(k => AsyncStorage.removeItem(k)));
             try {
               const all = await AsyncStorage.getAllKeys();
-              const imageKeys = all.filter(k => k.startsWith('@oracle_image_v1_'));
-              if (imageKeys.length > 0) await AsyncStorage.multiRemove(imageKeys);
+              const derivedKeys = all.filter(k =>
+                k.startsWith('@oracle_image_v1_') ||
+                k.startsWith('@outfit_oracle_city_descriptor_')
+              );
+              if (derivedKeys.length > 0) await AsyncStorage.multiRemove(derivedKeys);
             } catch { /* non-fatal */ }
             await deleteAllLocalAuth();
-            historyCtx.clear();
+            notifyDataReset();
             await signOut();
             Alert.alert('Done', 'All data removed.');
           },
