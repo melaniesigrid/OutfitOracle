@@ -35,6 +35,23 @@ describe('local auth service', () => {
     expect(sessionRaw).toContain(user.id);
   });
 
+  it('generates local user IDs without Math.random()', async () => {
+    const randomSpy = jest.spyOn(Math, 'random');
+
+    try {
+      const user = await createLocalAccount({
+        name: 'Melanie',
+        email: 'melanie@example.com',
+        password: 'weather123',
+      });
+
+      expect(user.id).toMatch(/^user_\d+_[0-9a-f]{24}$/);
+      expect(randomSpy).not.toHaveBeenCalled();
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
   it('rejects duplicate emails on the same device', async () => {
     await createLocalAccount({ name: 'Melanie', email: 'melanie@example.com', password: 'weather123' });
 
