@@ -18,6 +18,8 @@ type AppContextValue = {
   badges: WeatherBadge[];
   newBadgeQueue: WeatherBadge[];
   dismissBadgeToast: () => void;
+  dataResetEpoch: number;
+  notifyDataReset: () => void;
   oracleImages: {
     day: OracleImageState;
     night: OracleImageState;
@@ -53,6 +55,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const prevEarnedRef  = useRef<Set<string>>(new Set());
   const badgesHydratedRef = useRef(false);
   const [newBadgeQueue, setNewBadgeQueue] = useState<WeatherBadge[]>([]);
+  const autoConsultFiredRef = useRef(false);
+  const [dataResetEpoch, setDataResetEpoch] = useState(0);
 
   useEffect(() => {
     if (!historyCtx.historyLoaded || !streakCtx.streakLoaded || !savedCtx.savedLoaded) return;
@@ -71,38 +75,55 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [badges, historyCtx.historyLoaded, savedCtx.savedLoaded, streakCtx.streakLoaded]);
 
   const dismissBadgeToast = useCallback(() => setNewBadgeQueue(prev => prev.slice(1)), []);
+  const notifyDataReset = useCallback(() => {
+    oracle.reset();
+    profileCtx.clear();
+    historyCtx.clear();
+    streakCtx.clear();
+    savedCtx.clear();
+    archiveCtx.clear();
+    autoConsultFiredRef.current = false;
+    prevEarnedRef.current = new Set();
+    badgesHydratedRef.current = false;
+    setNewBadgeQueue([]);
+    setDataResetEpoch(epoch => epoch + 1);
+  }, [archiveCtx.clear, historyCtx.clear, oracle.reset, profileCtx.clear, savedCtx.clear, streakCtx.clear]);
 
   // Auto-consult on app open using device location, so Today tab is pre-populated.
   // Only fires when: cache check is done, no valid cache exists, and profile is loaded.
-  const autoConsultFiredRef = useRef(false);
   useEffect(() => {
     if (!oracle.cacheLoaded) return;
     if (oracle.status !== 'idle') return;
-    if (profileCtx.profileState.status === 'loading') return;
+    if (profileCtx.profileState.status !== 'set') return;
     if (autoConsultFiredRef.current) return;
     autoConsultFiredRef.current = true;
 
     (async () => {
+      const fallback = () => {
+        if (oracle.lastKnownCity) {
+          oracle.consult(oracle.lastKnownCity, 'Women', profileCtx.profile ?? undefined);
+        }
+      };
       try {
         const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
-        if (permStatus !== 'granted') return;
+        if (permStatus !== 'granted') { fallback(); return; }
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         const results = await Location.reverseGeocodeAsync(loc.coords);
-        if (!results.length) return;
+        if (!results.length) { fallback(); return; }
         const place = results[0];
         const detectedCity    = place.city ?? place.subregion ?? place.region ?? '';
         const detectedCountry = place.isoCountryCode ?? place.country ?? '';
-        if (!detectedCity) return;
+        if (!detectedCity) { fallback(); return; }
         oracle.consultByCoords(
           loc.coords.latitude, loc.coords.longitude,
           detectedCity, detectedCountry,
           'Women', profileCtx.profile ?? undefined,
         );
       } catch {
-        // Location unavailable — silent fail, user can consult manually from Oracle tab
+        fallback();
       }
     })();
-  }, [oracle.cacheLoaded, oracle.status, profileCtx.profileState.status]);
+  }, [dataResetEpoch, oracle.cacheLoaded, oracle.status, profileCtx.profileState.status]);
 
   const contextValue = useMemo(
     () => ({
@@ -115,6 +136,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       badges,
       newBadgeQueue,
       dismissBadgeToast,
+      dataResetEpoch,
+      notifyDataReset,
       oracleImages: {
         day: dayImageState,
         night: nightImageState,
@@ -122,7 +145,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         nightSketch: nightSketchImageState,
       },
     }),
-    [oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx, badges, newBadgeQueue, dismissBadgeToast, dayImageState, nightImageState, daySketchImageState, nightSketchImageState],
+    [oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx, badges, newBadgeQueue, dismissBadgeToast, dataResetEpoch, notifyDataReset, dayImageState, nightImageState, daySketchImageState, nightSketchImageState],
   );
 
   return (

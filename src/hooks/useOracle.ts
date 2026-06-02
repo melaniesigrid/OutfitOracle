@@ -27,12 +27,15 @@ export function useOracle() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [verdict, setVerdict] = useState<OracleVerdict | null>(null);
   const [error, setError]     = useState<string | null>(null);
-  const [cachedCity, setCachedCity]     = useState<string | null>(null);
-  const [cachedAt, setCachedAt]         = useState<number | null>(null);
-  const [isOffline, setIsOffline]       = useState(false);
-  const [lastOccasion, setLastOccasion] = useState<string | undefined>(undefined);
-  const [lastGender, setLastGender]     = useState<string>('Women');
-  const [cacheLoaded, setCacheLoaded]   = useState(false);
+  const [cachedCity, setCachedCity]         = useState<string | null>(null);
+  const [cachedAt, setCachedAt]             = useState<number | null>(null);
+  const [isOffline, setIsOffline]           = useState(false);
+  const [lastOccasion, setLastOccasion]     = useState<string | undefined>(undefined);
+  const [lastGender, setLastGender]         = useState<string>('Women');
+  const [cacheLoaded, setCacheLoaded]       = useState(false);
+  // Persists across cache expiry — always the city of the most recent consult,
+  // even if the full cached result is stale. Used as a GPS fallback on open.
+  const [lastKnownCity, setLastKnownCity]   = useState<string | null>(null);
   const isFromCacheRef = useRef(false);
   const consultIdRef   = useRef(0);
 
@@ -65,6 +68,9 @@ export function useOracle() {
       if (!raw) { setCacheLoaded(true); return; }
       try {
         const parsed: CachedResult = JSON.parse(raw);
+        // Always remember the last city regardless of TTL, so the auto-consult
+        // in AppContext can fall back to it when GPS is unavailable.
+        if (parsed.city) setLastKnownCity(parsed.city);
         if (Date.now() - parsed.timestamp < CACHE_TTL) {
           parsed.verdict = normalizeVerdictShopItems(parsed.verdict);
           isFromCacheRef.current = true;
@@ -192,6 +198,7 @@ export function useOracle() {
     reset,
     cachedCity,
     cachedAt,
+    lastKnownCity,
     isFromCache: isFromCacheRef.current,
     isOffline,
     cacheLoaded,
