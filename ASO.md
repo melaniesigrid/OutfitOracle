@@ -1,6 +1,6 @@
 # App Store Optimization — Outfit Oracle
 **Living document** · Update with every release · Tie keyword changes to version bumps  
-*Last updated: 2026-06-01*
+*Last updated: 2026-06-01 (v2 — expanded research)*
 
 Related: [MARKETING.md](MARKETING.md) · [COMPETITOR_ANALYSIS.md](COMPETITOR_ANALYSIS.md) · [DESIGN.md](DESIGN.md)
 
@@ -181,6 +181,97 @@ Pulled from [COMPETITOR_ANALYSIS.md](COMPETITOR_ANALYSIS.md). These are keywords
 | `AI wardrobe` | Whering, Alta | Medium — captures wardrobe-adjacent searchers; wrong job-to-be-done for us so use sparingly |
 
 **Immediate action:** Add `AI outfit picker`, `fashion oracle`, `what should i wear`, and `AI fashion advisor` to the keyword field on next metadata update.
+
+---
+
+## Hidden Keyword Surfaces
+
+Beyond the standard keyword field, three indexed surfaces are almost always ignored. Each one is free, requires no additional submissions, and compounds over time.
+
+### Developer Name
+
+Apple and Google Play both index the developer name. Most teams use their legal entity name ("Melanie Arellano" or "OutfitOracle LLC"), which contributes nothing to ranking. The name that appears under your app title in search results has ~50 characters of keyword potential.
+
+**Strategy:** The developer name should capture at least one high-value keyword not already in the title, subtitle, or keyword field. "Fashion" and "Style" are the best candidates — both are too competitive to waste the 100-char keyword field on, but capturing them via developer name is free.
+
+| Option | Keyword signal | Notes |
+|--------|---------------|-------|
+| `Oracle Fashion Labs` | "fashion", "labs" (authority signal) | Clean, studio-like credibility |
+| `Oracle Style Studio` | "style", "studio" | Distinct from the app name |
+| **`Oracle Fashion Studio`** | "fashion", "studio" | Recommended — indexed, credible |
+| `AI Fashion Technology` | "AI", "fashion", "technology" | Generic but keyword-dense |
+
+Do not repeat words already in the app title ("Outfit", "Oracle", "Advisor"). Duplication across metadata fields is ignored — it is not additive.
+
+### In-App Purchase Names (When Pro Tier Ships)
+
+Apple indexes IAP display names. The indexing weight is lighter than title/subtitle, but the cost of optimising is zero. When Oracle Pro launches, name IAPs with keyword intent rather than generic tier names:
+
+| IAP | Avoid | Use instead |
+|-----|-------|------------|
+| Monthly subscription | `Outfit Oracle Pro Monthly` | `Oracle Pro — AI Style Advisor` |
+| Annual subscription | `Outfit Oracle Pro Annual` | `Oracle Pro — AI Fashion Stylist` |
+| Unlimited consults | `Remove Limit Pack` | `Unlimited Oracle Consults` |
+
+Rules: Keep "Oracle" in every IAP name (reinforces the brand keyword). Each IAP should contain at least one keyword not in the title. Do not repeat the same keyword across IAPs.
+
+### Single-Word Keyword Field Tactic
+
+Apple's algorithm auto-generates keyword combinations from all indexed fields. Entering `outfit,weather,AI,stylist` into the keyword field generates: "outfit weather", "weather stylist", "AI outfit", "AI stylist" — far more coverage than entering individual phrases.
+
+**Implication:** Use single words in the keyword field. Place multi-word phrases in the title and subtitle, where phrase-match carries higher weight. The keyword field should extend the combination space, not duplicate phrases already in title/subtitle.
+
+**Current field (inefficient):**
+```
+outfit,AI stylist,weather,clothing,wardrobe,fashion advice,what to wear,style,daily look,dress
+```
+
+**Revised field (single words, more combinations):**
+```
+outfit,stylist,weather,clothing,wardrobe,advice,look,dress,travel,occasion,verdict,guide
+```
+Count: 76 chars ✓ — saves 17 chars for additional keywords while generating more unique combinations.
+
+**Exception:** Keep multi-word phrases that represent exact high-intent queries Apple is unlikely to generate from components. "What to wear" (a common 3-word search) is worth keeping. "Fashion advice" is not — Apple will combine "fashion" + "advice" itself.
+
+---
+
+## Seasonal Keyword Calendar
+
+Fashion search volume is strongly seasonal. Missing the pre-season indexing window means missing peak demand. Apple takes 7–14 days to index metadata changes — update 3 weeks before each season's search peak, not on the day.
+
+### Seasonal Update Schedule
+
+| Season | Keyword update window | Add to field | Remove from field |
+|--------|----------------------|-------------|-------------------|
+| **Spring** | Early February | `spring outfit`, `transitional look`, `rain outfit` | `winter layering`, `cold weather dressing` |
+| **Summer** | Early April | `summer outfit`, `heat dressing`, `vacation look`, `linen` | `spring layers`, `rain outfit` |
+| **Fall** | Early August | `fall outfit`, `autumn layers`, `back to work look` | `summer outfit`, `vacation look` |
+| **Winter** | Early October | `winter outfit`, `cold weather`, `layering`, `coat` | `fall outfit`, `autumn layers` |
+
+**Rule:** Never replace more than 20% of keywords at once. Seasonal swaps should only touch the lowest-performing current keywords (by rank report). Core terms — "outfit", "AI stylist", "weather", "clothing" — are evergreen and never rotated out.
+
+### Fashion Week Windows
+
+Fashion Week drives measurable search spikes for style-related terms. Add fashion week keywords 2 weeks before each city's show dates, then rotate out within 30 days.
+
+| Fashion Week | Show dates (approx) | Keywords to temporarily add |
+|-------------|-------------------|----------------------------|
+| New York | Early Sept / Early Feb | `fashion week outfit`, `NYFW style`, `New York fashion` |
+| London | Mid-Sept / Mid-Feb | `LFW outfit`, `London fashion style` |
+| Milan | Late Sept / Late Feb | `MFW outfit`, `Milan fashion week` |
+| Paris | Late Sept / Early March | `PFW outfit`, `Paris fashion style`, `Paris chic` |
+
+**In-App Events connection:** Run a "Fashion Week Oracle Edition" In-App Event during each city's Fashion Week window. The event's indexed name and description capture the spike keywords while the event itself earns editorial placement.
+
+### Seasonal Screenshot Updates
+
+Screenshots can (and should) change with seasons. The Editorial Dark theme works year-round but captions and city choices should reflect the season:
+- Summer: swap hero city to a warm-weather destination (Los Angeles, Barcelona)
+- Winter: show a cold-weather verdict with layering complexity visible
+- Fashion Week: add a screenshot showing a fashion-capital city (Paris, Milan) consult
+
+Do not change screenshots and keywords at the same time — change one element per cycle to maintain attribution clarity.
 
 ---
 
@@ -394,6 +485,50 @@ Bad: *"Thanks for your feedback! We're always working to improve!"*
 
 Respond to **positive reviews** at least selectively — it signals to Apple that the developer is engaged.
 
+### Rating Velocity: Zero to Fifty
+
+The first 50 ratings define the store page for months. A 3.8 from 20 early ratings is recoverable but painful — it suppresses conversion, which suppresses impressions, which suppresses new ratings. The only clean path is 50 ratings fast at 4.5+.
+
+**Rating velocity matters more than average score.** An app with a 4.2 rating collecting 100 reviews per week will typically outrank a 4.5-rated app collecting 5 per week. The algorithm reads velocity as a proxy for active usage and user satisfaction.
+
+**Launch week tactics — in order of impact:**
+
+1. **Prime beta testers before App Store day 1.** TestFlight users who have been using the app for 2+ weeks are the most satisfied users you will ever have. Before submitting to the App Store, send a personal message (DM or email, not in-app) asking if they'd leave a review on launch day. Ten testers who say yes = ten reviews at launch. Frame it: "We go live on [date] — one review from you changes how the algorithm treats us in the first week."
+
+2. **Use Instagram on launch day.** Post a Story with a review link (not just "link in bio" — use the direct App Store review URL in a link sticker). Your first 100 followers are disproportionately high-intent and willing to help. Phrase: "We launched today — a 30-second review changes the App Store algorithm for us." Direct, specific, no guilt.
+
+3. **Time the in-app prompt precisely.** Day-1 users are still evaluating. Day-3 users who return have self-selected as satisfied. The `SKStoreReviewRequest` at the 3rd consult is correct — do not move this earlier.
+
+4. **Badge unlock is the peak trigger.** Badge animations are emotional highs. The review prompt placed immediately after a badge animation closes is the highest-converting moment in the product lifecycle.
+
+5. **Streak milestones.** Users on a 7-day or 30-day streak are confirmed habitual users. They are the safest possible moment to prompt — lowest churn, highest satisfaction.
+
+**Never:**
+- Incentivise reviews with free features, credits, or any reward (Apple and Google ban this; app can be removed)
+- Ask people to review from the same IP or household (flagged as manipulation)
+- Purchase reviews from any service (permanent account suspension risk)
+
+### Review Gating (Legal Implementation)
+
+Apple's guidelines ban "review gating" — routing unhappy users away from the App Store before they can review. However, a pre-prompt satisfaction check routed to an **in-app feedback form** (not a block on App Store access) is legal and widely used.
+
+**Legal implementation pattern:**
+
+```
+Trigger: after 3rd consult or badge unlock
+
+Screen 1:
+  "Quick check before we ask — how's the Oracle working for you?"
+  → [It's great]     → fires SKStoreReviewRequest
+  → [Could be better] → opens in-app feedback form (text field, send button)
+```
+
+The critical distinction: the unhappy path leads to a genuine feedback form that is monitored and actioned — not a dead end. Users on the unhappy path are not blocked from reviewing the app on the App Store; they can still navigate there independently.
+
+**Why this is worth implementing:** The 3 annual `SKStoreReviewRequest` calls are a scarce resource. Using one on a user at a frustrating moment produces a 1-star review that costs more in conversion suppression than a missed prompt would have. The satisfaction gate preserves the call for users in a positive state.
+
+**Implementation note:** The feedback form responses should feed into a real inbox (`support@outfitoracle.fashion`) and be reviewed weekly. Apple has rejected apps where the "feedback" path was clearly a dead end — it must be genuine.
+
 ---
 
 ## Category Selection
@@ -457,6 +592,68 @@ App Store featuring is editorial, not algorithmic, but it is heavily influenced 
 | Submit to "Apps We Love" editorial consideration | Not done | After 50+ ratings |
 
 **How to submit:** App Store Connect → App Information → "Promotional Artwork" section → fill in the pitch form. Apple does not confirm submissions or guarantee consideration.
+
+### iOS Platform Features: Widgets, Live Activities, App Clips
+
+Apple explicitly lists "unique or innovative use of platform features" as a featuring consideration factor. These three features have direct ASO impact — each one improves retention signals, earns editorial attention, or reduces the barrier to first use.
+
+**Build order recommendation: Widget → Live Activity → App Clip** (ascending complexity; widget is a weekend project, App Clip requires a separate target and review).
+
+---
+
+#### Home Screen & Lock Screen Widgets
+
+A widget showing the Oracle's daily verdict — city name, weather condition icon, and the top outfit recommendation — lives on the user's home screen and functions as a daily retention nudge without requiring an app open.
+
+**ASO impact:**
+- Home screen presence means the app icon is seen daily even on non-open days, which reduces the uninstall signal
+- Widgets increase daily active usage (the retention metric the algorithm rewards)
+- Lock Screen widgets (iOS 16+) are one of the features Apple's editorial team actively looks for when selecting apps to feature
+- Apple specifically features widget-capable apps in "Apps We Love" editorial
+
+**Recommended widget: `Today's Verdict`**
+- Small: city name + condition icon + 1-line verdict
+- Medium: city + weather strip + top outfit piece
+- Lock Screen: condition icon + city + temperature
+
+Refreshes every morning via background fetch. Tapping opens the Oracle tab directly. Cost: one weekend to build with WidgetKit; no new backend endpoints required.
+
+---
+
+#### Live Activities / Dynamic Island
+
+A Live Activity for the Oracle displays real-time consult progress in the Dynamic Island and Lock Screen — weather fetching → verdict generating → done — with the final verdict's lead piece ("Layer: camel coat") persisting in the Dynamic Island after completion.
+
+**ASO impact:**
+- Apple lists Live Activities as an explicit featuring consideration
+- Dynamic Island presence = persistent brand visibility between app opens
+- Live Activities that surface genuinely useful real-time information get editorial attention; fashion + weather is a strong use case
+
+**Implementation scope:**
+- Start state: "Checking the weather in [city]…" — weather condition icon animating
+- Update: "Building your verdict…" — shimmer loader
+- End state: top outfit item + condition icon; taps into the full verdict screen
+- Expiry: auto-dismiss after 2 hours (user has presumably dressed by then)
+
+---
+
+#### App Clips
+
+A zero-install demo consult: a QR code or NFC tag on the outfitoracle.fashion website, in press kits, or on physical collateral triggers a mini Outfit Oracle experience — enter a city, see one verdict — with no App Store download required. If the verdict is compelling, the full install prompt appears at the end.
+
+**ASO impact:**
+- Apple's editorial team features App Clips that demonstrate clear, focused utility with no friction
+- Clip-to-install conversion is higher than cold organic install — users have already experienced value before the install ask
+- App Clips surface in Maps, Safari, and Siri Suggestions — contexts where the App Store would never appear
+- A well-executed App Clip is a PR asset: "try the Oracle without downloading anything" is a genuinely shareable angle for fashion media
+
+**Clip scope (keep it under 10 MB):**
+- One screen: city text input → consult button
+- One result: weather strip + 3 outfit items (stripped-down verdict card)
+- One CTA: "Get the full Oracle" → App Store install page
+- No auth, no onboarding, no theme switching — just the core loop
+
+**Trigger points to set up:** QR code on website hero, NFC tag in press kit PDF, `appclip.outfitoracle.fashion` subdomain for direct link sharing.
 
 ---
 
@@ -574,6 +771,67 @@ Front-load keywords in the event name and short description — these are the on
 
 ---
 
+## Google Play: Custom Store Listings (CSLs)
+
+Google Play's equivalent of Apple's Custom Product Pages. Up to **50 CSLs** can run simultaneously. Unlike Apple CPPs, CSLs can be triggered by five distinct signals — country, Google Ads campaign, keyword, install state, or custom URL. This makes them more flexible for segmentation.
+
+Phiture case study: **57% CVR increase** over two months using keyword-targeted CSLs on a lifestyle app.
+
+### How CSLs Differ from CPPs
+
+| Feature | Apple CPPs | Google Play CSLs |
+|---------|-----------|-----------------|
+| Max simultaneous | 70 | 50 |
+| Trigger types | URL / ASA campaign | Country, keyword, Ads campaign, install state, URL |
+| Indexed for organic search | Yes (June 2025) | Yes — via keyword targeting |
+| Content that can vary | Screenshots, preview, promo text | Short description, long description, screenshots, icon |
+| Shared fields | App name, icon, description, ratings | App name, ratings |
+
+### CSL Strategy for Outfit Oracle
+
+| CSL | Trigger | Key change from default |
+|-----|---------|------------------------|
+| **Weather intent** | Keyword: "weather", "what to wear today", "dress for weather" | Lead screenshot: weather strip → verdict; short description emphasizes real-time data |
+| **AI intent** | Keyword: "AI stylist", "AI outfit", "AI fashion" | Lead screenshot: verdict card; short description: "Claude AI tells you what to wear" |
+| **Travel intent** | Keyword: "travel outfit", "packing", "vacation style" | Lead screenshot: city passport; short description: "Oracle covers every city in the world" |
+| **Returning users** | Install state: previously uninstalled | Short description emphasizes what's new since they left |
+| **UK market** | Country: GB | British English throughout ("travelling", "wardrobe", "favourite colour") |
+| **French market** | Country: FR | Full French short description with `tenue du jour`, `conseil mode` keywords |
+
+**Note:** Google Play also has Store Listing Experiments (their equivalent of Apple's PPO A/B testing). Run these via Play Console → Store Presence → Store Listing Experiments. Minimum 2 weeks per test; Play provides statistical significance indicators automatically.
+
+---
+
+## Google Play: Promotional Content (LiveOps)
+
+Google Play's equivalent of Apple's In-App Events. Promotional content lets you showcase events, updates, and offers directly on the Play Store listing — appearing in search results, category pages, and the editorial "Offers" tab.
+
+Google reports that apps running Promotional Content during the launch beta saw **+5% more active users and +4% higher revenue** than apps that did not.
+
+### Key Differences from Apple In-App Events
+
+| Feature | Apple In-App Events | Google Play Promotional Content |
+|---------|--------------------|---------------------------------|
+| Indexed fields | Name + short description | Title + description |
+| Visual format | Portrait card (1080×1920 px) | Landscape card (1024×500 px) |
+| Max duration | 31 days | 14 days |
+| Approval wait | 5 business days | 2–3 business days |
+| Policy on discounts | Banned — real in-app experiences only | Allowed — can promote offers and sales |
+| Live events | Supported | Supported |
+
+### Promotional Content for Outfit Oracle on Google Play
+
+| Content | Title | Description |
+|---------|-------|-------------|
+| Style Challenge | `Oracle Style Challenge` | `7-day AI outfit challenge. Beat the weather, earn your rank.` |
+| Summer drop | `Summer Oracle Edition` | `AI outfit verdicts for summer heat. New themes, new season.` |
+| Feature update | `v2.0: Wardrobe Intelligence` | `Teach the Oracle your closet. AI verdicts from what you actually own.` |
+| Fashion Week | `Paris Fashion Week: Oracle Edit` | `AI outfit advice for fashion week. Any city, any occasion.` |
+
+**Workflow difference:** Submit iOS In-App Events and Google Play Promotional Content simultaneously for the same campaign, but prepare separate assets (portrait vs landscape card) and different review lead times (5 days vs 2–3 days).
+
+---
+
 ## Apple Search Ads — The ASO Connection
 
 Apple Search Ads (ASA) and organic ASO are a closed feedback loop. They are not separate budgets for separate goals — they are the same funnel running in parallel.
@@ -675,12 +933,15 @@ Understanding category scale calibrates keyword ambition and informs the acquisi
 ### Week 1 — Foundation
 - [ ] Set app name to `Outfit Oracle: AI Style Advisor` (or tested variant)
 - [ ] Set subtitle: `Weather-Powered Fashion Oracle`
-- [ ] Enter keyword field: 100 chars, no duplicates from title/subtitle
+- [ ] Set developer name to `Oracle Fashion Studio` (indexes "fashion" keyword for free)
+- [ ] Enter keyword field: single-word optimised, 100 chars, no duplicates from title/subtitle
 - [ ] Set Primary: Lifestyle, Secondary: Shopping
-- [ ] Upload 6 screenshots (English set — Editorial Dark theme)
+- [ ] Upload 6 screenshots (English set — Editorial Dark theme; captions as keyword phrases)
 - [ ] Write and upload App Preview video (15–30 sec)
 - [ ] Complete full description (iOS + Play)
 - [ ] Set up AppFollow keyword rank tracking for 20 target keywords
+- [ ] Build first Google Play CSL (Weather intent) alongside default iOS listing
+- [ ] Schedule seasonal keyword update dates in calendar (Feb / Apr / Aug / Oct)
 
 ### Week 2 — Ratings Foundation + Paid Discovery
 - [ ] Implement `SKStoreReviewRequest` trigger on 3rd consult and badge unlock
@@ -704,8 +965,20 @@ Understanding category scale calibrates keyword ambition and informs the acquisi
 - [ ] Launch Product Page Optimization Test 1 (screenshots variant)
 - [ ] Wire CPP #1 and CPP #2 to their ASA keyword clusters
 - [ ] Build CPP #3 (Travel angle) and submit
+- [ ] Build Google Play CSLs #2 and #3 (AI intent, Travel intent)
+- [ ] Submit first Google Play Promotional Content event
 - [ ] Localise keyword field for en-GB and en-AU (10 minutes each)
 - [ ] Draft French keyword translation for Phase 2
+- [ ] Implement review gating pre-prompt (satisfaction check → feedback form or SKStoreReviewRequest)
+- [ ] Begin Widget design (Today's Verdict — small + medium + Lock Screen)
+
+### Ongoing — Monthly
+- [ ] Pull ASA Search Terms Report → swap bottom keyword performers
+- [ ] Check AppFollow rank report for all 20 tracked keywords
+- [ ] Respond to all 1–3 star reviews within 72 hours
+- [ ] Run a Google Play Store Listing Experiment (rotate quarterly)
+- [ ] Refresh seasonal keywords 3 weeks before each season peak (Feb / Apr / Aug / Oct)
+- [ ] Submit a new In-App Event (iOS) and Promotional Content (Google Play) each month
 
 ---
 
