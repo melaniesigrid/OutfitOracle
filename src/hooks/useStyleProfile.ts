@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { cloudGet, cloudPut } from '../services/cloudData';
@@ -137,15 +137,21 @@ export function useStyleProfile() {
     });
   }, [token]);
 
-  const saveProfile = (profile: StyleProfile) => {
+  const saveProfile = useCallback((profile: StyleProfile) => {
     AsyncStorage.setItem(KEY, JSON.stringify(profile));
     cloudPut('/data/style-profile', token, profile);
     setState({ status: 'set', profile });
-  };
+  }, [token]);
 
-  const edit = () => setState({ status: 'not-set' });
+  const edit = useCallback(() => setState({ status: 'not-set' }), []);
+
+  const clear = useCallback(() => {
+    AsyncStorage.removeItem(KEY);
+    cloudPut('/data/style-profile', token, null);
+    setState({ status: 'not-set' });
+  }, [token]);
 
   const profile = state.status === 'set' ? state.profile : undefined;
 
-  return { profileState: state, profile, saveProfile, edit };
+  return { profileState: state, profile, saveProfile, edit, clear };
 }

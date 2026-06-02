@@ -90,7 +90,9 @@ export function useOutfitHistory() {
 
   const clear = useCallback(() => {
     setHistory([]);
+    setFirstConsultAt(undefined);
     AsyncStorage.removeItem(KEY);
+    AsyncStorage.removeItem(FIRST_CONSULT_KEY);
     cloudPut('/data/history', token, []);
   }, [token]);
 

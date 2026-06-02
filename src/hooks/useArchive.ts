@@ -211,5 +211,11 @@ export function useArchive() {
     ) ?? null;
   }, [entries]);
 
-  return { entries, loaded, addEntry, removeEntry, setReaction, setNote, updateImages, findEntry };
+  const clear = useCallback(() => {
+    AsyncStorage.removeItem(KEY);
+    setEntries([]);
+    cloudPut('/data/archive', token, []);
+  }, [token]);
+
+  return { entries, loaded, addEntry, removeEntry, setReaction, setNote, updateImages, findEntry, clear };
 }

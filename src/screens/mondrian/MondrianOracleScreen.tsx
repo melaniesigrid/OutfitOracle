@@ -162,7 +162,7 @@ export function MondrianOracleScreen() {
   const { formatTemp } = useTempUnit();
   const { magicOpacity, showMagicMoment, dismissMagicMoment, tryTriggerFirstConsult } = useMagicMoment();
 
-  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx } = useAppData();
+  const { oracle, profileCtx, historyCtx, streakCtx, savedCtx, archiveCtx, dataResetEpoch } = useAppData();
   const {
     status, weather, verdict, error, consult, consultByCoords,
     reset, cachedCity, cachedAt, isFromCache, isOffline,
@@ -319,10 +319,14 @@ export function MondrianOracleScreen() {
   };
 
   useEffect(() => {
-    if (autoLocationStartedRef.current || profileCtx.profileState.status === 'loading') return;
+    autoLocationStartedRef.current = false;
+  }, [dataResetEpoch]);
+
+  useEffect(() => {
+    if (autoLocationStartedRef.current || profileCtx.profileState.status !== 'set') return;
     autoLocationStartedRef.current = true;
     handleUseLocation();
-  }, [profileCtx.profileState.status]);
+  }, [dataResetEpoch, profileCtx.profileState.status]);
 
   const handleShare = async () => {
     if (!shareCardRef.current || !verdict) return;

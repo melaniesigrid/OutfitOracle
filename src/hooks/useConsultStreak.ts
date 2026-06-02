@@ -122,6 +122,15 @@ export function useConsultStreak() {
 
   const clearMilestone = useCallback(() => setNewMilestone(null), []);
   const clearRank = useCallback(() => setNewRank(null), []);
+  const clear = useCallback(() => {
+    const empty: StreakData = { streak: 0, lastConsultDate: '', totalConsults: 0 };
+    AsyncStorage.removeItem(KEY);
+    cloudPut('/data/streak', token, empty);
+    setStreak(0);
+    setTotalConsults(0);
+    setNewMilestone(null);
+    setNewRank(null);
+  }, [token]);
 
   return {
     streak,
@@ -133,5 +142,6 @@ export function useConsultStreak() {
     recordConsult,
     clearMilestone,
     clearRank,
+    clear,
   };
 }

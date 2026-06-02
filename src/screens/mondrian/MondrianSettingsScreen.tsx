@@ -18,6 +18,13 @@ import {
   ANALYTICS_ENABLED_KEY,
 } from '../../services/analytics';
 import { deleteAllLocalAuth } from '../../services/auth';
+import {
+  NOTIF_ENABLED_KEY,
+  NOTIF_HOUR_KEY,
+  NOTIF_LAST_CITY_KEY,
+  NOTIF_PROMPTED_KEY,
+  NOTIF_RATING_ID_KEY,
+} from '../../hooks/useNotifications';
 
 const { red, blue, yellow, black, white, gridLine } = mondrianTokens;
 
@@ -25,10 +32,13 @@ const ALL_KEYS = [
   '@outfit_oracle_history', '@outfit_oracle_first_consult',
   '@outfit_oracle_recent_cities', '@outfit_oracle_last_result',
   '@outfit_oracle_streak', '@outfit_oracle_style_profile',
-  '@outfit_oracle_saved', '@onboarding_complete',
+  '@outfit_oracle_saved', '@outfit_oracle_look_archive_v1',
+  '@onboarding_complete',
   '@outfit_oracle_founding_member', '@outfit_oracle_theme',
   '@outfit_oracle_temp_unit', '@outfit_oracle_y2k_font_subtheme',
-  '@outfit_oracle_magic_shown', ANALYTICS_ENABLED_KEY,
+  '@outfit_oracle_magic_shown', '@outfit_oracle_device_id',
+  ANALYTICS_ENABLED_KEY, NOTIF_ENABLED_KEY, NOTIF_HOUR_KEY,
+  NOTIF_LAST_CITY_KEY, NOTIF_PROMPTED_KEY, NOTIF_RATING_ID_KEY,
 ];
 const SOFT_KEYS = [
   '@outfit_oracle_history', '@outfit_oracle_first_consult',
@@ -68,7 +78,7 @@ export function MondrianSettingsScreen() {
   const { themeName, setTheme } = useTheme();
   const { unit: tempUnit, setUnit: setTempUnit } = useTempUnit();
   const navigation = useNavigation<any>();
-  const { historyCtx } = useAppData();
+  const { historyCtx, notifyDataReset } = useAppData();
   const { user, signOut } = useAuth();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
 
@@ -116,8 +126,16 @@ export function MondrianSettingsScreen() {
           text: 'Reset', style: 'destructive',
           onPress: async () => {
             await Promise.all(ALL_KEYS.map(k => AsyncStorage.removeItem(k)));
+            try {
+              const all = await AsyncStorage.getAllKeys();
+              const derivedKeys = all.filter(k =>
+                k.startsWith('@oracle_image_v1_') ||
+                k.startsWith('@outfit_oracle_city_descriptor_')
+              );
+              if (derivedKeys.length > 0) await AsyncStorage.multiRemove(derivedKeys);
+            } catch { /* non-fatal */ }
             await deleteAllLocalAuth();
-            historyCtx.clear();
+            notifyDataReset();
             await signOut();
             Alert.alert('Done', 'All data removed.');
           },
