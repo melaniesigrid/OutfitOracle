@@ -58,7 +58,7 @@ npx expo run:android
 
 TypeScript check: `npx tsc --noEmit`
 
-Run tests: `npm test` (Jest + ts-jest, 201 tests across 22 suites)
+Run tests: `npm test` (Jest + ts-jest, 202 tests across 22 suites)
 
 SDK 54 requires Node 20.19.0 or newer. Use an even-numbered LTS release such as Node 22 or Node 24 for the cleanest local tooling support.
 
@@ -143,7 +143,7 @@ Deploy: `wrangler deploy`. Set the key: `wrangler secret put ANTHROPIC_API_KEY`.
 
 ## Agentic engineering workflows
 
-This repo includes a small agent-orchestration layer I use to make AI-assisted engineering work more reproducible than ad hoc prompting. The goal is not to let agents edit freely; it is to define roles, boundaries, shared context, and review loops in files that can be inspected and improved like any other engineering artifact.
+This repo includes a small agent-orchestration layer to make AI-assisted engineering work more reproducible than ad hoc prompting. The goal is not to let agents edit freely; it is to define roles, boundaries, shared context, and review loops in files that can be inspected and improved like any other engineering artifact.
 
 | Area | Files | Purpose |
 |---|---|---|
@@ -162,7 +162,7 @@ Engineering choices:
 - **Generated output hygiene**: `active/`, browser logs, and snapshots are ignored by git; source instructions and configs are kept, run artifacts are not.
 - **Review-oriented workflows**: the documented agent patterns emphasize independent analysis, structured disagreement, and verification before changes are accepted.
 
-These files are intentionally visible in the repo because they show how I approach AI-assisted development as an engineering system: scoped agents, portable configuration, explicit handoffs, and reproducible outputs.
+These files are intentionally visible in the repo because they show how the project approaches AI-assisted development as an engineering system: scoped agents, portable configuration, explicit handoffs, and reproducible outputs.
 
 ---
 
@@ -188,7 +188,7 @@ Before archiving in Xcode:
 1. Confirm `EXPO_PUBLIC_SENTRY_DSN` is set in `.env` and rebuild after any value change
 2. Enable GitHub Pages for the privacy policy: repo Settings → Pages → Source → main → /docs → Save
 3. Confirm `ios/OutfitOracle/PrivacyInfo.xcprivacy` remains referenced in `ios/OutfitOracle.xcodeproj/project.pbxproj`
-4. Create the App Store Connect record (name: Outfit Oracle, category: Lifestyle, age rating: 4+, privacy policy URL: `https://melaniesigrid.github.io/OutfitOracle/`)
+4. Create the App Store Connect record (name: Outfit Oracle, category: Lifestyle, age rating: 4+, privacy policy URL: `https://outfitoracle.fashion/privacy`)
 5. Capture 6.5" (1284×2778) and 5.5" (1242×2208) screenshots — minimum 3 per device class
 6. Run a 15-minute VoiceOver audit on a real device
 
@@ -196,7 +196,7 @@ Before archiving in Xcode:
 
 ## Privacy policy
 
-Hosted at `https://melaniesigrid.github.io/OutfitOracle/` (GitHub Pages from `/docs/index.html`). Covers: Open-Meteo, Anthropic, Cloudflare, Google Shopping, Sentry. Contact: melaniesigridab@gmail.com.
+Hosted at `https://outfitoracle.fashion/privacy` (canonical) and mirrored at GitHub Pages from `/docs/index.html`. Covers: Open-Meteo, Anthropic, Cloudflare, Google Shopping, Sentry. Contact: hello@outfitoracle.fashion.
 
 ---
 
@@ -211,3 +211,20 @@ Hosted at `https://melaniesigrid.github.io/OutfitOracle/` (GitHub Pages from `/d
 - [DESIGN.md](DESIGN.md) — design system and theme specs
 - [CLAUDE.md](CLAUDE.md) — AI assistant guidance
 - [docs/agent-workflows](docs/agent-workflows/README.md) — agent orchestration and verification workflows
+
+---
+
+## License & Copyright
+
+© 2026 Oracle Fashion Studio. All rights reserved.
+
+Outfit Oracle is proprietary software. The source code is shared publicly for transparency and portfolio purposes. No licence is granted to copy, modify, distribute, or use this code in other products without explicit written permission.
+
+Third-party components are subject to their own licences:
+- [Expo SDK](https://github.com/expo/expo/blob/main/LICENSE) — MIT
+- [React Native](https://github.com/facebook/react-native/blob/main/LICENSE) — MIT
+- [React Navigation](https://github.com/react-navigation/react-navigation/blob/main/packages/native/LICENSE) — MIT
+- [Open-Meteo](https://open-meteo.com/) — CC BY 4.0 (non-commercial free tier)
+- [Anthropic Claude API](https://www.anthropic.com/legal/aup) — subject to Anthropic's usage policy
+
+Contact: [hello@outfitoracle.fashion](mailto:hello@outfitoracle.fashion)
